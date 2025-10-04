@@ -1,11 +1,11 @@
+import type { SpoolCardProps, ThreadEntryProps } from './components';
+
 /**
  * Base API response
  */
 export interface ApiResponse {
   ok: boolean;
-  json: {
-    error: string;
-  };
+  error?: string;
 }
 
 /**
@@ -16,3 +16,13 @@ export interface Credentials {
   email: string;
   password: string;
 }
+
+/**
+ * Spool info
+ */
+export interface SpoolInfo extends ApiResponse, SpoolCardProps {}
+
+/**
+ * Thread info
+ */
+export interface ThreadInfo extends ApiResponse, ThreadEntryProps {}
