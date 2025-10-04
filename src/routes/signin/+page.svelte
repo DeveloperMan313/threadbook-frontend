@@ -23,7 +23,7 @@
     });
 
     if (!response.ok) {
-      alert(response.json.error);
+      alert(response.error);
       return;
     }
 
