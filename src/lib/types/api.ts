@@ -2,14 +2,17 @@
  * Base API response
  */
 export interface ApiResponse {
-  error: string;
+  ok: boolean;
+  json: {
+    error: string;
+  };
 }
 
 /**
  * Auth credentials
  */
 export interface Credentials {
-  username: string;
+  username?: string;
   email: string;
   password: string;
 }

@@ -1,4 +1,4 @@
-import { API_ORIGIN } from '$env/static/private';
+import { PUBLIC_API_ORIGIN } from '$env/static/public';
 
 /**
  * Base API client that sends JSON, cookies and works with CORS
@@ -16,10 +16,10 @@ export const ApiClient = {
       };
     }
 
-    const response = await fetch(API_ORIGIN + inputRelative, init);
+    const response = await fetch(PUBLIC_API_ORIGIN + inputRelative, init);
 
     if (response.status >= 500) {
-      alert('Сервис временно недоступен');
+      alert('Service unavailable');
     }
 
     return response;
