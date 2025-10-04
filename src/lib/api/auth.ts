@@ -11,7 +11,7 @@ export const AuthApi = {
       method: 'GET',
       headers: {}
     });
-    return response.json();
+    return { ok: response.ok, json: await response.json() };
   },
 
   /**
@@ -24,7 +24,7 @@ export const AuthApi = {
       method: 'POST',
       body: JSON.stringify(credentials)
     });
-    return response.json();
+    return { ok: response.ok, json: await response.json() };
   },
 
   /**
@@ -37,7 +37,7 @@ export const AuthApi = {
       method: 'POST',
       body: JSON.stringify(credentials)
     });
-    return response.json();
+    return { ok: response.ok, json: await response.json() };
   },
 
   /**
@@ -49,6 +49,6 @@ export const AuthApi = {
       method: 'POST',
       headers: {}
     });
-    return response.json();
+    return { ok: response.ok, json: await response.json() };
   }
 };

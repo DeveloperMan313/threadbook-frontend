@@ -26,22 +26,36 @@ export function emailGetError(value: string): string | null {
   return 'Invalid email';
 }
 
+const passMinLength = 8;
+
 /**
- * Check password
+ * Check password in signup
  * @param {string} value - password string
  * @returns {string?} - error message or null
  */
-export function passwordGetError(value: string): string | null {
-  const minLength = 8;
+export function signupPasswordGetError(value: string): string | null {
   const isValid =
-    value.length >= minLength &&
+    value.length >= passMinLength &&
     /[a-z]+/.test(value) &&
     /[A-Z]+/.test(value) &&
     /[0-9]+/.test(value);
   if (isValid) {
     return null;
   }
-  return `At least ${minLength} symbols, capital and lowercase letters and digits`;
+  return `At least ${passMinLength} symbols, capital and lowercase letters and digits`;
+}
+
+/**
+ * Check password in signin
+ * @param {string} value - password string
+ * @returns {string?} - error message or null
+ */
+export function signinPasswordGetError(value: string): string | null {
+  const isValid = value.length >= passMinLength;
+  if (isValid) {
+    return null;
+  }
+  return `Incorrect password`;
 }
 
 /**
