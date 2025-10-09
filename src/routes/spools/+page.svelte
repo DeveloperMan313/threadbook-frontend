@@ -1,12 +1,14 @@
 <script lang="ts">
   import Navbar from '$lib/templates/Navbar.svelte';
   import SpoolCard from '$lib/templates/SpoolCard.svelte';
+  import VoiceChat from '$lib/templates/VoiceChat.svelte';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
 </script>
 
 <Navbar />
+<VoiceChat />
 <div class="container">
   {#each data.spools as spool (spool.id)}
     <SpoolCard {...spool} />
