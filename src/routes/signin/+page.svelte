@@ -2,7 +2,9 @@
   import InputField from '$lib/templates/InputField.svelte';
   import { emailGetError, signinPasswordGetError } from '$lib/validation';
   import { AuthApi } from '$lib/api';
-  // import { goto } from '$app/navigation';
+  import Button from '$lib/templates/Button.svelte';
+  import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
 
   let emailValue = $state('');
   let emailIsValid = $state(false);
@@ -27,7 +29,7 @@
       return;
     }
 
-    // goto('/spools');
+    goto(resolve('/spools'));
   };
 </script>
 
@@ -43,7 +45,7 @@
         placeholder="Enter email"
         noSpaces={true}
       />
-      <button type="button" disabled={!emailIsValid} onclick={advanceStage}>Next</button>
+      <Button type="primary" label="Next" onClick={advanceStage} disabled={!emailIsValid} />
     </div>
     <div class="slide">
       <InputField
@@ -55,7 +57,7 @@
         placeholder="Enter password"
         noSpaces={true}
       />
-      <button type="button" disabled={!passwordIsValid} onclick={makeRequest}>Sign in</button>
+      <Button type="primary" label="Sign in" onClick={makeRequest} disabled={!passwordIsValid} />
     </div>
   </div>
 </div>
@@ -70,17 +72,21 @@
   }
 
   .main {
-    width: 16rem;
-    height: 10rem;
+    width: 18rem;
     display: flex;
     flex-direction: row;
     overflow: hidden;
+    background-color: var(--bg-primary);
+    border-radius: var(--border-radius-large);
   }
 
   .slide {
-    width: 16rem;
-    height: 100%;
+    padding: calc(var(--m-4) + var(--input-field-vert-margin)) var(--m-4) var(--m-4);
+    width: 100%;
     flex-shrink: 0;
     transition: margin-left ease-in-out 0.5s;
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
   }
 </style>
