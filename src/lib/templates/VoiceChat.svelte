@@ -171,6 +171,8 @@
       await room.connect('ws://localhost:7880', token);
 
       const tracks = await room.localParticipant.createTracks({
+        // СЮДА ПОТОМ ИИ МОЖНО ИНТЕГРИРОВАТЬ, но работать он будет ток в Electron
+        // Нужно предусмотреть тут if Electron -> flase флаги + DeepFilterNet else -> true флаги
         audio: {
           autoGainControl: true,
           echoCancellation: true,
