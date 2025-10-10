@@ -1,6 +1,16 @@
+<script context="module">
+  export const ssr = false;
+</script>
+
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { Room, RemoteParticipant, RemoteTrack, RemoteTrackPublication } from 'livekit-client';
+  import {
+    Room,
+    RemoteParticipant,
+    RemoteTrack,
+    RemoteTrackPublication,
+    LocalTrack
+  } from 'livekit-client';
 
   let isConnected = false;
   let error = '';
@@ -9,9 +19,16 @@
 
   let isSelfMuted = false;
   let isOthersMuted = false;
-  let participants: RemoteParticipant[] = []; // ← массив вместо Map для реактивности
+  let participants: RemoteParticipant[] = [];
   let volumes: Record<string, number> = {};
-  const audioElements = new Map<string, HTMLAudioElement>();
+  let audioElements = new Map<string, HTMLAudioElement>();
+  let localVideoEl: HTMLVideoElement | null = null;
+
+  // Защита от SSR
+  const isBrowser = typeof document !== 'undefined';
+
+  // Для отложенной привязки видео
+  let pendingLocalVideoTrack: LocalTrack | null = null;
 
   async function getToken() {
     const res = await fetch('/api/thread/sfu/token', {
@@ -29,7 +46,8 @@
     return token;
   }
 
-  function attachTrack(track: RemoteTrack, participant: RemoteParticipant) {
+  function attachAudioTrack(track: RemoteTrack, participant: RemoteParticipant) {
+    if (!isBrowser) return;
     const element = track.attach() as HTMLAudioElement;
     element.dataset.participant = participant.identity;
     element.muted = isOthersMuted;
@@ -39,17 +57,35 @@
     audioElements.set(participant.identity, element);
   }
 
+  function attachVideoTrack(track: RemoteTrack, participant: RemoteParticipant) {
+    if (!isBrowser) return;
+    const element = track.attach() as HTMLVideoElement;
+    element.autoplay = true;
+    element.playsInline = true;
+    element.muted = true;
+    element.className = 'video-preview';
+
+    const container = document.querySelector(
+      `.video-container[data-participant="${participant.identity}"]`
+    );
+    if (container) {
+      container.innerHTML = '';
+      container.appendChild(element);
+    }
+  }
+
   function detachTrack(participantId: string) {
-    const el = audioElements.get(participantId);
-    if (el) {
-      el.remove();
+    if (!isBrowser) return;
+    const audioEl = audioElements.get(participantId);
+    if (audioEl) {
+      audioEl.remove();
       audioElements.delete(participantId);
     }
   }
 
   function updateVolume(participantId: string, volume: number) {
-    // ← реактивное обновление объекта
     volumes = { ...volumes, [participantId]: volume };
+    if (!isBrowser) return;
     const el = audioElements.get(participantId);
     if (el) {
       el.volume = volume;
@@ -63,6 +99,7 @@
   }
 
   function toggleOthersMute() {
+    if (!isBrowser) return;
     isOthersMuted = !isOthersMuted;
     audioElements.forEach((el) => {
       el.muted = isOthersMuted;
@@ -73,7 +110,9 @@
     participant.on('trackPublished', (pub: RemoteTrackPublication) => {
       pub.on('subscribed', (track: RemoteTrack) => {
         if (track.kind === 'audio') {
-          attachTrack(track, participant);
+          attachAudioTrack(track, participant);
+        } else if (track.kind === 'video') {
+          attachVideoTrack(track, participant);
         }
       });
 
@@ -83,25 +122,28 @@
     });
 
     participant.on('trackUnpublished', (pub: RemoteTrackPublication) => {
-      if (pub.kind === 'audio') {
+      if (pub.kind === 'audio' || pub.kind === 'video') {
         detachTrack(participant.identity);
       }
     });
 
-    // Обработка уже существующих треков
     participant.trackPublications.forEach((pub) => {
-      if (pub.track?.kind === 'audio') {
-        attachTrack(pub.track, participant);
+      if (pub.track) {
+        if (pub.track.kind === 'audio') {
+          attachAudioTrack(pub.track, participant);
+        } else if (pub.track.kind === 'video') {
+          attachVideoTrack(pub.track, participant);
+        }
       }
     });
 
-    // Добавляем только если ещё не в списке (реактивно)
     if (!participants.some((p) => p.identity === participant.identity)) {
       participants = [...participants, participant];
     }
   }
 
   async function joinRoom() {
+    if (!isBrowser) return;
     try {
       const token = await getToken();
       room = new Room();
@@ -113,31 +155,38 @@
       });
 
       room.on('connected', () => {
-        // Очистка старых элементов
+        if (!isBrowser) return;
         audioElements.forEach((el) => el.remove());
         audioElements.clear();
         volumes = {};
         participants = [];
 
-        // Обработка уже подключённых участников
+        document.querySelectorAll('.video-container').forEach((el) => {
+          (el as HTMLElement).innerHTML = '';
+        });
+
         room!.remoteParticipants.forEach((p) => handleParticipant(p));
       });
 
       await room.connect('ws://localhost:7880', token);
 
-      // Публикация локального аудио
       const tracks = await room.localParticipant.createTracks({
-        // СЮДА ПОТОМ ИИ МОЖНО ИНТЕГРИРОВАТЬ, но работать он будет ток в Electron
-        // Нужно предусмотреть тут if Electron -> flase флаги + DeepFilterNet else -> true флаги
         audio: {
           autoGainControl: true,
           echoCancellation: true,
           noiseSuppression: true
         },
-        video: false
+        video: true
       });
+
       for (const track of tracks) {
         await room.localParticipant.publishTrack(track);
+        if (track.kind === 'video') {
+          pendingLocalVideoTrack = track;
+          if (localVideoEl) {
+            track.attach(localVideoEl);
+          }
+        }
       }
 
       isConnected = true;
@@ -150,6 +199,8 @@
   }
 
   function leaveRoom() {
+    if (!isBrowser) return;
+
     if (room) {
       room.disconnect();
       room = null;
@@ -157,10 +208,25 @@
     participants = [];
     audioElements.forEach((el) => el.remove());
     audioElements.clear();
+    document.querySelectorAll('.video-container').forEach((el) => {
+      (el as HTMLElement).innerHTML = '';
+    });
+    if (localVideoEl) {
+      localVideoEl.srcObject = null;
+      localVideoEl.load();
+    }
     isConnected = false;
     isSelfMuted = false;
     isOthersMuted = false;
     volumes = {};
+  }
+
+  // Автоматически привязать локальное видео, когда элемент появится
+  $: {
+    if (localVideoEl && pendingLocalVideoTrack) {
+      pendingLocalVideoTrack.attach(localVideoEl);
+      pendingLocalVideoTrack = null;
+    }
   }
 
   onDestroy(() => {
@@ -173,6 +239,13 @@
 
   {#if error}
     <p class="error">{error}</p>
+  {/if}
+
+  <!-- Локальное видео -->
+  {#if isConnected}
+    <div class="local-video-container">
+      <video bind:this={localVideoEl} class="local-video" autoplay playsinline muted />
+    </div>
   {/if}
 
   <div class="controls">
@@ -188,16 +261,19 @@
     {#each participants as p}
       {#if room && p.identity !== room.localParticipant.identity}
         <div class="participant">
-          <span class="identity">{p.identity}</span>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            bind:value={volumes[p.identity]}
-            on:input={(e) =>
-              updateVolume(p.identity, parseFloat((e.target as HTMLInputElement).value))}
-          />
+          <div class="video-container" data-participant={p.identity}></div>
+          <div class="participant-info">
+            <span class="identity">{p.identity}</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              bind:value={volumes[p.identity]}
+              on:input={(e) =>
+                updateVolume(p.identity, parseFloat((e.target as HTMLInputElement).value))}
+            />
+          </div>
         </div>
       {/if}
     {/each}
@@ -275,20 +351,58 @@
     margin-bottom: var(--m-2);
   }
 
+  .local-video-container {
+    margin-bottom: var(--m-2);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background: #000;
+  }
+
+  .local-video {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .video-container {
+    width: 100%;
+    height: 80px;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background: #000;
+    margin-bottom: var(--m-1);
+  }
+
+  .video-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
   .participants {
     margin: var(--m-2) 0;
-    max-height: 120px;
+    max-height: 240px;
     overflow-y: auto;
   }
 
   .participant {
     display: flex;
+    flex-direction: column;
     align-items: center;
     gap: var(--m-1);
-    margin-bottom: var(--m-1);
+    margin-bottom: var(--m-2);
     padding: var(--m-1);
     background: #f0f0f0;
     border-radius: var(--border-radius);
+  }
+
+  .participant-info {
+    display: flex;
+    align-items: center;
+    gap: var(--m-1);
+    width: 100%;
   }
 
   .identity {
