@@ -1,10 +1,28 @@
 <script lang="ts">
-  import type { ThreadEntryProps } from '$lib/types';
+  import type { ContextMenuEntry, ThreadEntryProps } from '$lib/types';
+  import { openContextMenuHandler } from './ContextMenu.svelte';
 
   const { title, unreadCnt, mentionCnt }: ThreadEntryProps = $props();
+
+  const contextMenuEntries: Array<ContextMenuEntry> = [
+    {
+      type: 'neutral',
+      label: 'Rename',
+      onClick: () => {
+        alert('Rename thread');
+      }
+    },
+    {
+      type: 'danger',
+      label: 'Delete',
+      onClick: () => {
+        alert('Delete thread');
+      }
+    }
+  ];
 </script>
 
-<div class="thread-entry">
+<button class="thread-entry" oncontextmenu={openContextMenuHandler(contextMenuEntries)}>
   <p class="title">{title}</p>
   <div class="info">
     {#if mentionCnt > 0}
@@ -14,7 +32,7 @@
       <p class="unread-cnt">{unreadCnt}</p>
     {/if}
   </div>
-</div>
+</button>
 
 <style>
   .thread-entry {
@@ -24,8 +42,21 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    background-color: var(--bg-primary);
+    background-color: var(--bg-default);
+    border: none;
     border-radius: var(--border-radius-small);
+    cursor: pointer;
+
+    --bg-default: var(--bg-primary);
+    --bg-dark: var(--bg-primary-dark);
+  }
+
+  .thread-entry:hover {
+    background-color: color-mix(in srgb, var(--bg-default), var(--bg-dark));
+  }
+
+  .thread-entry:active {
+    background-color: var(--bg-dark);
   }
 
   .info {

@@ -1,15 +1,27 @@
 /**
  * Button click callback
- * @callback ButtonProps~clickCallback
- * @param {Event} event - mouse click event
+ * @param {MouseEvent} event - mouse click event
  */
-export type ClickCallback = (event: Event) => void;
+export type ClickCallback = (event: MouseEvent) => void;
 
 export interface ButtonProps {
   type: 'primary' | 'neutral' | 'danger';
   label: string;
   onClick: ClickCallback;
   disabled?: boolean;
+}
+
+export interface ContextMenuEntry {
+  type: 'neutral' | 'danger';
+  label: string;
+  onClick: ClickCallback;
+}
+
+export interface ContextMenuProps {
+  posXpx: number;
+  posYpx: number;
+  entries: Array<ContextMenuEntry>;
+  onClose: () => void;
 }
 
 export interface InputFieldProps {
