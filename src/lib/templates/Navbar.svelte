@@ -51,7 +51,7 @@
   .profile-picture {
     width: 3rem;
     height: 3rem;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-large);
     background-color: var(--active-primary);
   }
 

@@ -29,7 +29,7 @@
   .spool-card {
     width: 16rem;
     height: 26rem;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-large);
     overflow: hidden;
     text-decoration: none;
   }

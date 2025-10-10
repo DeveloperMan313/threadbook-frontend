@@ -55,7 +55,7 @@
   .chat-section {
     height: 100%;
     background-color: var(--bg-primary);
-    border-bottom-left-radius: var(--border-radius);
+    border-bottom-left-radius: var(--border-radius-large);
   }
 
   .input-section {
