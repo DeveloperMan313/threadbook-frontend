@@ -1,3 +1,5 @@
+import type { Snippet } from 'svelte';
+
 /**
  * Button click callback
  * @param {MouseEvent} event - mouse click event
@@ -5,9 +7,10 @@
 export type ClickCallback = (event: MouseEvent) => void;
 
 export interface ButtonProps {
-  type: 'primary' | 'neutral' | 'danger';
+  type: 'primary' | 'neutral' | 'subtle' | 'danger';
   label: string;
   onClick: ClickCallback;
+  thin?: boolean;
   disabled?: boolean;
 }
 
@@ -33,6 +36,19 @@ export interface InputFieldProps {
   placeholder?: string;
   disabled?: boolean;
   noSpaces?: boolean;
+}
+
+export interface ModalProps {
+  title: string;
+  body: Snippet;
+  buttons: Snippet;
+  isOpen: boolean; // bindable
+  onClose?: () => void;
+}
+
+export interface ModalThreadDeleteProps {
+  threadEntryProps: ThreadEntryProps;
+  isOpen: boolean; // bindable
 }
 
 export interface SpoolCardProps {

@@ -1,14 +1,16 @@
 <script lang="ts">
   import type { ButtonProps } from '$lib/types';
 
-  let { type, label, onClick, disabled }: ButtonProps = $props();
+  let { type, label, onClick, thin, disabled }: ButtonProps = $props();
 </script>
 
-<button class="button {type}" onclick={onClick} class:disabled {disabled}>{label}</button>
+<button class="button {type}" onclick={onClick} class:thin class:disabled {disabled}>{label}</button
+>
 
 <style>
   .button {
     height: var(--button-height);
+    padding: 0 var(--m-3);
     border-style: solid;
     border-width: var(--border-width);
     border-radius: var(--border-radius-small);
@@ -16,6 +18,11 @@
 
     background-color: var(--bg-default);
     border-color: var(--bg-dark);
+  }
+
+  .button.thin {
+    height: auto;
+    padding: var(--m-1);
   }
 
   .button:hover {
@@ -35,6 +42,12 @@
   .button.neutral {
     --bg-default: var(--bg-primary);
     --bg-dark: var(--bg-primary-dark);
+  }
+
+  .button.subtle {
+    --bg-default: transparent;
+    --bg-dark: var(--bg-primary-dark);
+    border-color: transparent;
   }
 
   .button.danger {
