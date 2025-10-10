@@ -25,7 +25,7 @@
     align-items: center;
     justify-content: space-between;
     background-color: var(--bg-primary);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-small);
   }
 
   .info {
@@ -40,7 +40,7 @@
     height: var(--font-small);
     color: var(--text-inverted);
     background-color: var(--active-primary);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-small);
     text-align: center;
   }
 
