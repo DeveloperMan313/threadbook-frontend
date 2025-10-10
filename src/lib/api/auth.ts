@@ -21,7 +21,7 @@ export const AuthApi = {
    * @returns {Promise<ApiResponse>} - API response
    */
   async register(credentials: Credentials): Promise<ApiResponse> {
-    const response = await ApiClient.fetch('/auth/register', {
+    const response = await ApiClient.fetch('/auth/user/register', {
       method: 'POST',
       body: JSON.stringify(credentials)
     });
@@ -35,7 +35,7 @@ export const AuthApi = {
    * @returns {Promise<ApiResponse>} - API response
    */
   async logIn(credentials: Credentials): Promise<ApiResponse> {
-    const response = await ApiClient.fetch('/auth/login', {
+    const response = await ApiClient.fetch('/auth/user/login', {
       method: 'POST',
       body: JSON.stringify(credentials)
     });
@@ -48,7 +48,7 @@ export const AuthApi = {
    * @returns {Promise<ApiResponse>} - API response
    */
   async logOut(): Promise<ApiResponse> {
-    const response = await ApiClient.fetch('/auth/logout', {
+    const response = await ApiClient.fetch('/auth/user/logout', {
       method: 'POST',
       headers: {}
     });
