@@ -33,7 +33,7 @@
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-<div class="context-menu-bg" onclick={onClose}>
+<div class="backdrop" onclick={onClose}>
   <div
     class="context-menu"
     onclick={(event: MouseEvent) => {
@@ -48,12 +48,13 @@
 </div>
 
 <style>
-  .context-menu-bg {
+  .backdrop {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
   }
 
   .context-menu {

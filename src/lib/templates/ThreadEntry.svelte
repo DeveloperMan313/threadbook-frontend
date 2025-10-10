@@ -1,8 +1,12 @@
 <script lang="ts">
   import type { ContextMenuEntry, ThreadEntryProps } from '$lib/types';
   import { openContextMenuHandler } from './ContextMenu.svelte';
+  import ModalThreadDelete from './ModalThreadDelete.svelte';
 
-  const { title, unreadCnt, mentionCnt }: ThreadEntryProps = $props();
+  const thisProps: ThreadEntryProps = $props();
+  const { title, unreadCnt, mentionCnt }: ThreadEntryProps = thisProps;
+
+  let isThreadDeleteModalOpen = $state(false);
 
   const contextMenuEntries: Array<ContextMenuEntry> = [
     {
@@ -16,7 +20,7 @@
       type: 'danger',
       label: 'Delete',
       onClick: () => {
-        alert('Delete thread');
+        isThreadDeleteModalOpen = true;
       }
     }
   ];
@@ -33,6 +37,7 @@
     {/if}
   </div>
 </button>
+<ModalThreadDelete threadEntryProps={thisProps} bind:isOpen={isThreadDeleteModalOpen} />
 
 <style>
   .thread-entry {
