@@ -1,5 +1,6 @@
 :root {
   --bg-primary: #f8f5f0;
+  --bg-primary-dark: #e4ded5;
   --bg-secondary: #f3efe7;
 
   --active-primary: #81b29a;
@@ -28,4 +29,5 @@
   --m-5: 3rem;
 
   --navbar-height: 4rem;
+  --button-height: 2rem;
 }

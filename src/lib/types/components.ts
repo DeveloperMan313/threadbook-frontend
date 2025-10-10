@@ -1,3 +1,17 @@
+/**
+ * Button click callback
+ * @callback ButtonProps~clickCallback
+ * @param {Event} event - mouse click event
+ */
+export type ClickCallback = (event: Event) => void;
+
+export interface ButtonProps {
+  type: 'primary' | 'neutral' | 'danger';
+  label: string;
+  onClick: ClickCallback;
+  disabled?: boolean;
+}
+
 export interface InputFieldProps {
   type: 'text' | 'email' | 'password';
   getError: (value: string) => string | null;
