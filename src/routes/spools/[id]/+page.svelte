@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Button from '$lib/templates/Button.svelte';
   import Navbar from '$lib/templates/Navbar.svelte';
   import ThreadListSection from '$lib/templates/ThreadListSection.svelte';
   import type { PageProps } from './$types';
@@ -10,6 +11,7 @@
 <div class="container">
   <div class="spool-list"></div>
   <div class="thread-list">
+    <Button type="primary" label="New thread" onClick={() => alert('New thread')} />
     <ThreadListSection title="Private" entries={data.threads.private} expanded={true} />
     <ThreadListSection title="Public" entries={data.threads.public} expanded={true} />
     <ThreadListSection title="History" entries={data.threads.history} expanded={false} />
