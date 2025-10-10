@@ -7,7 +7,9 @@
     getPasswordRepeatGetError
   } from '$lib/validation';
   import { AuthApi } from '$lib/api';
-  // import { goto } from '$app/navigation';
+  import Button from '$lib/templates/Button.svelte';
+  import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
 
   let usernameValue = $state('');
   let usernameIsValid = $state(false);
@@ -41,7 +43,7 @@
       return;
     }
 
-    // goto('/spools');
+    goto(resolve('/spools'));
   };
 </script>
 
@@ -57,7 +59,7 @@
         placeholder="Enter username"
         noSpaces={true}
       />
-      <button type="button" disabled={!usernameIsValid} onclick={advanceStage}>Next</button>
+      <Button type="primary" label="Next" onClick={advanceStage} disabled={!usernameIsValid} />
     </div>
     <div class="slide">
       <InputField
@@ -69,7 +71,7 @@
         placeholder="Enter email"
         noSpaces={true}
       />
-      <button type="button" disabled={!emailIsValid} onclick={advanceStage}>Next</button>
+      <Button type="primary" label="Next" onClick={advanceStage} disabled={!emailIsValid} />
     </div>
     <div class="slide">
       <InputField
@@ -81,6 +83,9 @@
         placeholder="Enter password"
         noSpaces={true}
       />
+      <Button type="primary" label="Next" onClick={advanceStage} disabled={!passwordIsValid} />
+    </div>
+    <div class="slide">
       <InputField
         type="password"
         getError={passwordRepeatedGetError}
@@ -90,11 +95,12 @@
         placeholder="Enter password"
         noSpaces={true}
       />
-      <button
-        type="button"
-        disabled={!passwordIsValid || !passwordRepeatedIsValid}
-        onclick={makeRequest}>Sign up</button
-      >
+      <Button
+        type="primary"
+        label="Sign up"
+        onClick={makeRequest}
+        disabled={!passwordRepeatedIsValid}
+      />
     </div>
   </div>
 </div>
@@ -109,17 +115,21 @@
   }
 
   .main {
-    width: 16rem;
-    height: 10rem;
+    width: 18rem;
     display: flex;
     flex-direction: row;
     overflow: hidden;
+    background-color: var(--bg-primary);
+    border-radius: var(--border-radius-large);
   }
 
   .slide {
-    width: 16rem;
-    height: 100%;
+    padding: calc(var(--m-4) + var(--input-field-vert-margin)) var(--m-4) var(--m-4);
+    width: 100%;
     flex-shrink: 0;
     transition: margin-left ease-in-out 0.5s;
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
   }
 </style>

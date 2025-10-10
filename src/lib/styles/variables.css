@@ -30,4 +30,6 @@
 
   --navbar-height: 4rem;
   --button-height: 2.2rem;
+
+  --input-field-vert-margin: calc(var(--font-small) + var(--m-1));
 }
