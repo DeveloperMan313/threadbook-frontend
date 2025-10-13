@@ -1,6 +1,7 @@
 <script lang="ts">
   import Button from '$lib/templates/Button.svelte';
   import Navbar from '$lib/templates/Navbar.svelte';
+  import SpoolDock from '$lib/templates/SpoolDock.svelte';
   import ThreadListSection from '$lib/templates/ThreadListSection.svelte';
   import type { PageProps } from './$types';
 
@@ -9,12 +10,18 @@
 
 <Navbar />
 <div class="container">
-  <div class="spool-list"></div>
+  <SpoolDock spools={data.spools} />
   <div class="thread-list">
     <Button type="primary" label="New thread" onClick={() => alert('New thread')} />
-    <ThreadListSection title="Private" entries={data.threads.private} expanded={true} />
-    <ThreadListSection title="Public" entries={data.threads.public} expanded={true} />
-    <ThreadListSection title="History" entries={data.threads.history} expanded={false} />
+    {#await data.threads}
+      <p>Loading threads...</p>
+    {:then threads}
+      <ThreadListSection title="Private" entries={threads.private} expanded={true} />
+      <ThreadListSection title="Public" entries={threads.public} expanded={true} />
+      <ThreadListSection title="History" entries={threads.history} expanded={false} />
+    {:catch error}
+      <p>Error loading threads: {error.message}</p>
+    {/await}
   </div>
   <div class="main">
     <div class="chat-section"></div>
@@ -31,12 +38,6 @@
     right: 0;
     display: flex;
     flex-direction: row;
-  }
-
-  .spool-list {
-    width: 6rem;
-    flex-shrink: 0;
-    background-color: var(--bg-primary);
   }
 
   .thread-list {

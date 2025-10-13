@@ -70,6 +70,7 @@
   }
 
   .modal {
+    width: 30rem;
     padding: var(--m-4);
     background-color: var(--bg-primary);
     border-radius: var(--border-radius-large);
