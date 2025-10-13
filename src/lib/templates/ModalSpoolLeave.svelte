@@ -3,13 +3,13 @@
   import Button from './Button.svelte';
   import Modal from './Modal.svelte';
 
-  let { spoolProps, isOpen = $bindable() }: ModalSpoolLeaveProps = $props();
+  let { spoolName, isOpen = $bindable() }: ModalSpoolLeaveProps = $props();
 </script>
 
 <Modal title="Leave spool" bind:isOpen>
   {#snippet body()}
     <p>
-      Are you sure you want to leave from spool "{spoolProps.name}"? You will not be able to return
+      Are you sure you want to leave from spool "{spoolName}"? You will not be able to return
       without an invite.
     </p>
   {/snippet}
@@ -27,7 +27,7 @@
       label="Leave"
       onClick={() => {
         isOpen = false;
-        alert(`Leave from spool "${spoolProps.name}"`);
+        alert(`Leave from spool "${spoolName}"`);
       }}
     ></Button>
   {/snippet}

@@ -1,5 +1,5 @@
 import { ApiClient } from './client';
-import type { SpoolProps, SpoolDockProps } from '$lib/types';
+import type { SpoolProps, SpoolDockProps, GetSpoolInfoRequest } from '$lib/types';
 
 const MockGetUserSpoolList: SpoolDockProps = {
   spools: [
@@ -55,16 +55,14 @@ export const SpoolApi = {
 
   /**
    * Get spool info by id
-   * @param {number} spool_id - spool id
+   * @param {GetSpoolInfoRequest} request - request object
    * @returns {Promise<SpoolProps>} - API response
    */
-  async getSpoolInfo(spool_id: number): Promise<SpoolProps> {
+  async getSpoolInfo(request: GetSpoolInfoRequest): Promise<SpoolProps> {
     return MockGetSpoolInfoRes;
     return ApiClient.fetchJSON('/spool/get', {
       method: 'GET',
-      body: JSON.stringify({
-        spool_id
-      })
+      body: JSON.stringify(request)
     }) as Promise<SpoolProps>;
   }
 };

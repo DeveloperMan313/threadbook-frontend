@@ -25,7 +25,7 @@ export const ApiClient = {
     return response;
   },
 
-  async fetchJSON(inputRelative: string, init?: RequestInit): Promise<object> {
+  async fetchJSON(inputRelative: string, init?: RequestInit) {
     const response = await ApiClient.fetch(inputRelative, init);
     const json = await response.json();
     if (!response.ok) {
