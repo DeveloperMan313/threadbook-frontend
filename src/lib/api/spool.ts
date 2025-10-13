@@ -45,9 +45,9 @@ export const SpoolApi = {
    * @returns {Promise<SpoolDockProps>} - API response
    */
   async getUserSpoolList(): Promise<SpoolDockProps> {
-    await new Promise((r) => setTimeout(r, 1500)); // emulate API delay
-    return MockGetUserSpoolList;
-    return ApiClient.fetchJSON('/spool/get', {
+    // await new Promise((r) => setTimeout(r, 1500)); // emulate API delay
+    // return MockGetUserSpoolList;
+    return ApiClient.fetchJSON('/spool/user', {
       method: 'GET',
       headers: {}
     }) as Promise<SpoolDockProps>;
@@ -59,8 +59,8 @@ export const SpoolApi = {
    * @returns {Promise<SpoolProps>} - API response
    */
   async getSpoolInfo(request: GetSpoolInfoRequest): Promise<SpoolProps> {
-    return MockGetSpoolInfoRes;
-    return ApiClient.fetchJSON('/spool/get', {
+    // return MockGetSpoolInfoRes;
+    return ApiClient.fetchJSON(`/spool/${request.spool_id}`, {
       method: 'GET',
       body: JSON.stringify(request)
     }) as Promise<SpoolProps>;

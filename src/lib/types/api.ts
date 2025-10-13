@@ -33,9 +33,10 @@ export interface CreateThreadRequest {
   spool_id: number;
 }
 
-export interface RenameThreadRequest {
+export interface UpdateThreadRequest {
   id: number;
   title: string;
+  type: string;
 }
 
 export interface Credentials {

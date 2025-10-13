@@ -85,12 +85,13 @@ export interface SpoolDockProps {
   spools: Array<SpoolProps>;
 }
 
-export type ThreadType = 'private' | 'public' | 'history';
+export type ThreadType = 'private' | 'public';
 
 export interface ThreadEntryProps {
   id: number;
   title: string;
   type: ThreadType;
+  is_closed: boolean;
   unreadCnt: number;
   mentionCnt: number;
 }
