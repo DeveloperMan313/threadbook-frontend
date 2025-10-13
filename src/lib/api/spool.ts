@@ -1,8 +1,7 @@
 import { ApiClient } from './client';
-import type { SpoolInfo, UserSpoolsInfo } from '$lib/types';
+import type { SpoolProps, SpoolDockProps } from '$lib/types';
 
-const MockGetUserSpoolList: UserSpoolsInfo = {
-  ok: true,
+const MockGetUserSpoolList: SpoolDockProps = {
   spools: [
     {
       id: 1,
@@ -31,8 +30,7 @@ const MockGetUserSpoolList: UserSpoolsInfo = {
   ]
 };
 
-const MockGetSpoolInfoRes: SpoolInfo = {
-  ok: true,
+const MockGetSpoolInfoRes: SpoolProps = {
   id: 1,
   name: 'Spool 1',
   banner_link: '',
@@ -44,33 +42,29 @@ const MockGetSpoolInfoRes: SpoolInfo = {
 export const SpoolApi = {
   /**
    * Get spools which user is a member of
-   * @returns {Promise<MockGetUserSpoolList>} - API response
+   * @returns {Promise<SpoolDockProps>} - API response
    */
-  async getUserSpoolList(): Promise<UserSpoolsInfo> {
+  async getUserSpoolList(): Promise<SpoolDockProps> {
     await new Promise((r) => setTimeout(r, 1500)); // emulate API delay
     return MockGetUserSpoolList;
-    const response = await ApiClient.fetch('/spool/get', {
+    return ApiClient.fetchJSON('/spool/get', {
       method: 'GET',
       headers: {}
-    });
-    const json = await response.json();
-    return { ok: response.ok, ...json };
+    }) as Promise<SpoolDockProps>;
   },
 
   /**
    * Get spool info by id
    * @param {number} spool_id - spool id
-   * @returns {Promise<SpoolInfo>} - API response
+   * @returns {Promise<SpoolProps>} - API response
    */
-  async getSpoolInfo(spool_id: number): Promise<SpoolInfo> {
+  async getSpoolInfo(spool_id: number): Promise<SpoolProps> {
     return MockGetSpoolInfoRes;
-    const response = await ApiClient.fetch('/spool/get', {
+    return ApiClient.fetchJSON('/spool/get', {
       method: 'GET',
       body: JSON.stringify({
         spool_id
       })
-    });
-    const json = await response.json();
-    return { ok: response.ok, ...json };
+    }) as Promise<SpoolProps>;
   }
 };

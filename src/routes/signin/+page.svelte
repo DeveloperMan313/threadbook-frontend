@@ -19,17 +19,16 @@
   };
 
   const makeRequest = async () => {
-    const response = await AuthApi.logIn({
-      email: emailValue,
-      password: passwordValue
-    });
+    try {
+      await AuthApi.logIn({
+        email: emailValue,
+        password: passwordValue
+      });
 
-    if (!response.ok) {
-      alert(response.error);
-      return;
+      goto(resolve('/spools'));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Login failed');
     }
-
-    goto(resolve('/spools'));
   };
 </script>
 
