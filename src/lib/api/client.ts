@@ -18,9 +18,10 @@ export const ApiClient = {
 
     const response = await fetch(PUBLIC_API_ORIGIN + inputRelative, init);
 
-    if (response.status >= 500) {
-      alert('Service unavailable');
-    }
+    // turned off because i worry for epileptic people
+    // if (response.status >= 500) {
+    //   alert('Service unavailable');
+    // }
 
     return response;
   },

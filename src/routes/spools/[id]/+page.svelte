@@ -20,10 +20,9 @@
   setContext('threads', {
     archiveThread: (id: number) => {
       let thread = threads.filter((t) => t.id == id)[0];
-      const oldThreadType = thread.type;
-      thread.type = 'history';
+      thread.is_closed = true;
       ThreadApi.archiveThread({ id }).catch(() => {
-        thread.type = oldThreadType;
+        thread.is_closed = false;
       });
     },
     createThread: (title: string, type: ThreadType) => {
@@ -39,10 +38,11 @@
       });
     },
     renameThread: (id: number, title: string) => {
+      // TODO: rename to updateThread and add arg type: ThreadType
       let thread = threads.filter((t) => t.id == id)[0];
       const oldThreadTitle = thread.title;
       thread.title = title;
-      ThreadApi.renameThread({ id, title }).catch(() => {
+      ThreadApi.updateThread({ id, title, type: thread.type }).catch(() => {
         thread.title = oldThreadTitle;
       });
     }
