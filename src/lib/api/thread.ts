@@ -1,9 +1,8 @@
 import { ApiClient } from './client';
-import type { ThreadInfo } from '$lib/types';
+import type { ThreadEntryProps } from '$lib/types';
 
-const MockGetSpoolThreads: Array<ThreadInfo> = [
+const MockGetSpoolThreads: Array<ThreadEntryProps> = [
   {
-    ok: true,
     id: 1,
     title: 'my secret lair',
     type: 'private',
@@ -11,7 +10,6 @@ const MockGetSpoolThreads: Array<ThreadInfo> = [
     mentionCnt: 1
   },
   {
-    ok: true,
     id: 2,
     title: 'great surprise',
     type: 'private',
@@ -19,7 +17,6 @@ const MockGetSpoolThreads: Array<ThreadInfo> = [
     mentionCnt: 0
   },
   {
-    ok: true,
     id: 3,
     title: 'general',
     type: 'public',
@@ -27,7 +24,6 @@ const MockGetSpoolThreads: Array<ThreadInfo> = [
     mentionCnt: 3
   },
   {
-    ok: true,
     id: 4,
     title: 'memes',
     type: 'public',
@@ -35,7 +31,6 @@ const MockGetSpoolThreads: Array<ThreadInfo> = [
     mentionCnt: 0
   },
   {
-    ok: true,
     id: 5,
     title: 'gaming 04.09 night',
     type: 'history',
@@ -43,7 +38,6 @@ const MockGetSpoolThreads: Array<ThreadInfo> = [
     mentionCnt: 0
   },
   {
-    ok: true,
     id: 6,
     title: 'discussion abt dogs',
     type: 'history',
@@ -56,18 +50,16 @@ export const ThreadApi = {
   /**
    * Get threads in a spool
    * @param {number} spool_id - spool id
-   * @returns {Promise<Array<ThreadInfo>>} - API response
+   * @returns {Promise<Array<ThreadEntryProps>>} - API response
    */
-  async getSpoolThreads(spool_id: number): Promise<Array<ThreadInfo>> {
+  async getSpoolThreads(spool_id: number): Promise<Array<ThreadEntryProps>> {
     await new Promise((r) => setTimeout(r, 2000)); // emulate API delay
     return MockGetSpoolThreads;
-    const response = await ApiClient.fetch('/thread/get', {
+    return ApiClient.fetchJSON('/thread/get', {
       method: 'GET',
       body: JSON.stringify({
         spool_id
       })
-    });
-    const json = await response.json();
-    return { ok: response.ok, ...json };
+    }) as Promise<Array<ThreadEntryProps>>;
   }
 };

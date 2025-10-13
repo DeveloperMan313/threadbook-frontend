@@ -32,18 +32,17 @@
   };
 
   const makeRequest = async () => {
-    const response = await AuthApi.register({
-      username: usernameValue,
-      email: emailValue,
-      password: passwordValue
-    });
+    try {
+      await AuthApi.register({
+        username: usernameValue,
+        email: emailValue,
+        password: passwordValue
+      });
 
-    if (!response.ok) {
-      alert(response.error);
-      return;
+      goto(resolve('/spools'));
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Registration failed');
     }
-
-    goto(resolve('/spools'));
   };
 </script>
 
