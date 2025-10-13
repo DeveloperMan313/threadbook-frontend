@@ -1,6 +1,10 @@
 import type { Snippet } from 'svelte';
 
 /**
+ * Component properties interfaces
+ */
+
+/**
  * Button click callback
  * @param {MouseEvent} event - mouse click event
  */
@@ -47,12 +51,24 @@ export interface ModalProps {
 }
 
 export interface ModalSpoolLeaveProps {
-  spoolProps: SpoolProps;
+  spoolId: number;
+  spoolName: string;
   isOpen: boolean; // bindable
 }
 
-export interface ModalThreadDeleteProps {
-  threadEntryProps: ThreadEntryProps;
+export interface ModalThreadArchiveProps {
+  threadId: number;
+  threadTitle: string;
+  isOpen: boolean; // bindable
+}
+
+export interface ModalThreadCreateProps {
+  isOpen: boolean; // bindable
+}
+
+export interface ModalThreadRenameProps {
+  threadId: number;
+  threadTitle: string;
   isOpen: boolean; // bindable
 }
 
@@ -69,10 +85,12 @@ export interface SpoolDockProps {
   spools: Array<SpoolProps>;
 }
 
+export type ThreadType = 'private' | 'public' | 'history';
+
 export interface ThreadEntryProps {
   id: number;
   title: string;
-  type: 'private' | 'public' | 'history';
+  type: ThreadType;
   unreadCnt: number;
   mentionCnt: number;
 }

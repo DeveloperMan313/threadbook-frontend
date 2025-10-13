@@ -1,26 +1,27 @@
 <script lang="ts">
   import type { ContextMenuEntry, ThreadEntryProps } from '$lib/types';
   import { openContextMenuHandler } from './ContextMenu.svelte';
-  import ModalThreadDelete from './ModalThreadDelete.svelte';
+  import ModalThreadArchive from './ModalThreadArchive.svelte';
+  import ModalThreadRename from './ModalThreadRename.svelte';
 
-  const thisProps: ThreadEntryProps = $props();
-  const { title, unreadCnt, mentionCnt }: ThreadEntryProps = thisProps;
+  let { id, title, unreadCnt, mentionCnt }: ThreadEntryProps = $props();
 
-  let isThreadDeleteModalOpen = $state(false);
+  let isThreadRenameModalOpen = $state(false);
+  let isThreadArchiveModalOpen = $state(false);
 
   const contextMenuEntries: Array<ContextMenuEntry> = [
     {
       type: 'neutral',
       label: 'Rename',
       onClick: () => {
-        alert('Rename thread');
+        isThreadRenameModalOpen = true;
       }
     },
     {
       type: 'danger',
-      label: 'Delete',
+      label: 'Archive',
       onClick: () => {
-        isThreadDeleteModalOpen = true;
+        isThreadArchiveModalOpen = true;
       }
     }
   ];
@@ -37,7 +38,8 @@
     {/if}
   </div>
 </button>
-<ModalThreadDelete threadEntryProps={thisProps} bind:isOpen={isThreadDeleteModalOpen} />
+<ModalThreadRename threadId={id} threadTitle={title} bind:isOpen={isThreadRenameModalOpen} />
+<ModalThreadArchive threadId={id} threadTitle={title} bind:isOpen={isThreadArchiveModalOpen} />
 
 <style>
   .thread-entry {

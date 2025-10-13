@@ -1,5 +1,11 @@
 import { ApiClient } from './client';
-import type { ThreadEntryProps } from '$lib/types';
+import type {
+  ArchiveThreadRequest,
+  CreateThreadRequest,
+  GetSpoolThreadsRequest,
+  RenameThreadRequest,
+  ThreadEntryProps
+} from '$lib/types';
 
 const MockGetSpoolThreads: Array<ThreadEntryProps> = [
   {
@@ -49,17 +55,56 @@ const MockGetSpoolThreads: Array<ThreadEntryProps> = [
 export const ThreadApi = {
   /**
    * Get threads in a spool
-   * @param {number} spool_id - spool id
+   * @param {GetSpoolThreadsRequest} request - request object
    * @returns {Promise<Array<ThreadEntryProps>>} - API response
    */
-  async getSpoolThreads(spool_id: number): Promise<Array<ThreadEntryProps>> {
+  async getSpoolThreads(request: GetSpoolThreadsRequest): Promise<Array<ThreadEntryProps>> {
     await new Promise((r) => setTimeout(r, 2000)); // emulate API delay
     return MockGetSpoolThreads;
-    return ApiClient.fetchJSON('/thread/get', {
+    return ApiClient.fetchJSON(`/thread/?spool_id=${request.spool_id}`, {
       method: 'GET',
+      headers: {}
+    });
+  },
+
+  /**
+   * Archive thread
+   * @param {ArchiveThreadRequest} request - request object
+   */
+  async archiveThread(request: ArchiveThreadRequest) {
+    await new Promise((r) => setTimeout(r, 750)); // emulate API delay
+    return {};
+    return ApiClient.fetchJSON(`/thread/close?id=${request.id}`, {
+      method: 'PUT',
+      headers: {}
+    });
+  },
+
+  /**
+   * Create thread
+   * @param {CreateThreadRequest} request - request object
+   */
+  async createThread(request: CreateThreadRequest) {
+    await new Promise((r) => setTimeout(r, 750)); // emulate API delay
+    return {};
+    return ApiClient.fetchJSON('/thread/create', {
+      method: 'POST',
+      body: JSON.stringify(request)
+    });
+  },
+
+  /**
+   * Rename thread
+   * @param {RenameThreadRequest} request - request object
+   */
+  async renameThread(request: RenameThreadRequest) {
+    await new Promise((r) => setTimeout(r, 500)); // emulate API delay
+    return {};
+    return ApiClient.fetchJSON(`/thread/rename?id=${request.id}`, {
+      method: 'PUT',
       body: JSON.stringify({
-        spool_id
+        title: request.title
       })
-    }) as Promise<Array<ThreadEntryProps>>;
+    });
   }
 };

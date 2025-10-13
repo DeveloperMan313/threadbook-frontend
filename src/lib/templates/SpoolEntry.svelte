@@ -4,8 +4,7 @@
   import { openContextMenuHandler } from './ContextMenu.svelte';
   import ModalSpoolLeave from './ModalSpoolLeave.svelte';
 
-  const thisProps: SpoolProps = $props();
-  const { id, name, banner_link }: SpoolProps = thisProps;
+  const { id, name, banner_link }: SpoolProps = $props();
 
   let isSpoolLeaveModalOpen = $state(false);
 
@@ -35,7 +34,7 @@
   <img class="banner" src={banner_link} alt={name} />
   <p class="title">{name}</p>
 </a>
-<ModalSpoolLeave spoolProps={thisProps} bind:isOpen={isSpoolLeaveModalOpen} />
+<ModalSpoolLeave spoolId={id} spoolName={name} bind:isOpen={isSpoolLeaveModalOpen} />
 
 <style>
   .spool-entry {
