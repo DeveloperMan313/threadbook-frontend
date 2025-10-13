@@ -1,28 +1,18 @@
-import type { SpoolCardProps, ThreadEntryProps } from './components';
+import type { SpoolProps, SpoolDockProps, ThreadEntryProps } from './components';
 
-/**
- * Base API response
- */
 export interface ApiResponse {
   ok: boolean;
   error?: string;
 }
 
-/**
- * Auth credentials
- */
 export interface Credentials {
   username?: string;
   email: string;
   password: string;
 }
 
-/**
- * Spool info
- */
-export interface SpoolInfo extends ApiResponse, SpoolCardProps {}
+export interface SpoolInfo extends ApiResponse, SpoolProps {}
 
-/**
- * Thread info
- */
+export interface UserSpoolsInfo extends ApiResponse, SpoolDockProps {}
+
 export interface ThreadInfo extends ApiResponse, ThreadEntryProps {}

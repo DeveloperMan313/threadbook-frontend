@@ -46,18 +46,27 @@ export interface ModalProps {
   onClose?: () => void;
 }
 
+export interface ModalSpoolLeaveProps {
+  spoolProps: SpoolProps;
+  isOpen: boolean; // bindable
+}
+
 export interface ModalThreadDeleteProps {
   threadEntryProps: ThreadEntryProps;
   isOpen: boolean; // bindable
 }
 
-export interface SpoolCardProps {
+export interface SpoolProps {
   id: number;
   name: string;
   banner_link: string;
   description: string;
   members: number;
   threads: number;
+}
+
+export interface SpoolDockProps {
+  spools: Array<SpoolProps>;
 }
 
 export interface ThreadEntryProps {

@@ -59,6 +59,7 @@ export const ThreadApi = {
    * @returns {Promise<Array<ThreadInfo>>} - API response
    */
   async getSpoolThreads(spool_id: number): Promise<Array<ThreadInfo>> {
+    await new Promise((r) => setTimeout(r, 2000)); // emulate API delay
     return MockGetSpoolThreads;
     const response = await ApiClient.fetch('/thread/get', {
       method: 'GET',

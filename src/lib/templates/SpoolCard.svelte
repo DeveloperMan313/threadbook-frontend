@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { SpoolCardProps } from '$lib/types';
+  import type { SpoolProps } from '$lib/types';
   import usersIcon from '$lib/assets/icons/users.svg';
   import threadsIcon from '$lib/assets/icons/threads.svg';
   import { resolve } from '$app/paths';
 
-  const { id, name, description, members, threads }: SpoolCardProps = $props();
+  const { id, name, description, members, threads }: SpoolProps = $props();
 </script>
 
 <a class="spool-card" href={resolve(`/spools/${id}`)}>
