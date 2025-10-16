@@ -151,10 +151,13 @@
         detachTrack(p.identity);
       });
 
-      await room.connect('ws://localhost:7880', token);
+      // Устанавливаем обработчик connected ДО подключения
+      room.on('connected', () => {
+        // Теперь remoteParticipants гарантированно заполнен
+        room!.remoteParticipants.forEach((p) => handleParticipant(p));
+      });
 
-      // После подключения — обрабатываем всех уже подключённых участников
-      room.remoteParticipants.forEach((p) => handleParticipant(p));
+      await room.connect('ws://localhost:7880', token);
 
       const tracks = await room.localParticipant.createTracks({
         // СЮДА ПОТОМ ИИ МОЖНО ИНТЕГРИРОВАТЬ, но работать он будет ток в Electron
