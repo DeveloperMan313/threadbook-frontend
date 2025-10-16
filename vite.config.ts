@@ -16,7 +16,7 @@ export default defineConfig({
 		proxy: {
 			// Проксируем все /api → на Go-бэкенд
 			'/api': {
-				target: 'http://api:8080', // порт Go-сервера
+				target: 'http://localhost:8080', // порт Go-сервера
 				changeOrigin: true,
 				secure: false,
 			},

@@ -24,10 +24,7 @@
   let audioElements = new Map<string, HTMLAudioElement>();
   let localVideoEl: HTMLVideoElement | null = null;
 
-  // Защита от SSR
   const isBrowser = typeof document !== 'undefined';
-
-  // Для отложенной привязки видео
   let pendingLocalVideoTrack: LocalTrack | null = null;
 
   async function getToken() {
@@ -46,18 +43,18 @@
     return token;
   }
 
-  function attachAudioTrack(track: RemoteTrack, participant: RemoteParticipant) {
+  function attachAudioTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
     const element = track.attach() as HTMLAudioElement;
-    element.dataset.participant = participant.identity;
+    element.dataset.participant = participantId;
     element.muted = isOthersMuted;
-    element.volume = volumes[participant.identity] ?? 1;
+    element.volume = volumes[participantId] ?? 1;
     element.style.display = 'none';
     document.body.appendChild(element);
-    audioElements.set(participant.identity, element);
+    audioElements.set(participantId, element);
   }
 
-  function attachVideoTrack(track: RemoteTrack, participant: RemoteParticipant) {
+  function attachVideoTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
     const element = track.attach() as HTMLVideoElement;
     element.autoplay = true;
@@ -66,7 +63,7 @@
     element.className = 'video-preview';
 
     const container = document.querySelector(
-      `.video-container[data-participant="${participant.identity}"]`
+      `.video-container[data-participant="${participantId}"]`
     );
     if (container) {
       container.innerHTML = '';
@@ -107,12 +104,13 @@
   }
 
   function handleParticipant(participant: RemoteParticipant) {
+    // Обработка будущих публикаций
     participant.on('trackPublished', (pub: RemoteTrackPublication) => {
       pub.on('subscribed', (track: RemoteTrack) => {
         if (track.kind === 'audio') {
-          attachAudioTrack(track, participant);
+          attachAudioTrack(track, participant.identity);
         } else if (track.kind === 'video') {
-          attachVideoTrack(track, participant);
+          attachVideoTrack(track, participant.identity);
         }
       });
 
@@ -121,19 +119,17 @@
       });
     });
 
-    participant.on('trackUnpublished', (pub: RemoteTrackPublication) => {
-      if (pub.kind === 'audio' || pub.kind === 'video') {
-        detachTrack(participant.identity);
-      }
-    });
-
+    // Обработка УЖЕ существующих публикаций
     participant.trackPublications.forEach((pub) => {
-      if (pub.track) {
+      if (pub.isSubscribed && pub.track) {
         if (pub.track.kind === 'audio') {
-          attachAudioTrack(pub.track, participant);
+          attachAudioTrack(pub.track, participant.identity);
         } else if (pub.track.kind === 'video') {
-          attachVideoTrack(pub.track, participant);
+          attachVideoTrack(pub.track, participant.identity);
         }
+      } else if (!pub.isSubscribed) {
+        // Подписываемся явно, если ещё не подписаны
+        pub.setSubscribed(true);
       }
     });
 
@@ -148,27 +144,17 @@
       const token = await getToken();
       room = new Room();
 
+      // Устанавливаем обработчики ДО подключения
       room.on('participantConnected', (p) => handleParticipant(p));
       room.on('participantDisconnected', (p) => {
         participants = participants.filter((part) => part.identity !== p.identity);
         detachTrack(p.identity);
       });
 
-      room.on('connected', () => {
-        if (!isBrowser) return;
-        audioElements.forEach((el) => el.remove());
-        audioElements.clear();
-        volumes = {};
-        participants = [];
-
-        document.querySelectorAll('.video-container').forEach((el) => {
-          (el as HTMLElement).innerHTML = '';
-        });
-
-        room!.remoteParticipants.forEach((p) => handleParticipant(p));
-      });
-
       await room.connect('ws://localhost:7880', token);
+
+      // После подключения — обрабатываем всех уже подключённых участников
+      room.remoteParticipants.forEach((p) => handleParticipant(p));
 
       const tracks = await room.localParticipant.createTracks({
         // СЮДА ПОТОМ ИИ МОЖНО ИНТЕГРИРОВАТЬ, но работать он будет ток в Electron
@@ -223,7 +209,6 @@
     volumes = {};
   }
 
-  // Автоматически привязать локальное видео, когда элемент появится
   $: {
     if (localVideoEl && pendingLocalVideoTrack) {
       pendingLocalVideoTrack.attach(localVideoEl);
@@ -243,7 +228,6 @@
     <p class="error">{error}</p>
   {/if}
 
-  <!-- Локальное видео -->
   {#if isConnected}
     <div class="local-video-container">
       <video bind:this={localVideoEl} class="local-video" autoplay playsinline muted />
