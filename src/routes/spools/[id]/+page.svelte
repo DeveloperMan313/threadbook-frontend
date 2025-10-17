@@ -67,17 +67,17 @@
     {:else}
       <ThreadListSection
         title="Private"
-        entries={threads.filter((t) => t.type == 'private')}
+        entries={threads.filter((t) => !t.is_closed && t.type == 'private')}
         expanded={true}
       />
       <ThreadListSection
         title="Public"
-        entries={threads.filter((t) => t.type == 'public')}
+        entries={threads.filter((t) => !t.is_closed && t.type == 'public')}
         expanded={true}
       />
       <ThreadListSection
         title="History"
-        entries={threads.filter((t) => t.type == 'history')}
+        entries={threads.filter((t) => t.is_closed)}
         expanded={false}
       />
     {/if}

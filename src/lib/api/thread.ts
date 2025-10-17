@@ -80,9 +80,9 @@ export const ThreadApi = {
   async archiveThread(request: ArchiveThreadRequest) {
     // await new Promise((r) => setTimeout(r, 750)); // emulate API delay
     // return {};
-    return ApiClient.fetchJSON('/thread/close', {
+    return ApiClient.fetchJSON(`/thread/close?id=${request.id}`, {
       method: 'PUT',
-      body: JSON.stringify(request)
+      headers: {}
     });
   },
 
