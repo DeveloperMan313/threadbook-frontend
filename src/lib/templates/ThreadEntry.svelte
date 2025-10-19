@@ -1,10 +1,33 @@
 <script lang="ts">
-  import type { ThreadEntryProps } from '$lib/types';
+  import type { ContextMenuEntry, ThreadEntryProps } from '$lib/types';
+  import { openContextMenuHandler } from './ContextMenu.svelte';
+  import ModalThreadArchive from './ModalThreadArchive.svelte';
+  import ModalThreadRename from './ModalThreadRename.svelte';
 
-  const { title, unreadCnt, mentionCnt }: ThreadEntryProps = $props();
+  let { id, title, unreadCnt, mentionCnt }: ThreadEntryProps = $props();
+
+  let isThreadRenameModalOpen = $state(false);
+  let isThreadArchiveModalOpen = $state(false);
+
+  const contextMenuEntries: Array<ContextMenuEntry> = [
+    {
+      type: 'neutral',
+      label: 'Rename',
+      onClick: () => {
+        isThreadRenameModalOpen = true;
+      }
+    },
+    {
+      type: 'danger',
+      label: 'Archive',
+      onClick: () => {
+        isThreadArchiveModalOpen = true;
+      }
+    }
+  ];
 </script>
 
-<div class="thread-entry">
+<button class="thread-entry" oncontextmenu={openContextMenuHandler(contextMenuEntries)}>
   <p class="title">{title}</p>
   <div class="info">
     {#if mentionCnt > 0}
@@ -14,7 +37,9 @@
       <p class="unread-cnt">{unreadCnt}</p>
     {/if}
   </div>
-</div>
+</button>
+<ModalThreadRename threadId={id} threadTitle={title} bind:isOpen={isThreadRenameModalOpen} />
+<ModalThreadArchive threadId={id} threadTitle={title} bind:isOpen={isThreadArchiveModalOpen} />
 
 <style>
   .thread-entry {
@@ -24,8 +49,21 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    background-color: var(--bg-primary);
-    border-radius: var(--border-radius);
+    background-color: var(--bg-default);
+    border: none;
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+
+    --bg-default: var(--bg-primary);
+    --bg-dark: var(--bg-primary-dark);
+  }
+
+  .thread-entry:hover {
+    background-color: color-mix(in srgb, var(--bg-default), var(--bg-dark));
+  }
+
+  .thread-entry:active {
+    background-color: var(--bg-dark);
   }
 
   .info {
@@ -40,7 +78,7 @@
     height: var(--font-small);
     color: var(--text-inverted);
     background-color: var(--active-primary);
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-small);
     text-align: center;
   }
 

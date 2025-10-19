@@ -2,9 +2,9 @@
   import Navbar from '$lib/templates/Navbar.svelte';
   import SpoolCard from '$lib/templates/SpoolCard.svelte';
   import VoiceChat from '$lib/templates/VoiceChat.svelte';
-  import type { PageProps } from './$types';
+  import type { LayoutProps } from './$types';
 
-  let { data }: PageProps = $props();
+  let { data }: LayoutProps = $props();
 </script>
 
 <Navbar />

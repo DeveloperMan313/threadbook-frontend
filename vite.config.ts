@@ -3,23 +3,22 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-	plugins: [
-		sveltekit(),
-		paraglideVitePlugin({
-			project: './project.inlang',
-			outdir: './src/lib/paraglide'
-		})
-	],
+  plugins: [
+    sveltekit(),
+    paraglideVitePlugin({
+      project: './project.inlang',
+      outdir: './src/lib/paraglide'
+    })
+  ],
 
-	// 👇 ВРЕМЕННЫЙ ПРОКСИ ДЛЯ DEV
-	server: {
-		proxy: {
-			// Проксируем все /api → на Go-бэкенд
-			'/api': {
-				target: 'http://localhost:8080', // порт Go-сервера
-				changeOrigin: true,
-				secure: false,
-			},
-		}
-	}
+  // temp dev proxy
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false
+      }
+    }
+  }
 });

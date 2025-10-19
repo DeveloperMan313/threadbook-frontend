@@ -1,3 +1,36 @@
+import type { Snippet } from 'svelte';
+
+/**
+ * Component properties interfaces
+ */
+
+/**
+ * Button click callback
+ * @param {MouseEvent} event - mouse click event
+ */
+export type ClickCallback = (event: MouseEvent) => void;
+
+export interface ButtonProps {
+  type: 'primary' | 'neutral' | 'subtle' | 'danger';
+  label: string;
+  onClick: ClickCallback;
+  thin?: boolean;
+  disabled?: boolean;
+}
+
+export interface ContextMenuEntry {
+  type: 'neutral' | 'danger';
+  label: string;
+  onClick: ClickCallback;
+}
+
+export interface ContextMenuProps {
+  posXpx: number;
+  posYpx: number;
+  entries: Array<ContextMenuEntry>;
+  onClose: () => void;
+}
+
 export interface InputFieldProps {
   type: 'text' | 'email' | 'password';
   getError: (value: string) => string | null;
@@ -9,7 +42,37 @@ export interface InputFieldProps {
   noSpaces?: boolean;
 }
 
-export interface SpoolCardProps {
+export interface ModalProps {
+  title: string;
+  body: Snippet;
+  buttons: Snippet;
+  isOpen: boolean; // bindable
+  onClose?: () => void;
+}
+
+export interface ModalSpoolLeaveProps {
+  spoolId: number;
+  spoolName: string;
+  isOpen: boolean; // bindable
+}
+
+export interface ModalThreadArchiveProps {
+  threadId: number;
+  threadTitle: string;
+  isOpen: boolean; // bindable
+}
+
+export interface ModalThreadCreateProps {
+  isOpen: boolean; // bindable
+}
+
+export interface ModalThreadRenameProps {
+  threadId: number;
+  threadTitle: string;
+  isOpen: boolean; // bindable
+}
+
+export interface SpoolProps {
   id: number;
   name: string;
   banner_link: string;
@@ -18,10 +81,17 @@ export interface SpoolCardProps {
   threads: number;
 }
 
+export interface SpoolDockProps {
+  spools: Array<SpoolProps>;
+}
+
+export type ThreadType = 'private' | 'public';
+
 export interface ThreadEntryProps {
   id: number;
   title: string;
-  type: 'private' | 'public' | 'history';
+  type: ThreadType;
+  is_closed: boolean;
   unreadCnt: number;
   mentionCnt: number;
 }

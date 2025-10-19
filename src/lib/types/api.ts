@@ -1,28 +1,46 @@
-import type { SpoolCardProps, ThreadEntryProps } from './components';
+import type { ThreadType } from './components';
 
 /**
- * Base API response
+ * API request and response interfaces
  */
-export interface ApiResponse {
-  ok: boolean;
-  error?: string;
-}
 
-/**
- * Auth credentials
- */
-export interface Credentials {
+export interface RegisterRequest {
   username?: string;
   email: string;
   password: string;
 }
 
-/**
- * Spool info
- */
-export interface SpoolInfo extends ApiResponse, SpoolCardProps {}
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
 
-/**
- * Thread info
- */
-export interface ThreadInfo extends ApiResponse, ThreadEntryProps {}
+export interface GetSpoolInfoRequest {
+  spool_id: number;
+}
+
+export interface GetSpoolThreadsRequest {
+  spool_id: number;
+}
+
+export interface ArchiveThreadRequest {
+  id: number;
+}
+
+export interface CreateThreadRequest {
+  title: string;
+  type: ThreadType;
+  spool_id: number;
+}
+
+export interface UpdateThreadRequest {
+  id: number;
+  title: string;
+  type: string;
+}
+
+export interface Credentials {
+  username?: string;
+  email: string;
+  password: string;
+}

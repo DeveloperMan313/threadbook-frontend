@@ -1,5 +1,6 @@
 :root {
   --bg-primary: #f8f5f0;
+  --bg-primary-dark: #e4ded5;
   --bg-secondary: #f3efe7;
 
   --active-primary: #81b29a;
@@ -17,7 +18,8 @@
   --font-medium: 1.375rem;
   --font-large: 1.75rem;
 
-  --border-radius: 1rem;
+  --border-radius-small: 0.5rem;
+  --border-radius-large: 1rem;
   --border-width: 0.125rem;
 
   --m-1: 0.25rem;
@@ -27,4 +29,7 @@
   --m-5: 3rem;
 
   --navbar-height: 4rem;
+  --button-height: 2.2rem;
+
+  --input-field-vert-margin: calc(var(--font-small) + var(--m-1));
 }
