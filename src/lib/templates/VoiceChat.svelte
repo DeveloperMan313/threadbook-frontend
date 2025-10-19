@@ -1,11 +1,10 @@
-<script context="module">
-  export const ssr = false;
-</script>
-
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import {
-    Room,
+  import { onDestroy } from 'svelte';
+  import { SvelteMap } from 'svelte/reactivity';
+  import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
+
+  import { Room } from 'livekit-client';
+  import type {
     RemoteParticipant,
     RemoteTrack,
     RemoteTrackPublication,
@@ -21,7 +20,7 @@
   let isOthersMuted = false;
   let participants: RemoteParticipant[] = [];
   let volumes: Record<string, number> = {};
-  let audioElements = new Map<string, HTMLAudioElement>();
+  let audioElements = new SvelteMap<string, HTMLAudioElement>();
   let localVideoEl: HTMLVideoElement | null = null;
 
   const isBrowser = typeof document !== 'undefined';
@@ -157,7 +156,7 @@
         room!.remoteParticipants.forEach((p) => handleParticipant(p));
       });
 
-      await room.connect('ws://localhost:7880', token);
+      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
       const tracks = await room.localParticipant.createTracks({
         // СЮДА ПОТОМ ИИ МОЖНО ИНТЕГРИРОВАТЬ, но работать он будет ток в Electron
@@ -182,6 +181,7 @@
 
       isConnected = true;
       error = '';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       error = err.message || 'Connection failed';
       console.error('Join error:', err);
@@ -233,7 +233,7 @@
 
   {#if isConnected}
     <div class="local-video-container">
-      <video bind:this={localVideoEl} class="local-video" autoplay playsinline muted />
+      <video bind:this={localVideoEl} class="local-video" autoplay playsinline muted></video>
     </div>
   {/if}
 
@@ -247,7 +247,7 @@
   </div>
 
   <div class="participants">
-    {#each participants as p}
+    {#each participants as p (p.sid)}
       {#if room && p.identity !== room.localParticipant.identity}
         <div class="participant">
           <div class="video-container" data-participant={p.identity}></div>
@@ -361,13 +361,6 @@
     overflow: hidden;
     background: #000;
     margin-bottom: var(--m-1);
-  }
-
-  .video-preview {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
   }
 
   .participants {
