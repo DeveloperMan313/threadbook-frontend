@@ -52,7 +52,7 @@
 </script>
 
 <Navbar />
-<div class="container">
+<div class="page">
   <SpoolDock spools={data.spools} />
   <div class="thread-list">
     <Button
@@ -90,7 +90,7 @@
 </div>
 
 <style>
-  .container {
+  .page {
     position: fixed;
     top: var(--navbar-height);
     left: 0;

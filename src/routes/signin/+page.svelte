@@ -32,7 +32,7 @@
   };
 </script>
 
-<div class="container">
+<div class="page">
   <div class="main">
     <div class="slide" style:margin-left={`${-100 * registrationStage}%`}>
       <InputField
@@ -62,7 +62,7 @@
 </div>
 
 <style>
-  .container {
+  .page {
     width: 100%;
     height: 100%;
     display: flex;
