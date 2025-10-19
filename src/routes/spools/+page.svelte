@@ -9,21 +9,8 @@
 
 <Navbar />
 <VoiceChat />
-<div class="spool-cards">
+<div class="flex h-full w-full flex-row flex-wrap justify-start gap-3 px-20 pt-28">
   {#each data.spools as spool (spool.id)}
     <SpoolCard {...spool} />
   {/each}
 </div>
-
-<style>
-  .spool-cards {
-    width: 100%;
-    height: 100%;
-    padding: 7rem 5rem 0;
-    display: flex;
-    flex-direction: row;
-    justify-content: start;
-    flex-wrap: wrap;
-    gap: var(--m-3);
-  }
-</style>

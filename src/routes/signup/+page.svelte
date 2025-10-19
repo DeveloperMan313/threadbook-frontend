@@ -46,9 +46,12 @@
   };
 </script>
 
-<div class="page">
-  <div class="main">
-    <div class="slide" style:margin-left={`${-100 * registrationStage}%`}>
+<div class="flex h-full w-full items-center justify-center">
+  <div class="flex w-72 flex-row overflow-hidden rounded-2xl bg-white">
+    <div
+      class="flex w-full flex-shrink-0 flex-col gap-10 p-6 transition-all duration-500"
+      style:margin-left={`${-100 * registrationStage}%`}
+    >
       <InputField
         type="text"
         getError={usernameGetError}
@@ -60,7 +63,7 @@
       />
       <Button type="primary" label="Next" onClick={advanceStage} disabled={!usernameIsValid} />
     </div>
-    <div class="slide">
+    <div class="flex w-full flex-shrink-0 flex-col gap-10 p-6">
       <InputField
         type="email"
         getError={emailGetError}
@@ -72,7 +75,7 @@
       />
       <Button type="primary" label="Next" onClick={advanceStage} disabled={!emailIsValid} />
     </div>
-    <div class="slide">
+    <div class="flex w-full flex-shrink-0 flex-col gap-10 p-6">
       <InputField
         type="password"
         getError={signupPasswordGetError}
@@ -84,7 +87,7 @@
       />
       <Button type="primary" label="Next" onClick={advanceStage} disabled={!passwordIsValid} />
     </div>
-    <div class="slide">
+    <div class="flex w-full flex-shrink-0 flex-col gap-10 p-6">
       <InputField
         type="password"
         getError={passwordRepeatedGetError}
@@ -103,32 +106,3 @@
     </div>
   </div>
 </div>
-
-<style>
-  .page {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  .main {
-    width: 18rem;
-    display: flex;
-    flex-direction: row;
-    overflow: hidden;
-    background-color: var(--bg-primary);
-    border-radius: var(--border-radius-large);
-  }
-
-  .slide {
-    padding: calc(var(--m-4) + var(--input-field-vert-margin)) var(--m-4) var(--m-4);
-    width: 100%;
-    flex-shrink: 0;
-    transition: margin-left ease-in-out 0.5s;
-    display: flex;
-    flex-direction: column;
-    gap: 2.5rem;
-  }
-</style>

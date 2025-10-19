@@ -27,10 +27,12 @@
   };
 </script>
 
-<div class="input-field" class:disabled>
-  <p class="label">{label}</p>
+<div class="relative h-9 overflow-visible">
+  <p class="absolute -top-6 text-sm">{label}</p>
   <input
-    class="input {errorMsg ? 'error' : ''}"
+    class="h-full w-full rounded border-2 border-amber-200 bg-white px-2 transition-shadow duration-200 outline-none placeholder:text-gray-600 focus:shadow-[0_0_0_8px_rgba(129,178,154,0.5)] {errorMsg
+      ? 'border-orange-400 focus:shadow-[0_0_0_8px_rgba(224,122,95,0.5)]'
+      : ''}"
     {type}
     bind:value
     {placeholder}
@@ -38,51 +40,5 @@
     oninput={validate}
     onkeydown={noSpaces ? filterSpaces : undefined}
   />
-  <p class="error-msg">{errorMsg}</p>
+  <p class="absolute top-9 text-sm text-orange-400">{errorMsg}</p>
 </div>
-
-<style>
-  .input-field {
-    position: relative;
-    height: var(--button-height);
-    overflow: visible;
-  }
-
-  .label {
-    position: absolute;
-    top: calc(-1 * var(--font-small) - var(--m-1));
-  }
-
-  .input {
-    width: 100%;
-    height: 100%;
-    background-color: var(--bg-primary);
-    border: solid var(--border-width) var(--bg-primary-dark);
-    border-radius: var(--border-radius-small);
-    padding: 0 var(--m-2);
-    outline: none;
-    transition: box-shadow ease-in-out 0.2s;
-  }
-
-  .input.error {
-    border-color: var(--active-secondary);
-  }
-
-  .input::placeholder {
-    color: var(--text-secondary);
-  }
-
-  .input:focus {
-    box-shadow: 0 0 0 var(--m-2) rgba(from var(--active-primary) r g b / 0.5);
-  }
-
-  .input.error:focus {
-    box-shadow: 0 0 0 var(--m-2) rgba(from var(--active-secondary) r g b / 0.5);
-  }
-
-  .error-msg {
-    position: absolute;
-    top: calc(var(--button-height) + var(--m-1));
-    color: var(--active-secondary);
-  }
-</style>

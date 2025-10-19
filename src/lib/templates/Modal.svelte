@@ -34,70 +34,26 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 {#if isOpen}
-  <div class="backdrop" onclick={handleBackdropClick}>
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/20"
+    onclick={handleBackdropClick}
+  >
     <div
-      class="modal"
+      class="flex w-[30rem] flex-col gap-3 rounded-2xl bg-white p-6"
       onclick={(event: MouseEvent) => {
         event.stopPropagation();
       }}
     >
-      <div class="header">
-        <h1 id="title" class="title">{title}</h1>
+      <div class="flex items-center justify-between">
+        <h1 id="title" class="text-xl font-medium">{title}</h1>
         <Button type="subtle" label="✕" onClick={closeModal} thin />
       </div>
       <div class="body">
         {@render body()}
       </div>
-      <div class="buttons">
+      <div class="flex justify-end gap-3">
         {@render buttons()}
       </div>
     </div>
   </div>
 {/if}
-
-<style>
-  .backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: rgba(0, 0, 0, 0.2);
-  }
-
-  .modal {
-    width: 30rem;
-    padding: var(--m-4);
-    background-color: var(--bg-primary);
-    border-radius: var(--border-radius-large);
-    display: flex;
-    flex-direction: column;
-    gap: var(--m-3);
-  }
-
-  .header {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .title {
-    font-size: var(--font-medium);
-  }
-
-  :global(.modal .header .button) {
-    font-size: var(--font-medium);
-  }
-
-  .buttons {
-    display: flex;
-    flex-direction: row;
-    justify-content: end;
-    gap: var(--m-3);
-  }
-</style>

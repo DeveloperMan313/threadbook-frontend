@@ -27,50 +27,15 @@
 </script>
 
 <a
-  class="spool-entry"
+  class="flex h-12 w-12 items-center no-underline"
   href={resolve(`/spools/${id}`)}
   oncontextmenu={openContextMenuHandler(contextMenuEntries)}
 >
-  <img class="banner" src={banner_link} alt={name} />
-  <p class="title">{name}</p>
+  <img class="h-12 w-12 flex-shrink-0 rounded-2xl bg-orange-400" src={banner_link} alt={name} />
+  <p
+    class="pointer-events-none invisible -ml-4 flex-shrink-0 rounded-r border-2 border-amber-200 bg-white px-3 py-2 pl-5 text-base font-normal transition-all hover:pointer-events-auto hover:visible"
+  >
+    {name}
+  </p>
 </a>
 <ModalSpoolLeave spoolId={id} spoolName={name} bind:isOpen={isSpoolLeaveModalOpen} />
-
-<style>
-  .spool-entry {
-    width: 3rem;
-    height: 3rem;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    text-decoration: none;
-  }
-
-  .banner {
-    width: 100%;
-    height: 100%;
-    flex-shrink: 0;
-    background-color: var(--active-secondary);
-    border-radius: var(--border-radius-large);
-    z-index: 2;
-  }
-
-  .title {
-    margin-left: -1rem;
-    padding: var(--m-2) var(--m-3);
-    padding-left: calc(var(--m-3) + 1rem);
-    flex-shrink: 0;
-    background-color: var(--bg-primary);
-    border-top-right-radius: var(--border-radius-small);
-    border-bottom-right-radius: var(--border-radius-small);
-    border: solid var(--border-width) var(--bg-primary-dark);
-    visibility: hidden;
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  .spool-entry:hover .title {
-    visibility: visible;
-    pointer-events: all;
-  }
-</style>

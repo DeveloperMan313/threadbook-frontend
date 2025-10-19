@@ -23,7 +23,7 @@
 
 <Modal title="New thread" bind:isOpen>
   {#snippet body()}
-    <div class="body">
+    <div class="mt-6 flex gap-3">
       <InputField
         type="text"
         getError={(value) => (value.trim() === '' ? 'Title cannot be empty' : null)}
@@ -54,12 +54,3 @@
     <Button type="primary" label="Create" onClick={onCreateClick} disabled={!titleIsValid}></Button>
   {/snippet}
 </Modal>
-
-<style>
-  .body {
-    margin-top: var(--input-field-vert-margin);
-    display: flex;
-    flex-direction: row;
-    gap: var(--m-3);
-  }
-</style>

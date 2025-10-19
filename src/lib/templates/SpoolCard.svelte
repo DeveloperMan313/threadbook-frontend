@@ -7,70 +7,20 @@
   const { id, name, description, members, threads }: SpoolProps = $props();
 </script>
 
-<a class="spool-card" href={resolve(`/spools/${id}`)}>
-  <div class="image"></div>
-  <div class="body">
-    <p class="name">{name}</p>
-    <div class="stats">
-      <div class="stat">
-        <img class="icon" src={usersIcon} alt="users:" />
-        <p class="number">{members}</p>
+<a class="h-[26rem] w-64 overflow-hidden rounded-2xl no-underline" href={resolve(`/spools/${id}`)}>
+  <div class="h-64 w-64 bg-orange-400"></div>
+  <div class="flex h-40 w-full flex-col gap-3 bg-white p-3">
+    <p class="text-xl font-medium">{name}</p>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
+        <img class="h-5 w-5" src={usersIcon} alt="users:" />
+        <p class="text-base">{members}</p>
       </div>
-      <div class="stat">
-        <img class="icon" src={threadsIcon} alt="users:" />
-        <p class="number">{threads}</p>
+      <div class="flex items-center gap-2">
+        <img class="h-5 w-5" src={threadsIcon} alt="threads:" />
+        <p class="text-base">{threads}</p>
       </div>
     </div>
-    <p class="description">{description}</p>
+    <p class="text-base text-gray-600">{description}</p>
   </div>
 </a>
-
-<style>
-  .spool-card {
-    width: 16rem;
-    height: 26rem;
-    border-radius: var(--border-radius-large);
-    overflow: hidden;
-    text-decoration: none;
-  }
-
-  .image {
-    width: 16rem;
-    height: 16rem;
-    background-color: var(--active-secondary);
-  }
-
-  .body {
-    width: 100%;
-    height: 10rem;
-    padding: var(--m-3);
-    display: flex;
-    flex-direction: column;
-    gap: var(--m-3);
-    background-color: var(--bg-primary);
-  }
-
-  .name {
-    font-size: var(--font-medium);
-  }
-
-  .stats,
-  .stat {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-  }
-
-  .stats {
-    gap: var(--m-3);
-  }
-
-  .stat {
-    gap: var(--m-2);
-  }
-
-  .icon {
-    width: var(--font-medium);
-    height: var(--font-medium);
-  }
-</style>

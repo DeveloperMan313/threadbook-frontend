@@ -29,7 +29,7 @@
 
 <Modal title="Rename thread" bind:isOpen>
   {#snippet body()}
-    <div class="body">
+    <div class="mt-6">
       <InputField
         type="text"
         getError={(value) => (value.trim() === '' ? 'Title cannot be empty' : null)}
@@ -53,9 +53,3 @@
     ></Button>
   {/snippet}
 </Modal>
-
-<style>
-  .body {
-    margin-top: var(--input-field-vert-margin);
-  }
-</style>

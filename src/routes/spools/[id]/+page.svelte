@@ -52,9 +52,9 @@
 </script>
 
 <Navbar />
-<div class="page">
+<div class="fixed inset-0 top-16 flex flex-row">
   <SpoolDock spools={data.spools} />
-  <div class="thread-list">
+  <div class="flex w-72 flex-shrink-0 flex-col gap-6 p-4 pt-3 pr-3">
     <Button
       type="primary"
       label="New thread"
@@ -63,7 +63,7 @@
       }}
     />
     {#if threads.length == 0}
-      <p>Loading threads...</p>
+      <p class="text-gray-600">Loading threads...</p>
     {:else}
       <ThreadListSection
         title="Private"
@@ -83,45 +83,8 @@
     {/if}
     <ModalThreadCreate bind:isOpen={isThreadCreateModalOpen} />
   </div>
-  <div class="main">
-    <div class="chat-section"></div>
-    <div class="input-section"></div>
+  <div class="flex w-full flex-col">
+    <div class="h-full rounded-bl-2xl bg-white"></div>
+    <div class="h-20"></div>
   </div>
 </div>
-
-<style>
-  .page {
-    position: fixed;
-    top: var(--navbar-height);
-    left: 0;
-    bottom: 0;
-    right: 0;
-    display: flex;
-    flex-direction: row;
-  }
-
-  .thread-list {
-    width: 18rem;
-    padding: var(--m-3) var(--m-3) 0 var(--m-4);
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--m-4);
-  }
-
-  .main {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .chat-section {
-    height: 100%;
-    background-color: var(--bg-primary);
-    border-bottom-left-radius: var(--border-radius-large);
-  }
-
-  .input-section {
-    height: 5rem;
-  }
-</style>
