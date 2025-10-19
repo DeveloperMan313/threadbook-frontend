@@ -5,7 +5,7 @@
   let { spools }: SpoolDockProps = $props();
 </script>
 
-<div class="flex h-full w-16 flex-shrink-0 flex-col items-center gap-3 bg-white py-3">
+<div class="flex h-full w-16 flex-shrink-0 flex-col items-center gap-3 bg-background py-3">
   {#each spools as spool (spool.id)}
     <SpoolEntry {...spool} />
   {/each}

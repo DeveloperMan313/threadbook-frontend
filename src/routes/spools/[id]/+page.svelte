@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Button from '$lib/templates/Button.svelte';
+  import { Button } from '$lib/components/ui/button/index.js';
   import Navbar from '$lib/templates/Navbar.svelte';
   import SpoolDock from '$lib/templates/SpoolDock.svelte';
   import ThreadListSection from '$lib/templates/ThreadListSection.svelte';
@@ -38,7 +38,6 @@
       });
     },
     renameThread: (id: number, title: string) => {
-      // TODO: rename to updateThread and add arg type: ThreadType
       let thread = threads.filter((t) => t.id == id)[0];
       const oldThreadTitle = thread.title;
       thread.title = title;
@@ -56,12 +55,14 @@
   <SpoolDock spools={data.spools} />
   <div class="flex w-72 flex-shrink-0 flex-col gap-6 p-4 pt-3 pr-3">
     <Button
-      type="primary"
-      label="New thread"
-      onClick={() => {
+      variant="outline"
+      class="cursor-pointer"
+      onclick={() => {
         isThreadCreateModalOpen = true;
       }}
-    />
+    >
+      New thread
+    </Button>
     {#if threads.length == 0}
       <p class="text-gray-600">Loading threads...</p>
     {:else}
@@ -84,7 +85,7 @@
     <ModalThreadCreate bind:isOpen={isThreadCreateModalOpen} />
   </div>
   <div class="flex w-full flex-col">
-    <div class="h-full rounded-bl-2xl bg-white"></div>
+    <div class="h-full rounded-bl-2xl bg-background"></div>
     <div class="h-20"></div>
   </div>
 </div>

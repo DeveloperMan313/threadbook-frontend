@@ -1,34 +1,11 @@
-import type { Snippet } from 'svelte';
-
 /**
  * Component properties interfaces
  */
 
-/**
- * Button click callback
- * @param {MouseEvent} event - mouse click event
- */
-export type ClickCallback = (event: MouseEvent) => void;
-
-export interface ButtonProps {
-  type: 'primary' | 'neutral' | 'subtle' | 'danger';
-  label: string;
-  onClick: ClickCallback;
-  thin?: boolean;
-  disabled?: boolean;
-}
-
 export interface ContextMenuEntry {
   type: 'neutral' | 'danger';
   label: string;
-  onClick: ClickCallback;
-}
-
-export interface ContextMenuProps {
-  posXpx: number;
-  posYpx: number;
-  entries: Array<ContextMenuEntry>;
-  onClose: () => void;
+  onSelect: (event: Event) => void;
 }
 
 export interface InputFieldProps {
@@ -40,14 +17,7 @@ export interface InputFieldProps {
   placeholder?: string;
   disabled?: boolean;
   noSpaces?: boolean;
-}
-
-export interface ModalProps {
-  title: string;
-  body: Snippet;
-  buttons: Snippet;
-  isOpen: boolean; // bindable
-  onClose?: () => void;
+  class?: string;
 }
 
 export interface ModalSpoolLeaveProps {

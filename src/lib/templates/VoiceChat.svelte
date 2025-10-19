@@ -225,12 +225,12 @@
 </script>
 
 <div
-  class="fixed top-4 right-4 z-50 w-64 rounded-lg border border-pink-200 bg-amber-50 p-3 text-sm text-black shadow-lg"
+  class="fixed top-4 right-4 z-50 w-64 rounded-lg border-2 border-border bg-background p-3 text-sm shadow-lg"
 >
   <h3 class="mb-2 text-xl font-medium">Голосовой чат</h3>
 
   {#if error}
-    <p class="mb-2 text-sm text-red-600">{error}</p>
+    <p class="mb-2 text-sm text-destructive">{error}</p>
   {/if}
 
   {#if isConnected}

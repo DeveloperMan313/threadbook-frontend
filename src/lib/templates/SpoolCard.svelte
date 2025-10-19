@@ -8,8 +8,8 @@
 </script>
 
 <a class="h-[26rem] w-64 overflow-hidden rounded-2xl no-underline" href={resolve(`/spools/${id}`)}>
-  <div class="h-64 w-64 bg-orange-400"></div>
-  <div class="flex h-40 w-full flex-col gap-3 bg-white p-3">
+  <div class="h-64 w-64 bg-primary"></div>
+  <div class="flex h-40 w-full flex-col gap-3 bg-background p-3">
     <p class="text-xl font-medium">{name}</p>
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2">

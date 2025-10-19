@@ -1,34 +1,32 @@
 <script lang="ts">
   import type { ModalSpoolLeaveProps } from '$lib/types';
-  import Button from './Button.svelte';
-  import Modal from './Modal.svelte';
+  import { Button } from '$lib/components/ui/button/index.js';
+  import * as Dialog from '$lib/components/ui/dialog/index.js';
 
   let { spoolName, isOpen = $bindable() }: ModalSpoolLeaveProps = $props();
+
+  const onLeaveClick = () => {
+    isOpen = false;
+    alert(`Leave from spool "${spoolName}"`);
+  };
+
+  const onCancel = () => {
+    isOpen = false;
+  };
 </script>
 
-<Modal title="Leave spool" bind:isOpen>
-  {#snippet body()}
-    <p>
-      Are you sure you want to leave from spool "{spoolName}"? You will not be able to return
-      without an invite.
-    </p>
-  {/snippet}
-
-  {#snippet buttons()}
-    <Button
-      type="neutral"
-      label="Cancel"
-      onClick={() => {
-        isOpen = false;
-      }}
-    ></Button>
-    <Button
-      type="danger"
-      label="Leave"
-      onClick={() => {
-        isOpen = false;
-        alert(`Leave from spool "${spoolName}"`);
-      }}
-    ></Button>
-  {/snippet}
-</Modal>
+<Dialog.Root bind:open={isOpen}>
+  <Dialog.Content class="sm:max-w-[425px]">
+    <Dialog.Header>
+      <Dialog.Title>Leave spool</Dialog.Title>
+      <Dialog.Description>
+        Are you sure you want to leave from spool "{spoolName}"? You will not be able to return
+        without an invite.
+      </Dialog.Description>
+    </Dialog.Header>
+    <Dialog.Footer>
+      <Button variant="outline" class="cursor-pointer" onclick={onCancel}>Cancel</Button>
+      <Button variant="destructive" class="cursor-pointer" onclick={onLeaveClick}>Leave</Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>

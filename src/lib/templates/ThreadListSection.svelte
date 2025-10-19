@@ -12,7 +12,7 @@
 
 <div class="thread-list-section">
   <div class="mb-2 flex items-center justify-between">
-    <p class="text-base font-medium">{title}</p>
+    <p class="text-[0.9rem] font-medium">{title}</p>
     <button class="contents cursor-pointer" onclick={toggleExpand}>
       <img class="h-5 w-5" src={caretDown} alt=">" />
     </button>

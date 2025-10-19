@@ -72,3 +72,17 @@ export function getPasswordRepeatGetError(passwordValue: string): (value: string
     return 'Passwords do not match';
   };
 }
+
+/**
+ * Check thread title
+ * @param {string} value - thread title string
+ * @returns {string?} - error message or null
+ */
+export function threadTitleGetError(value: string): string | null {
+  const minLength = 4;
+  const isValid = value.length >= minLength;
+  if (isValid) {
+    return null;
+  }
+  return `At least ${minLength} symbols`;
+}

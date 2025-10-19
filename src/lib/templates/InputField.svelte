@@ -1,5 +1,7 @@
 <script lang="ts">
   import type { InputFieldProps } from '$lib/types';
+  import { Input } from '$lib/components/ui/input/index.js';
+  import { Label } from '$lib/components/ui/label/index.js';
 
   let {
     type,
@@ -9,7 +11,8 @@
     label,
     placeholder,
     disabled,
-    noSpaces
+    noSpaces,
+    class: className
   }: InputFieldProps = $props();
 
   let errorMsg = $state('');
@@ -27,18 +30,22 @@
   };
 </script>
 
-<div class="relative h-9 overflow-visible">
-  <p class="absolute -top-6 text-sm">{label}</p>
-  <input
-    class="h-full w-full rounded border-2 border-amber-200 bg-white px-2 transition-shadow duration-200 outline-none placeholder:text-gray-600 focus:shadow-[0_0_0_8px_rgba(129,178,154,0.5)] {errorMsg
-      ? 'border-orange-400 focus:shadow-[0_0_0_8px_rgba(224,122,95,0.5)]'
-      : ''}"
+<div class={'flex w-full max-w-sm flex-col gap-1.5' + (className ? ' ' + className : '')}>
+  {#if label}
+    <Label for="input-{label}">{label}</Label>
+  {/if}
+  <Input
+    id="input-{label}"
     {type}
     bind:value
     {placeholder}
     {disabled}
     oninput={validate}
+    aria-invalid={errorMsg != ''}
     onkeydown={noSpaces ? filterSpaces : undefined}
+    class={'w-full' + (errorMsg ? ' border-destructive focus-visible:ring-destructive/20' : '')}
   />
-  <p class="absolute top-9 text-sm text-orange-400">{errorMsg}</p>
+  {#if errorMsg}
+    <p class="text-sm text-destructive">{errorMsg}</p>
+  {/if}
 </div>
