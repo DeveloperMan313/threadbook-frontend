@@ -101,3 +101,7 @@ export interface ThreadListSectionProps {
   entries: Array<ThreadEntryProps>;
   expanded: boolean;
 }
+
+export interface VoiceChatProps {
+  thread_id: number;
+}

@@ -1,0 +1,19 @@
+services:
+  vite-app:
+    build: .
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    stdin_open: true
+    tty: true
+    networks:
+      - vibecode_network
+
+networks:
+  vibecode_network:
+    external: true
+    name: threadbook_backend_vibecode_network
