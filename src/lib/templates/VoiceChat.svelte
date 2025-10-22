@@ -1,9 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
-  import { SvelteMap } from 'svelte/reactivity';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
+  import { Room, LocalAudioTrack, LocalVideoTrack } from 'livekit-client';
 
-  import { Room } from 'livekit-client';
   import type {
     RemoteParticipant,
     RemoteTrack,
@@ -17,10 +16,11 @@
   let room: Room | null = null;
 
   let isSelfMuted = false;
+  let isSelfVideoEnabled = true;
   let isOthersMuted = false;
   let participants: RemoteParticipant[] = [];
   let volumes: Record<string, number> = {};
-  let audioElements = new SvelteMap<string, HTMLAudioElement>();
+  let audioElements = new Map<string, HTMLAudioElement>();
   let localVideoEl: HTMLVideoElement | null = null;
 
   const isBrowser = typeof document !== 'undefined';
@@ -44,6 +44,7 @@
 
   function attachAudioTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
+
     const element = track.attach() as HTMLAudioElement;
     element.dataset.participant = participantId;
     element.muted = isOthersMuted;
@@ -55,6 +56,7 @@
 
   function attachVideoTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
+
     const element = track.attach() as HTMLVideoElement;
     element.autoplay = true;
     element.playsInline = true;
@@ -72,6 +74,7 @@
 
   function detachTrack(participantId: string) {
     if (!isBrowser) return;
+
     const audioEl = audioElements.get(participantId);
     if (audioEl) {
       audioEl.remove();
@@ -82,6 +85,7 @@
   function updateVolume(participantId: string, volume: number) {
     volumes = { ...volumes, [participantId]: volume };
     if (!isBrowser) return;
+
     const el = audioElements.get(participantId);
     if (el) {
       el.volume = volume;
@@ -94,6 +98,12 @@
     await room.localParticipant.setMicrophoneEnabled(!isSelfMuted);
   }
 
+  async function toggleSelfVideo() {
+    if (!room) return;
+    isSelfVideoEnabled = !isSelfVideoEnabled;
+    await room.localParticipant.setCameraEnabled(isSelfVideoEnabled);
+  }
+
   function toggleOthersMute() {
     if (!isBrowser) return;
     isOthersMuted = !isOthersMuted;
@@ -102,34 +112,41 @@
     });
   }
 
-  function handleParticipant(participant: RemoteParticipant) {
-    // Обработка будущих публикаций
-    participant.on('trackPublished', (pub: RemoteTrackPublication) => {
+  function subscribeToTrack(pub: RemoteTrackPublication, participantId: string) {
+    if (pub.track) {
+      if (pub.track.kind === 'audio') {
+        attachAudioTrack(pub.track, participantId);
+      } else if (pub.track.kind === 'video') {
+        attachVideoTrack(pub.track, participantId);
+      }
+    } else {
       pub.on('subscribed', (track: RemoteTrack) => {
         if (track.kind === 'audio') {
-          attachAudioTrack(track, participant.identity);
+          attachAudioTrack(track, participantId);
         } else if (track.kind === 'video') {
-          attachVideoTrack(track, participant.identity);
+          attachVideoTrack(track, participantId);
         }
       });
+    }
+  }
 
-      pub.on('unsubscribed', () => {
-        detachTrack(participant.identity);
-      });
+  function handleParticipant(participant: RemoteParticipant) {
+    participant.removeAllListeners();
+
+    participant.on('trackPublished', (pub: RemoteTrackPublication) => {
+      pub.setSubscribed(true);
+      subscribeToTrack(pub, participant.identity);
     });
 
-    // Обработка УЖЕ существующих публикаций
+    participant.on('trackUnpublished', () => {
+      detachTrack(participant.identity);
+    });
+
     participant.trackPublications.forEach((pub) => {
-      if (pub.isSubscribed && pub.track) {
-        if (pub.track.kind === 'audio') {
-          attachAudioTrack(pub.track, participant.identity);
-        } else if (pub.track.kind === 'video') {
-          attachVideoTrack(pub.track, participant.identity);
-        }
-      } else if (!pub.isSubscribed) {
-        // Подписываемся явно, если ещё не подписаны
+      if (!pub.isSubscribed) {
         pub.setSubscribed(true);
       }
+      subscribeToTrack(pub, participant.identity);
     });
 
     if (!participants.some((p) => p.identity === participant.identity)) {
@@ -139,6 +156,7 @@
 
   async function joinRoom() {
     if (!isBrowser) return;
+
     try {
       const token = await getToken();
       room = new Room();
@@ -155,46 +173,55 @@
 
       await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
-      const videoTracks = await room.localParticipant.createTracks({ video: true, audio: false });
-      let audioTrack = null;
+      let audioTrack: LocalTrack | null = null;
+      let videoTrack: LocalTrack | null = null;
 
+      // === Аудио ===
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const micTrack = stream.getAudioTracks()[0];
+        if (micTrack) {
+          audioTrack = new LocalAudioTrack(micTrack);
 
-        if (!micTrack) throw new Error('No audio track from microphone');
-
-        const { LocalAudioTrack } = await import('livekit-client');
-        audioTrack = new LocalAudioTrack(micTrack);
-
-        // DeepFilterNet3
-        const { DeepFilterNoiseFilterProcessor } = await import('deepfilternet3-noise-filter');
-        const processor = new DeepFilterNoiseFilterProcessor({
-          sampleRate: 48000,
-          noiseReductionLevel: 80,
-          enabled: true
-        });
-
-        await processor.init({ track: micTrack });
-        await audioTrack.setProcessor(processor);
-      } catch (err) {
-        console.warn('DeepFilterNet3 failed, falling back to standard audio:', err);
-
-        // Fallback
-        const fallbackTracks = await room.localParticipant.createTracks({
-          audio: {
-            autoGainControl: true,
-            echoCancellation: true,
-            noiseSuppression: true
-          },
-          video: false
-        });
-        audioTrack = fallbackTracks[0];
+          try {
+            const { DeepFilterNoiseFilterProcessor } = await import(
+              'https://unpkg.com/@livekit/deepfilternet-noise-filter@1.0.1/dist/index.js'
+            );
+            const processor = new DeepFilterNoiseFilterProcessor({
+              sampleRate: micTrack.getSettings().sampleRate || 48000,
+              noiseReductionLevel: 80,
+              enabled: true
+            });
+            await processor.init({ track: micTrack });
+            await audioTrack.setProcessor(processor);
+          } catch (dfErr) {
+            console.warn('DeepFilterNet failed, using browser noise suppression:', dfErr);
+          }
+        }
+      } catch (micErr) {
+        console.warn('Microphone access failed:', micErr);
       }
 
-      const tracks = [...videoTracks, audioTrack].filter(Boolean);
+      // === Видео (только если включено) ===
+      if (isSelfVideoEnabled) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          const videoTrackRaw = stream.getVideoTracks()[0];
+          if (videoTrackRaw) {
+            videoTrack = new LocalVideoTrack(videoTrackRaw);
+          }
+        } catch (vidErr) {
+          console.warn('Camera access failed:', vidErr);
+          isSelfVideoEnabled = false; // отключаем, если нет камеры
+        }
+      }
 
-      for (const track of tracks) {
+      // Публикуем треки
+      const tracksToPublish: LocalTrack[] = [];
+      if (audioTrack) tracksToPublish.push(audioTrack);
+      if (videoTrack) tracksToPublish.push(videoTrack);
+
+      for (const track of tracksToPublish) {
         await room.localParticipant.publishTrack(track);
         if (track.kind === 'video') {
           pendingLocalVideoTrack = track;
@@ -206,7 +233,6 @@
 
       isConnected = true;
       error = '';
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       error = err.message || 'Connection failed';
       console.error('Join error:', err);
@@ -221,18 +247,23 @@
       room.disconnect();
       room = null;
     }
+
     participants = [];
     audioElements.forEach((el) => el.remove());
     audioElements.clear();
+
     document.querySelectorAll('.video-container').forEach((el) => {
       (el as HTMLElement).innerHTML = '';
     });
+
     if (localVideoEl) {
       localVideoEl.srcObject = null;
       localVideoEl.load();
     }
+
     isConnected = false;
     isSelfMuted = false;
+    isSelfVideoEnabled = true;
     isOthersMuted = false;
     volumes = {};
   }
@@ -270,16 +301,25 @@
     </div>
   {/if}
 
-  <div class="mb-2">
+  <div class="mb-2 space-y-1">
     <button
-      class="mb-1 w-full cursor-pointer rounded bg-gray-800 px-2 py-1 text-xs text-white transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+      class="w-full cursor-pointer rounded bg-gray-800 px-2 py-1 text-xs text-white transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
       on:click={toggleSelfMute}
       disabled={!isConnected}
     >
       {isSelfMuted ? 'Размутить себя' : 'Заглушить себя'}
     </button>
+
     <button
-      class="mb-1 w-full cursor-pointer rounded bg-gray-600 px-2 py-1 text-xs text-white transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+      class="w-full cursor-pointer rounded bg-gray-700 px-2 py-1 text-xs text-white transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+      on:click={toggleSelfVideo}
+      disabled={!isConnected}
+    >
+      {isSelfVideoEnabled ? 'Выключить камеру' : 'Включить камеру'}
+    </button>
+
+    <button
+      class="w-full cursor-pointer rounded bg-gray-600 px-2 py-1 text-xs text-white transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
       on:click={toggleOthersMute}
       disabled={!isConnected}
     >
@@ -288,7 +328,7 @@
   </div>
 
   <div class="my-2 max-h-60 overflow-y-auto">
-    {#each participants as p (p.sid)}
+    {#each participants as p (p.identity)}
       {#if room && p.identity !== room.localParticipant.identity}
         <div class="mb-2 flex flex-col items-center gap-1 rounded bg-gray-100 p-1">
           <div
@@ -296,9 +336,9 @@
             data-participant={p.identity}
           ></div>
           <div class="flex w-full items-center gap-1">
-            <span class="flex-1 overflow-hidden text-xs text-ellipsis whitespace-nowrap"
-              >{p.identity}</span
-            >
+            <span class="flex-1 overflow-hidden text-xs text-ellipsis whitespace-nowrap">
+              {p.identity}
+            </span>
             <input
               type="range"
               min="0"
