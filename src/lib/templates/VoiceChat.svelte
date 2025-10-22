@@ -143,31 +143,56 @@
       const token = await getToken();
       room = new Room();
 
-      // Устанавливаем обработчики ДО подключения
       room.on('participantConnected', (p) => handleParticipant(p));
       room.on('participantDisconnected', (p) => {
         participants = participants.filter((part) => part.identity !== p.identity);
         detachTrack(p.identity);
       });
 
-      // Устанавливаем обработчик connected ДО подключения
       room.on('connected', () => {
-        // Теперь remoteParticipants гарантированно заполнен
         room!.remoteParticipants.forEach((p) => handleParticipant(p));
       });
 
       await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
-      const tracks = await room.localParticipant.createTracks({
-        // СЮДА ПОТОМ ИИ МОЖНО ИНТЕГРИРОВАТЬ, но работать он будет ток в Electron
-        // Нужно предусмотреть тут if Electron -> flase флаги + DeepFilterNet else -> true флаги
-        audio: {
-          autoGainControl: true,
-          echoCancellation: true,
-          noiseSuppression: true
-        },
-        video: true
-      });
+      const videoTracks = await room.localParticipant.createTracks({ video: true, audio: false });
+      let audioTrack = null;
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const micTrack = stream.getAudioTracks()[0];
+
+        if (!micTrack) throw new Error('No audio track from microphone');
+
+        const { LocalAudioTrack } = await import('livekit-client');
+        audioTrack = new LocalAudioTrack(micTrack);
+
+        // DeepFilterNet3
+        const { DeepFilterNoiseFilterProcessor } = await import('deepfilternet3-noise-filter');
+        const processor = new DeepFilterNoiseFilterProcessor({
+          sampleRate: 48000,
+          noiseReductionLevel: 80,
+          enabled: true
+        });
+
+        await processor.init({ track: micTrack });
+        await audioTrack.setProcessor(processor);
+      } catch (err) {
+        console.warn('DeepFilterNet3 failed, falling back to standard audio:', err);
+
+        // Fallback
+        const fallbackTracks = await room.localParticipant.createTracks({
+          audio: {
+            autoGainControl: true,
+            echoCancellation: true,
+            noiseSuppression: true
+          },
+          video: false
+        });
+        audioTrack = fallbackTracks[0];
+      }
+
+      const tracks = [...videoTracks, audioTrack].filter(Boolean);
 
       for (const track of tracks) {
         await room.localParticipant.publishTrack(track);
