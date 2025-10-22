@@ -1,5 +1,7 @@
 <script lang="ts">
   import type { InputFieldProps } from '$lib/types';
+  import { Input } from '$lib/components/ui/input/index.js';
+  import { Label } from '$lib/components/ui/label/index.js';
 
   let {
     type,
@@ -9,7 +11,8 @@
     label,
     placeholder,
     disabled,
-    noSpaces
+    noSpaces,
+    class: className
   }: InputFieldProps = $props();
 
   let errorMsg = $state('');
@@ -27,62 +30,22 @@
   };
 </script>
 
-<div class="input-field" class:disabled>
-  <p class="label">{label}</p>
-  <input
-    class="input {errorMsg ? 'error' : ''}"
+<div class={'flex w-full max-w-sm flex-col gap-1.5' + (className ? ' ' + className : '')}>
+  {#if label}
+    <Label for="input-{label}">{label}</Label>
+  {/if}
+  <Input
+    id="input-{label}"
     {type}
     bind:value
     {placeholder}
     {disabled}
     oninput={validate}
+    aria-invalid={errorMsg != ''}
     onkeydown={noSpaces ? filterSpaces : undefined}
+    class={'w-full' + (errorMsg ? ' border-destructive focus-visible:ring-destructive/20' : '')}
   />
-  <p class="error-msg">{errorMsg}</p>
+  {#if errorMsg}
+    <p class="text-sm text-destructive">{errorMsg}</p>
+  {/if}
 </div>
-
-<style>
-  .input-field {
-    position: relative;
-    height: var(--button-height);
-    overflow: visible;
-  }
-
-  .label {
-    position: absolute;
-    top: calc(-1 * var(--font-small) - var(--m-1));
-  }
-
-  .input {
-    width: 100%;
-    height: 100%;
-    background-color: var(--bg-primary);
-    border: solid var(--border-width) var(--bg-primary-dark);
-    border-radius: var(--border-radius-small);
-    padding: 0 var(--m-2);
-    outline: none;
-    transition: box-shadow ease-in-out 0.2s;
-  }
-
-  .input.error {
-    border-color: var(--active-secondary);
-  }
-
-  .input::placeholder {
-    color: var(--text-secondary);
-  }
-
-  .input:focus {
-    box-shadow: 0 0 0 var(--m-2) rgba(from var(--active-primary) r g b / 0.5);
-  }
-
-  .input.error:focus {
-    box-shadow: 0 0 0 var(--m-2) rgba(from var(--active-secondary) r g b / 0.5);
-  }
-
-  .error-msg {
-    position: absolute;
-    top: calc(var(--button-height) + var(--m-1));
-    color: var(--active-secondary);
-  }
-</style>

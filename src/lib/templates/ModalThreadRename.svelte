@@ -1,9 +1,10 @@
 <script lang="ts">
   import type { ModalThreadRenameProps } from '$lib/types';
   import { getContext } from 'svelte';
-  import Button from './Button.svelte';
+  import { Button } from '$lib/components/ui/button/index.js';
+  import * as Dialog from '$lib/components/ui/dialog/index.js';
+  import { threadTitleGetError } from '$lib/validation';
   import InputField from './InputField.svelte';
-  import Modal from './Modal.svelte';
 
   let { threadId, threadTitle, isOpen = $bindable() }: ModalThreadRenameProps = $props();
 
@@ -21,41 +22,32 @@
     renameThread: { (id: number, title: string): void };
   };
 
-  const onRenameClick = () => {
+  const onSaveClick = () => {
     isOpen = false;
     renameThread(threadId, newThreadTitle);
   };
+
+  const onCancel = () => {
+    isOpen = false;
+  };
 </script>
 
-<Modal title="Rename thread" bind:isOpen>
-  {#snippet body()}
-    <div class="body">
-      <InputField
-        type="text"
-        getError={(value) => (value.trim() === '' ? 'Title cannot be empty' : null)}
-        bind:value={newThreadTitle}
-        bind:isValid={newTitleIsValid}
-        label="New thread title"
-        placeholder="Enter new title"
-      />
-    </div>
-  {/snippet}
-
-  {#snippet buttons()}
-    <Button
-      type="neutral"
-      label="Cancel"
-      onClick={() => {
-        isOpen = false;
-      }}
-    ></Button>
-    <Button type="primary" label="Rename" onClick={onRenameClick} disabled={!newTitleIsValid}
-    ></Button>
-  {/snippet}
-</Modal>
-
-<style>
-  .body {
-    margin-top: var(--input-field-vert-margin);
-  }
-</style>
+<Dialog.Root bind:open={isOpen}>
+  <Dialog.Content class="sm:max-w-[425px]">
+    <Dialog.Header>
+      <Dialog.Title>Rename thread</Dialog.Title>
+      <Dialog.Description>Enter a new title for this thread.</Dialog.Description>
+    </Dialog.Header>
+    <InputField
+      type="text"
+      getError={threadTitleGetError}
+      bind:value={newThreadTitle}
+      bind:isValid={newTitleIsValid}
+      placeholder="Enter new title"
+    />
+    <Dialog.Footer>
+      <Button variant="outline" class="cursor-pointer" onclick={onCancel}>Cancel</Button>
+      <Button class="cursor-pointer" onclick={onSaveClick} disabled={!newTitleIsValid}>Save</Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>

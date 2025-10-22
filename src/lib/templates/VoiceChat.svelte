@@ -249,40 +249,62 @@
   });
 </script>
 
-<div class="voice-chat">
-  <h3 class="title">Голосовой чат</h3>
+<div
+  class="fixed top-4 right-4 z-50 w-64 rounded-lg border-2 border-border bg-background p-3 text-sm shadow-lg"
+>
+  <h3 class="mb-2 text-xl font-medium">Голосовой чат</h3>
 
   {#if error}
-    <p class="error">{error}</p>
+    <p class="mb-2 text-sm text-destructive">{error}</p>
   {/if}
 
   {#if isConnected}
-    <div class="local-video-container">
-      <video bind:this={localVideoEl} class="local-video" autoplay playsinline muted></video>
+    <div class="mb-2 overflow-hidden rounded bg-black">
+      <video
+        bind:this={localVideoEl}
+        class="block h-24 w-full object-cover"
+        autoplay
+        playsinline
+        muted
+      ></video>
     </div>
   {/if}
 
-  <div class="controls">
-    <button class="button self-mute" on:click={toggleSelfMute} disabled={!isConnected}>
+  <div class="mb-2">
+    <button
+      class="mb-1 w-full cursor-pointer rounded bg-gray-800 px-2 py-1 text-xs text-white transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+      on:click={toggleSelfMute}
+      disabled={!isConnected}
+    >
       {isSelfMuted ? 'Размутить себя' : 'Заглушить себя'}
     </button>
-    <button class="button others-mute" on:click={toggleOthersMute} disabled={!isConnected}>
+    <button
+      class="mb-1 w-full cursor-pointer rounded bg-gray-600 px-2 py-1 text-xs text-white transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+      on:click={toggleOthersMute}
+      disabled={!isConnected}
+    >
       {isOthersMuted ? 'Включить других' : 'Заглушить всех'}
     </button>
   </div>
 
-  <div class="participants">
+  <div class="my-2 max-h-60 overflow-y-auto">
     {#each participants as p (p.sid)}
       {#if room && p.identity !== room.localParticipant.identity}
-        <div class="participant">
-          <div class="video-container" data-participant={p.identity}></div>
-          <div class="participant-info">
-            <span class="identity">{p.identity}</span>
+        <div class="mb-2 flex flex-col items-center gap-1 rounded bg-gray-100 p-1">
+          <div
+            class="video-container w-full overflow-hidden rounded bg-black"
+            data-participant={p.identity}
+          ></div>
+          <div class="flex w-full items-center gap-1">
+            <span class="flex-1 overflow-hidden text-xs text-ellipsis whitespace-nowrap"
+              >{p.identity}</span
+            >
             <input
               type="range"
               min="0"
               max="1"
               step="0.01"
+              class="h-5 w-20"
               bind:value={volumes[p.identity]}
               on:input={(e) =>
                 updateVolume(p.identity, parseFloat((e.target as HTMLInputElement).value))}
@@ -294,135 +316,10 @@
   </div>
 
   <button
-    class="button join-leave"
+    class="w-full cursor-pointer rounded bg-black px-2 py-1 text-xs text-white transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
     on:click={isConnected ? leaveRoom : joinRoom}
     disabled={error !== ''}
   >
     {isConnected ? 'Выйти' : 'Войти'}
   </button>
 </div>
-
-<style>
-  .voice-chat {
-    position: fixed;
-    top: var(--m-4);
-    right: var(--m-4);
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: var(--m-3);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    z-index: 1000;
-    width: 16rem;
-    font-size: 0.9rem;
-    color: #000;
-  }
-
-  .title {
-    font-size: var(--font-medium);
-    margin: 0 0 var(--m-2) 0;
-    color: #000;
-  }
-
-  .error {
-    color: #d32f2f;
-    font-size: var(--font-small);
-    margin-bottom: var(--m-2);
-  }
-
-  .button {
-    width: 100%;
-    padding: var(--m-1);
-    margin-bottom: var(--m-1);
-    border: none;
-    border-radius: var(--border-radius);
-    color: white;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: opacity 0.2s;
-  }
-
-  .self-mute {
-    background: #333;
-  }
-  .others-mute {
-    background: #555;
-  }
-  .join-leave {
-    background: #000;
-  }
-
-  .button:hover:not(:disabled) {
-    opacity: 0.9;
-  }
-
-  .button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .controls {
-    margin-bottom: var(--m-2);
-  }
-
-  .local-video-container {
-    margin-bottom: var(--m-2);
-    border-radius: var(--border-radius);
-    overflow: hidden;
-    background: #000;
-  }
-
-  .local-video {
-    width: 100%;
-    height: 100px;
-    object-fit: cover;
-    display: block;
-  }
-
-  .video-container {
-    width: 100%;
-    height: 80px;
-    border-radius: var(--border-radius);
-    overflow: hidden;
-    background: #000;
-    margin-bottom: var(--m-1);
-  }
-
-  .participants {
-    margin: var(--m-2) 0;
-    max-height: 240px;
-    overflow-y: auto;
-  }
-
-  .participant {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--m-1);
-    margin-bottom: var(--m-2);
-    padding: var(--m-1);
-    background: #f0f0f0;
-    border-radius: var(--border-radius);
-  }
-
-  .participant-info {
-    display: flex;
-    align-items: center;
-    gap: var(--m-1);
-    width: 100%;
-  }
-
-  .identity {
-    font-size: 0.8rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex: 1;
-    color: #000;
-  }
-
-  input[type='range'] {
-    width: 80px;
-    height: 20px;
-  }
-</style>

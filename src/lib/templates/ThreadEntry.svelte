@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { ContextMenuEntry, ThreadEntryProps } from '$lib/types';
-  import { openContextMenuHandler } from './ContextMenu.svelte';
   import ModalThreadArchive from './ModalThreadArchive.svelte';
   import ModalThreadRename from './ModalThreadRename.svelte';
+  import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
 
   let { id, title, unreadCnt, mentionCnt }: ThreadEntryProps = $props();
 
@@ -13,76 +13,50 @@
     {
       type: 'neutral',
       label: 'Rename',
-      onClick: () => {
+      onSelect: () => {
         isThreadRenameModalOpen = true;
       }
     },
     {
       type: 'danger',
       label: 'Archive',
-      onClick: () => {
+      onSelect: () => {
         isThreadArchiveModalOpen = true;
       }
     }
   ];
 </script>
 
-<button class="thread-entry" oncontextmenu={openContextMenuHandler(contextMenuEntries)}>
-  <p class="title">{title}</p>
-  <div class="info">
-    {#if mentionCnt > 0}
-      <p class="mention-cnt">{mentionCnt}</p>
-    {/if}
-    {#if unreadCnt > 0}
-      <p class="unread-cnt">{unreadCnt}</p>
-    {/if}
-  </div>
-</button>
+<ContextMenu.Root>
+  <ContextMenu.Trigger>
+    <button
+      class="flex h-6 w-full cursor-pointer items-center justify-between rounded border-none px-3 transition-colors duration-200 hover:bg-background"
+    >
+      <p class="truncate text-base">{title}</p>
+      <div class="flex items-center gap-2">
+        {#if mentionCnt > 0}
+          <p
+            class="flex h-4 w-4 items-center justify-center rounded bg-emerald-700 text-xs text-white"
+          >
+            {mentionCnt}
+          </p>
+        {/if}
+        {#if unreadCnt > 0}
+          <p class="text-sm text-gray-600">{unreadCnt}</p>
+        {/if}
+      </div>
+    </button>
+  </ContextMenu.Trigger>
+  <ContextMenu.Content class="min-w-[10rem]">
+    {#each contextMenuEntries as entry (entry.label)}
+      <ContextMenu.Item
+        class={entry.type === 'danger' ? 'text-destructive focus:text-destructive' : ''}
+        onSelect={entry.onSelect}
+      >
+        {entry.label}
+      </ContextMenu.Item>
+    {/each}
+  </ContextMenu.Content>
+</ContextMenu.Root>
 <ModalThreadRename threadId={id} threadTitle={title} bind:isOpen={isThreadRenameModalOpen} />
 <ModalThreadArchive threadId={id} threadTitle={title} bind:isOpen={isThreadArchiveModalOpen} />
-
-<style>
-  .thread-entry {
-    height: var(--m-4);
-    padding: var(--m-3);
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    background-color: var(--bg-default);
-    border: none;
-    border-radius: var(--border-radius-small);
-    cursor: pointer;
-
-    --bg-default: var(--bg-primary);
-    --bg-dark: var(--bg-primary-dark);
-  }
-
-  .thread-entry:hover {
-    background-color: color-mix(in srgb, var(--bg-default), var(--bg-dark));
-  }
-
-  .thread-entry:active {
-    background-color: var(--bg-dark);
-  }
-
-  .info {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: var(--m-2);
-  }
-
-  .mention-cnt {
-    width: var(--font-small);
-    height: var(--font-small);
-    color: var(--text-inverted);
-    background-color: var(--active-primary);
-    border-radius: var(--border-radius-small);
-    text-align: center;
-  }
-
-  .unread-cnt {
-    color: var(--text-secondary);
-  }
-</style>
