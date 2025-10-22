@@ -2,8 +2,8 @@
   import { onDestroy } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
-  import { LocalAudioTrack, Room } from 'livekit-client';
-  import { DeepFilterNoiseFilterProcessor } from 'deepfilternet3-noise-filter';
+
+  import { Room } from 'livekit-client';
   import type {
     RemoteParticipant,
     RemoteTrack,
@@ -164,9 +164,11 @@
 
         if (!micTrack) throw new Error('No audio track from microphone');
 
+        const { LocalAudioTrack } = await import('livekit-client');
         audioTrack = new LocalAudioTrack(micTrack);
 
         // DeepFilterNet3
+        const { DeepFilterNoiseFilterProcessor } = await import('deepfilternet3-noise-filter');
         const processor = new DeepFilterNoiseFilterProcessor({
           sampleRate: 48000,
           noiseReductionLevel: 80,
