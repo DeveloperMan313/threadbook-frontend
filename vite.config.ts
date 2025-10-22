@@ -11,5 +11,10 @@ export default defineConfig({
       project: './project.inlang',
       outdir: './src/lib/paraglide'
     })
-  ]
+  ],
+  build: {
+    rollupOptions: {
+      external: ['deepfilternet3-noise-filter']
+    }
+  }
 });
