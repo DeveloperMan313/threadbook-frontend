@@ -3,8 +3,13 @@
   import ModalThreadArchive from './ModalThreadArchive.svelte';
   import ModalThreadRename from './ModalThreadRename.svelte';
   import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
+  import { getContext } from 'svelte';
 
   let { id, title, unreadCnt, mentionCnt }: ThreadEntryProps = $props();
+
+  const { setCurrentThread } = getContext('threads') as {
+    setCurrentThread: { (id: number | null): void };
+  };
 
   let isThreadRenameModalOpen = $state(false);
   let isThreadArchiveModalOpen = $state(false);
@@ -30,13 +35,14 @@
 <ContextMenu.Root>
   <ContextMenu.Trigger>
     <button
-      class="flex h-6 w-full cursor-pointer items-center justify-between rounded border-none px-3 transition-colors duration-200 hover:bg-background"
+      class="flex h-6 cursor-pointer items-center justify-between rounded border-none bg-white px-3 transition-colors duration-200 hover:bg-amber-100 active:bg-amber-200"
+      onclick={() => setCurrentThread(id)}
     >
       <p class="truncate text-base">{title}</p>
       <div class="flex items-center gap-2">
         {#if mentionCnt > 0}
           <p
-            class="flex h-4 w-4 items-center justify-center rounded bg-emerald-700 text-xs text-white"
+            class="flex h-4 w-4 items-center justify-center rounded bg-emerald-400 text-xs text-white"
           >
             {mentionCnt}
           </p>
