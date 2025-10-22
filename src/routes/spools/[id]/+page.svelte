@@ -8,13 +8,24 @@
   import { ThreadApi } from '$lib/api';
   import type { ThreadEntryProps, ThreadType } from '$lib/types';
   import ModalThreadCreate from '$lib/templates/ModalThreadCreate.svelte';
+  import Chat from '$lib/templates/Chat.svelte';
 
   let { data, params }: PageProps = $props();
 
   let threads: Array<ThreadEntryProps> = $state([]);
+  let currentThreadId = $state<number | null>(null);
 
   data.threads.then((resolvedThreads) => {
     threads = resolvedThreads;
+  });
+
+  setContext('currentThread', {
+    get spoolId() {
+      return Number(params.id);
+    },
+    get threadId() {
+      return currentThreadId;
+    }
   });
 
   setContext('threads', {
@@ -36,6 +47,9 @@
           threads = newThreads;
         });
       });
+    },
+    setCurrentThread: (id: number | null) => {
+      currentThreadId = id;
     },
     renameThread: (id: number, title: string) => {
       let thread = threads.filter((t) => t.id == id)[0];
@@ -85,7 +99,15 @@
     <ModalThreadCreate bind:isOpen={isThreadCreateModalOpen} />
   </div>
   <div class="flex w-full flex-col">
-    <div class="h-full rounded-bl-2xl bg-background"></div>
+    <div class="h-full rounded-bl-2xl bg-white">
+      {#if currentThreadId}
+        <Chat />
+      {:else}
+        <div class="flex h-full items-center justify-center text-gray-500">
+          Select a thread to start chatting
+        </div>
+      {/if}
+    </div>
     <div class="h-20"></div>
   </div>
 </div>
