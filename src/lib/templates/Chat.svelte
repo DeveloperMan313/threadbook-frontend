@@ -2,6 +2,8 @@
   import { getContext } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
+  import Message from './Message.svelte';
+  import type { MessageProps } from '$lib/types';
 
   const currentThread = getContext('currentThread') as {
     spoolId: number;
@@ -9,15 +11,18 @@
   };
 
   let messageText = $state('');
-  let messages = $state<Array<{ id: number; text: string; timestamp: Date }>>([]);
+  let messages = $state<Array<MessageProps>>([]);
+  let id = $state(0);
 
   const sendMessage = () => {
     if (messageText.trim() === '') return;
 
-    const newMessage = {
-      id: Date.now(),
+    const newMessage: MessageProps = {
+      id: id++,
+      username: 'user',
+      userPfp: 'pfpurl.com',
       text: messageText,
-      timestamp: new Date()
+      createdAt: new Date()
     };
 
     messages = [...messages, newMessage];
@@ -53,18 +58,7 @@
     {:else}
       <div class="space-y-4">
         {#each messages as message (message.id)}
-          <div class="flex gap-3">
-            <div class="h-8 w-8 flex-shrink-0 rounded-full bg-emerald-400"></div>
-            <div class="flex-1">
-              <div class="flex items-baseline gap-2">
-                <span class="font-medium">User</span>
-                <span class="text-xs text-gray-500">
-                  {message.timestamp.toLocaleTimeString()}
-                </span>
-              </div>
-              <p class="mt-1 text-gray-800">{message.text}</p>
-            </div>
-          </div>
+          <Message {...message} />
         {/each}
       </div>
     {/if}
