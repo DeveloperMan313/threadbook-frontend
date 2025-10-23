@@ -35,7 +35,7 @@
 <ContextMenu.Root>
   <ContextMenu.Trigger>
     <button
-      class="flex h-6 cursor-pointer items-center justify-between rounded border-none bg-white px-3 transition-colors duration-200 hover:bg-amber-100 active:bg-amber-200"
+      class="flex h-6 w-full cursor-pointer items-center justify-between rounded border-none bg-white px-3 transition-colors duration-200 hover:bg-amber-100 active:bg-amber-200"
       onclick={() => setCurrentThread(id)}
     >
       <p class="truncate text-base">{title}</p>

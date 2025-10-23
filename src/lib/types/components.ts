@@ -20,6 +20,14 @@ export interface InputFieldProps {
   class?: string;
 }
 
+export interface MessageProps {
+  id: number;
+  username: string;
+  userPfp: string;
+  text: string;
+  createdAt: Date;
+}
+
 export interface ModalSpoolLeaveProps {
   spoolId: number;
   spoolName: string;
