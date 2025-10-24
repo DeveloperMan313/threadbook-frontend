@@ -1,4 +1,4 @@
-import type { ThreadType } from './components';
+import type { MessageProps, ThreadType } from './components';
 
 /**
  * API request and response interfaces
@@ -37,6 +37,20 @@ export interface UpdateThreadRequest {
   id: number;
   title: string;
   type: string;
+}
+
+export interface GetThreadMessagesRequest {
+  thread_id: number;
+}
+
+export interface SendThreadMessagesRequest {
+  thread_id: number;
+  message: MessageProps;
+}
+
+export interface InitThreadWebsocketRequest {
+  thread_id: number;
+  token: string;
 }
 
 export interface Credentials {
