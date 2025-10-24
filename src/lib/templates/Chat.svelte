@@ -3,16 +3,36 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import Message from './Message.svelte';
-  import type { MessageProps } from '$lib/types';
+  import type { ChatProps, MessageProps, ThreadProps } from '$lib/types';
+  import type { SvelteMap } from 'svelte/reactivity';
 
-  const currentThread = getContext('currentThread') as {
-    spoolId: number;
-    threadId: number | null;
+  const { threadChats, getCurrentThread } = getContext('threads') as {
+    threadChats: SvelteMap<number, ChatProps>;
+    getCurrentThread: () => ThreadProps;
   };
 
-  let messageText = $state('');
-  let messages = $state<Array<MessageProps>>([]);
+  const handleEmptyThreadMessages = () => {
+    if (!threadChats.has(currentThread.id)) {
+      threadChats.set(currentThread.id, {
+        thread: currentThread,
+        messages: [],
+        messageText: ''
+      });
+    }
+  };
+
+  let currentThread = getCurrentThread();
+  handleEmptyThreadMessages();
+  let messages = $derived((threadChats.get(currentThread.id) as ChatProps).messages);
+  let messageText = $state((threadChats.get(currentThread.id) as ChatProps).messageText);
   let id = $state(0);
+
+  $effect(() => {
+    currentThread = getCurrentThread();
+    handleEmptyThreadMessages();
+    messages = (threadChats.get(currentThread.id) as ChatProps).messages;
+    messageText = (threadChats.get(currentThread.id) as ChatProps).messageText;
+  });
 
   const sendMessage = () => {
     if (messageText.trim() === '') return;
@@ -25,8 +45,12 @@
       createdAt: new Date()
     };
 
-    messages = [...messages, newMessage];
-    messageText = '';
+    const currentChat = threadChats.get(currentThread.id) as ChatProps;
+    threadChats.set(currentThread.id, {
+      ...currentChat,
+      messages: [...currentChat.messages, newMessage],
+      messageText: ''
+    });
   };
 
   const handleKeyPress = (event: KeyboardEvent) => {
@@ -35,15 +59,6 @@
       sendMessage();
     }
   };
-
-  $effect(() => {
-    if (currentThread.threadId) {
-      console.log(`Chat updated: Spool ${currentThread.spoolId}, Thread ${currentThread.threadId}`);
-      // Here you would fetch messages for the current thread
-      // For now, we'll just clear messages when thread changes
-      messages = [];
-    }
-  });
 </script>
 
 <div class="flex h-full flex-col">
@@ -67,6 +82,10 @@
     <div class="flex gap-2">
       <Input
         bind:value={messageText}
+        oninput={() => {
+          // avoid mutating threadChats and causing an effect
+          (threadChats.get(currentThread.id) as ChatProps).messageText = messageText;
+        }}
         placeholder="Type a message..."
         class="flex-1"
         onkeydown={handleKeyPress}
