@@ -5,27 +5,52 @@
   import Message from './Message.svelte';
   import type { ChatProps, MessageProps, ThreadProps } from '$lib/types';
   import type { SvelteMap } from 'svelte/reactivity';
+  import { MessageApi } from '$lib/api/message';
 
   const { threadChats, getCurrentThread } = getContext('threads') as {
     threadChats: SvelteMap<number, ChatProps>;
     getCurrentThread: () => ThreadProps;
   };
 
+  let currMsgId = 0;
+
+  const renderMessage = (message: MessageProps) => {
+    const currentChat = threadChats.get(currentThread.id) as ChatProps;
+    threadChats.set(currentThread.id, {
+      ...currentChat,
+      messages: [...currentChat.messages, message],
+      messageText: ''
+    });
+  };
+
   const handleEmptyThreadMessages = () => {
-    if (!threadChats.has(currentThread.id)) {
+    if (threadChats.has(currentThread.id)) {
+      return;
+    }
+
+    threadChats.set(currentThread.id, {
+      thread: currentThread,
+      messages: [],
+      messageText: ''
+    });
+
+    MessageApi.getThreadMessages({ thread_id: currentThread.id }).then((msgs) => {
       threadChats.set(currentThread.id, {
         thread: currentThread,
-        messages: [],
+        messages: msgs,
         messageText: ''
       });
-    }
+      currMsgId = msgs[msgs.length - 1].id + 1;
+    });
+
+    // TODO: probably for entire chat too lazy rn
+    MessageApi.initThreadWebsocket({ thread_id: currentThread.id, token: 'hello' }, renderMessage);
   };
 
   let currentThread = getCurrentThread();
   handleEmptyThreadMessages();
   let messages = $derived((threadChats.get(currentThread.id) as ChatProps).messages);
   let messageText = $state((threadChats.get(currentThread.id) as ChatProps).messageText);
-  let id = $state(0);
 
   $effect(() => {
     currentThread = getCurrentThread();
@@ -37,20 +62,17 @@
   const sendMessage = () => {
     if (messageText.trim() === '') return;
 
-    const newMessage: MessageProps = {
-      id: id++,
+    const message: MessageProps = {
+      id: currMsgId++,
       username: 'user',
       userPfp: 'pfpurl.com',
       text: messageText,
       createdAt: new Date()
     };
 
-    const currentChat = threadChats.get(currentThread.id) as ChatProps;
-    threadChats.set(currentThread.id, {
-      ...currentChat,
-      messages: [...currentChat.messages, newMessage],
-      messageText: ''
-    });
+    MessageApi.sendThreadMessages({ thread_id: currentThread.id, message });
+
+    renderMessage(message);
   };
 
   const handleKeyPress = (event: KeyboardEvent) => {
