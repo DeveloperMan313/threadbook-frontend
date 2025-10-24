@@ -4,10 +4,10 @@ import type {
   CreateThreadRequest,
   GetSpoolThreadsRequest,
   UpdateThreadRequest,
-  ThreadEntryProps
+  ThreadProps
 } from '$lib/types';
 
-const MockGetSpoolThreads: Array<ThreadEntryProps> = [
+const MockGetSpoolThreads: Array<ThreadProps> = [
   {
     id: 1,
     title: 'my secret lair',
@@ -62,9 +62,9 @@ export const ThreadApi = {
   /**
    * Get threads in a spool
    * @param {GetSpoolThreadsRequest} request - request object
-   * @returns {Promise<Array<ThreadEntryProps>>} - API response
+   * @returns {Promise<Array<ThreadProps>>} - API response
    */
-  async getSpoolThreads(request: GetSpoolThreadsRequest): Promise<Array<ThreadEntryProps>> {
+  async getSpoolThreads(request: GetSpoolThreadsRequest): Promise<Array<ThreadProps>> {
     // await new Promise((r) => setTimeout(r, 2000)); // emulate API delay
     // return MockGetSpoolThreads;
     return ApiClient.fetchJSON(`/thread/?spool_id=${request.spool_id}`, {

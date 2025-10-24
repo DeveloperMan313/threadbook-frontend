@@ -1,14 +1,14 @@
 <script lang="ts">
-  import type { ContextMenuEntry, ThreadEntryProps } from '$lib/types';
+  import type { ContextMenuEntry, ThreadProps } from '$lib/types';
   import ModalThreadArchive from './ModalThreadArchive.svelte';
   import ModalThreadRename from './ModalThreadRename.svelte';
   import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
   import { getContext } from 'svelte';
 
-  let { id, title, unreadCnt, mentionCnt }: ThreadEntryProps = $props();
+  let { id, title, unreadCnt, mentionCnt }: ThreadProps = $props();
 
   const { setCurrentThread } = getContext('threads') as {
-    setCurrentThread: { (id: number | null): void };
+    setCurrentThread: { (id: number): void };
   };
 
   let isThreadRenameModalOpen = $state(false);
