@@ -2,6 +2,12 @@
  * Component properties interfaces
  */
 
+export interface ChatProps {
+  thread: ThreadProps;
+  messages: Array<MessageProps>;
+  messageText: string;
+}
+
 export interface ContextMenuEntry {
   type: 'neutral' | 'danger';
   label: string;
@@ -65,7 +71,7 @@ export interface SpoolDockProps {
 
 export type ThreadType = 'private' | 'public';
 
-export interface ThreadEntryProps {
+export interface ThreadProps {
   id: number;
   title: string;
   type: ThreadType;
@@ -76,7 +82,7 @@ export interface ThreadEntryProps {
 
 export interface ThreadListSectionProps {
   title: string;
-  entries: Array<ThreadEntryProps>;
+  entries: Array<ThreadProps>;
   expanded: boolean;
 }
 

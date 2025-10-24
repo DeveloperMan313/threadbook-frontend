@@ -6,29 +6,24 @@
   import { setContext } from 'svelte';
   import type { PageProps } from './$types';
   import { ThreadApi } from '$lib/api';
-  import type { ThreadEntryProps, ThreadType } from '$lib/types';
+  import type { ChatProps, ThreadProps, ThreadType } from '$lib/types';
   import ModalThreadCreate from '$lib/templates/ModalThreadCreate.svelte';
   import Chat from '$lib/templates/Chat.svelte';
+  import { SvelteMap } from 'svelte/reactivity';
 
   let { data, params }: PageProps = $props();
 
-  let threads: Array<ThreadEntryProps> = $state([]);
+  let threadChats = new SvelteMap<number, ChatProps>();
+
+  let threads: Array<ThreadProps> = $state([]);
   let currentThreadId = $state<number | null>(null);
 
   data.threads.then((resolvedThreads) => {
     threads = resolvedThreads;
   });
 
-  setContext('currentThread', {
-    get spoolId() {
-      return Number(params.id);
-    },
-    get threadId() {
-      return currentThreadId;
-    }
-  });
-
   setContext('threads', {
+    threadChats,
     archiveThread: (id: number) => {
       let thread = threads.filter((t) => t.id == id)[0];
       thread.is_closed = true;
@@ -48,7 +43,10 @@
         });
       });
     },
-    setCurrentThread: (id: number | null) => {
+    getCurrentThread: () => {
+      return threads.filter((t) => t.id == currentThreadId)[0];
+    },
+    setCurrentThread: (id: number) => {
       currentThreadId = id;
     },
     renameThread: (id: number, title: string) => {
