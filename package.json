@@ -27,6 +27,7 @@
     "@tailwindcss/vite": "^4.1.13",
     "@types/node": "^22",
     "bits-ui": "^2.14.0",
+    "centrifuge": "^5.5.2",
     "clsx": "^2.1.1",
     "deepfilternet3-noise-filter": "^1.0.8",
     "eslint": "^9.22.0",
