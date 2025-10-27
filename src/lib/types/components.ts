@@ -29,9 +29,9 @@ export interface InputFieldProps {
 export interface MessageProps {
   id: number;
   username: string;
-  userPfp: string;
-  text: string;
-  createdAt: Date;
+  content: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ModalSpoolLeaveProps {

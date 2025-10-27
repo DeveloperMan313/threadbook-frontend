@@ -5,8 +5,8 @@
   import ThreadListSection from '$lib/templates/ThreadListSection.svelte';
   import { setContext } from 'svelte';
   import type { PageProps } from './$types';
-  import { ThreadApi } from '$lib/api';
-  import type { ChatProps, ThreadProps, ThreadType } from '$lib/types';
+  import { CentrifugeClient, ThreadApi } from '$lib/api';
+  import type { ChatProps, MessageProps, ThreadProps, ThreadType, WsMessageSent } from '$lib/types';
   import ModalThreadCreate from '$lib/templates/ModalThreadCreate.svelte';
   import Chat from '$lib/templates/Chat.svelte';
   import { SvelteMap } from 'svelte/reactivity';
@@ -43,10 +43,13 @@
         });
       });
     },
-    getCurrentThread: () => {
-      return threads.filter((t) => t.id == currentThreadId)[0];
+    getCurrentThreadId: () => {
+      return currentThreadId;
     },
-    setCurrentThread: (id: number) => {
+    getThreads: () => {
+      return threads;
+    },
+    setCurrentThreadId: (id: number) => {
       currentThreadId = id;
     },
     renameThread: (id: number, title: string) => {
@@ -60,6 +63,21 @@
   });
 
   let isThreadCreateModalOpen = $state(false);
+
+  CentrifugeClient.subToUser((message: WsMessageSent) => {
+    if (message.username == 'paveldurov') {
+      return; // TODO think about duplication logic, update message.id
+    }
+    let chat = threadChats.get(message.thread_id) as ChatProps;
+    if (!chat) {
+      return; // ignore messages from not loaded threads
+    }
+    chat.messages = [...chat.messages, message as MessageProps];
+    threadChats.set(message.thread_id, {
+      ...chat,
+      messages: chat.messages
+    } as ChatProps);
+  });
 </script>
 
 <Navbar />

@@ -4,7 +4,8 @@ import type {
   CreateThreadRequest,
   GetSpoolThreadsRequest,
   UpdateThreadRequest,
-  ThreadProps
+  ThreadProps,
+  GetCentrifugeTokensResponse
 } from '$lib/types';
 
 const MockGetSpoolThreads: Array<ThreadProps> = [
@@ -109,6 +110,17 @@ export const ThreadApi = {
     return ApiClient.fetchJSON(`/thread/update`, {
       method: 'PUT',
       body: JSON.stringify(request)
+    });
+  },
+
+  /**
+   * Get tokens to connect to Centrifuge
+   * @returns {Promise<GetCentrifugeTokensResponse>} - API response
+   */
+  async getCentrifugeTokens(): Promise<GetCentrifugeTokensResponse> {
+    return ApiClient.fetchJSON(`/thread/ws/token`, {
+      method: 'GET',
+      headers: {}
     });
   }
 };
