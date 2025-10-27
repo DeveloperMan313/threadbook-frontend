@@ -18,14 +18,12 @@
 
     lastMessageMine = mine;
 
-    console.log(messagesContainer.scrollHeight);
     const currentChat = threadChats.get(currentThread.id) as ChatProps;
     threadChats.set(currentThread.id, {
       ...currentChat,
       messages: [...currentChat.messages, message],
       messageText: ''
     });
-    console.log(messagesContainer.scrollHeight);
   };
 
   $effect(() => {
