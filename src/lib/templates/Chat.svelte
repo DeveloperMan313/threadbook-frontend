@@ -7,72 +7,116 @@
   import type { SvelteMap } from 'svelte/reactivity';
   import { MessageApi } from '$lib/api/message';
 
-  const { threadChats, getCurrentThread } = getContext('threads') as {
+  const { threadChats, getCurrentThreadId, getThreads } = getContext('threads') as {
     threadChats: SvelteMap<number, ChatProps>;
-    getCurrentThread: () => ThreadProps;
+    getCurrentThreadId: () => number | null;
+    getThreads: () => ThreadProps[];
   };
 
-  let currMsgId = 0;
+  const renderMessage = (message: MessageProps, mine: boolean = false) => {
+    if (!currentThread) return;
 
-  const renderMessage = (message: MessageProps) => {
+    lastMessageMine = mine;
+
+    console.log(messagesContainer.scrollHeight);
     const currentChat = threadChats.get(currentThread.id) as ChatProps;
     threadChats.set(currentThread.id, {
       ...currentChat,
       messages: [...currentChat.messages, message],
       messageText: ''
     });
+    console.log(messagesContainer.scrollHeight);
   };
 
+  $effect(() => {
+    if (messages.length && (isAtBottom || lastMessageMine)) {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+  });
+
   const handleEmptyThreadMessages = () => {
-    if (threadChats.has(currentThread.id)) {
+    if (!currentThread) return;
+
+    const threadId = currentThread.id;
+
+    if (threadChats.has(threadId)) {
       return;
     }
 
-    threadChats.set(currentThread.id, {
+    threadChats.set(threadId, {
       thread: currentThread,
       messages: [],
       messageText: ''
     });
 
-    MessageApi.getThreadMessages({ thread_id: currentThread.id }).then((msgs) => {
-      threadChats.set(currentThread.id, {
+    MessageApi.getThreadMessages({ thread_id: threadId }).then((msgs) => {
+      msgs ||= [];
+      // Use captured threadId instead of currentThread.id to avoid race condition
+      threadChats.set(threadId, {
         thread: currentThread,
         messages: msgs,
         messageText: ''
       });
-      currMsgId = msgs[msgs.length - 1].id + 1;
     });
-
-    // TODO: probably for entire chat too lazy rn
-    MessageApi.initThreadWebsocket({ thread_id: currentThread.id, token: 'hello' }, renderMessage);
   };
 
-  let currentThread = getCurrentThread();
-  handleEmptyThreadMessages();
-  let messages = $derived((threadChats.get(currentThread.id) as ChatProps).messages);
-  let messageText = $state((threadChats.get(currentThread.id) as ChatProps).messageText);
+  let currentThread = $derived(
+    (() => {
+      if (!getCurrentThreadId()) return null;
+      return getThreads().find((t) => t.id === getCurrentThreadId());
+    })()
+  );
+
+  let messages = $derived(
+    (() => {
+      if (!currentThread) return [];
+      const chat = threadChats.get(currentThread.id);
+      return chat ? chat.messages : [];
+    })()
+  );
+
+  let messageText = $derived(
+    (() => {
+      if (!currentThread) return '';
+      const chat = threadChats.get(currentThread.id);
+      return chat ? chat.messageText : '';
+    })()
+  );
 
   $effect(() => {
-    currentThread = getCurrentThread();
-    handleEmptyThreadMessages();
-    messages = (threadChats.get(currentThread.id) as ChatProps).messages;
-    messageText = (threadChats.get(currentThread.id) as ChatProps).messageText;
+    if (currentThread) {
+      handleEmptyThreadMessages();
+    }
   });
 
+  let tempMsgId = 0;
+  let messagesContainer: HTMLDivElement;
+  let isAtBottom = $state(true);
+  let lastMessageMine = false;
+
+  const handleScroll = () => {
+    if (messagesContainer) {
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
+      const threshold = 10;
+      isAtBottom = scrollHeight - scrollTop - clientHeight <= threshold;
+    }
+  };
+
   const sendMessage = () => {
+    if (!currentThread) return;
+
     if (messageText.trim() === '') return;
 
     const message: MessageProps = {
-      id: currMsgId++,
-      username: 'user',
-      userPfp: 'pfpurl.com',
-      text: messageText,
-      createdAt: new Date()
+      id: -tempMsgId++, // use negative ids as temporary before WS message comes
+      username: 'user', // TODO get from context
+      content: messageText,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
-    MessageApi.sendThreadMessages({ thread_id: currentThread.id, message });
-
-    renderMessage(message);
+    MessageApi.sendThreadMessages({ thread_id: currentThread.id, content: message.content });
+    renderMessage(message, true);
   };
 
   const handleKeyPress = (event: KeyboardEvent) => {
@@ -84,7 +128,7 @@
 </script>
 
 <div class="flex h-full flex-col">
-  <div class="flex-1 overflow-y-auto p-4">
+  <div class="flex-1 overflow-y-auto p-4" bind:this={messagesContainer} onscroll={handleScroll}>
     {#if messages.length === 0}
       <div class="flex h-full items-center justify-center text-gray-500">
         <div class="text-center">
@@ -106,7 +150,12 @@
         bind:value={messageText}
         oninput={() => {
           // avoid mutating threadChats and causing an effect
-          (threadChats.get(currentThread.id) as ChatProps).messageText = messageText;
+          if (currentThread) {
+            const chat = threadChats.get(currentThread.id);
+            if (chat) {
+              chat.messageText = messageText;
+            }
+          }
         }}
         placeholder="Type a message..."
         class="flex-1"

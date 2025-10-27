@@ -45,12 +45,25 @@ export interface GetThreadMessagesRequest {
 
 export interface SendThreadMessagesRequest {
   thread_id: number;
-  message: MessageProps;
+  content: string;
 }
 
 export interface InitThreadWebsocketRequest {
   thread_id: number;
   token: string;
+}
+
+export interface GetCentrifugeTokensResponse {
+  ConnectToken: string;
+  ChannelTokens: Record<string, string>;
+}
+
+export interface WsBase {
+  type: string;
+}
+
+export interface WsMessageSent extends WsBase, MessageProps {
+  thread_id: number;
 }
 
 export interface Credentials {

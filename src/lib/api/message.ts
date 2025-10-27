@@ -10,16 +10,16 @@ const MockGetThreadMessages: Array<MessageProps> = [
   {
     id: 1,
     username: 'Alex',
-    userPfp: '',
-    text: 'hi, how everyone doing?',
-    createdAt: new Date()
+    content: 'hi, how everyone doing?',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   },
   {
     id: 2,
     username: 'Bob',
-    userPfp: '',
-    text: 'doing great, hbu?',
-    createdAt: new Date()
+    content: 'doing great, hbu?',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   }
 ];
 
@@ -30,8 +30,6 @@ export const MessageApi = {
    * @returns {Promise<Array<MessageProps>>} - API response
    */
   async getThreadMessages(request: GetThreadMessagesRequest): Promise<Array<MessageProps>> {
-    await new Promise((r) => setTimeout(r, 200)); // emulate API delay
-    return MockGetThreadMessages;
     return ApiClient.fetchJSON(`/thread/${request.thread_id}/messages`, {
       method: 'GET',
       headers: {}
@@ -43,43 +41,9 @@ export const MessageApi = {
    * @param {SendThreadMessagesRequest} request - request object
    */
   async sendThreadMessages(request: SendThreadMessagesRequest) {
-    return {};
-    return ApiClient.fetchJSON(`/thread/${request.thread_id}/messages/send`, {
+    return ApiClient.fetchJSON(`/thread/${request.thread_id}/messages`, {
       method: 'POST',
-      body: JSON.stringify(request.message)
+      body: JSON.stringify({ content: request.content })
     });
-  },
-
-  /**
-   * Init receiver websocket connection for a thread
-   * @param {InitThreadWebsocketRequest} request - request object
-   */
-  async initThreadWebsocket(
-    request: InitThreadWebsocketRequest,
-    onMessage: (message: MessageProps) => void
-  ) {
-    const startRandomMessages = () => {
-      const getRandomInterval = () => Math.random() * 5000 + 2000;
-      const getRandomNumber = () => Math.floor(Math.random() * 1000);
-      const sendRandomMessage = () => {
-        const randomMessage: MessageProps = {
-          id: Date.now(),
-          username: 'Bot',
-          userPfp: '',
-          text: `Random number: ${getRandomNumber()}`,
-          createdAt: new Date()
-        };
-        onMessage(randomMessage);
-        setTimeout(sendRandomMessage, getRandomInterval());
-      };
-      setTimeout(sendRandomMessage, getRandomInterval());
-    };
-    startRandomMessages();
-
-    return {
-      close: () => {
-        console.log('WebSocket simulation closed');
-      }
-    };
   }
 };
