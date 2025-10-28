@@ -296,10 +296,9 @@
       if (videoTrack) tracksToPublish.push(videoTrack);
 
       for (const track of tracksToPublish) {
-        await newRoom.localParticipant.publishTrack(track);
-        if ((track as any).kind === 'video' && localVideoEl) {
-          // attach local preview
-          (track as any).attach?.(localVideoEl);
+        const pub = await newRoom.localParticipant.publishTrack(track);
+        if (track instanceof LocalVideoTrack && localVideoEl) {
+          track.attach(localVideoEl);
         }
       }
 
