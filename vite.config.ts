@@ -13,12 +13,10 @@ export default defineConfig({
     })
   ],
   optimizeDeps: {
-    exclude: ['@shiguredo/noise-suppression']
+    include: ['@shiguredo/noise-suppression']
   },
-  build: {
-    rollupOptions: {
-      external: ['@shiguredo/noise-suppression']
-    }
+  ssr: {
+    noExternal: ['@shiguredo/noise-suppression']
   },
   assetsInclude: ['**/*.wasm']
 });
