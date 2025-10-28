@@ -266,9 +266,12 @@
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const micTrack = stream.getAudioTracks()[0];
         if (micTrack) {
+          /*
           const processor = new NoiseSuppressionProcessor();
           const processedTrack = await processor.startProcessing(micTrack);
           audioTrack = new LocalAudioTrack(processedTrack);
+          */
+          audioTrack = new LocalAudioTrack(micTrack);
         }
       } catch (micErr) {
         console.warn('Микрофон недоступен:', micErr);
