@@ -1,6 +1,7 @@
 <script lang="ts">
   import '../app.css';
   import '$lib/styles/global.css';
+  import VoiceChat from '$lib/templates/VoiceChat.svelte';
 
   import favicon from '$lib/assets/favicon.svg';
 
@@ -12,3 +13,4 @@
 </svelte:head>
 
 {@render children?.()}
+<VoiceChat />

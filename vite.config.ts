@@ -12,9 +12,13 @@ export default defineConfig({
       outdir: './src/lib/paraglide'
     })
   ],
+  optimizeDeps: {
+    exclude: ['@shiguredo/noise-suppression']
+  },
   build: {
     rollupOptions: {
-      external: ['deepfilternet3-noise-filter']
+      external: ['@shiguredo/noise-suppression']
     }
-  }
+  },
+  assetsInclude: ['**/*.wasm']
 });
