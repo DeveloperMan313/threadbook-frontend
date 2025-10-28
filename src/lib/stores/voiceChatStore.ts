@@ -17,6 +17,11 @@ export type VoiceChatState = {
 };
 
 function createVoiceChatStore() {
+    const getInitialPosition = () => {
+        if (typeof window === 'undefined') return { x: 0, y: 20 };
+        return { x: window.innerWidth - 320, y: 20 };
+    };
+
     const initialState: VoiceChatState = {
         room: null,
         isConnected: false,
@@ -29,7 +34,7 @@ function createVoiceChatStore() {
         participants: [],
         activeSpeakerId: null,
         isMinimized: false,
-        position: { x: typeof window !== 'undefined' ? window.innerWidth - 320 : 0, y: 20 }
+        position: getInitialPosition()
     };
 
     const { subscribe, set, update } = writable<VoiceChatState>(initialState);
@@ -37,31 +42,18 @@ function createVoiceChatStore() {
     return {
         subscribe,
         join: () => update(s => ({ ...s, error: '' })),
-        leave: () => {
-            set(initialState);
-        },
-        toggleMinimized: () =>
-            update(s => ({ ...s, isMinimized: !s.isMinimized })),
-        setPosition: (x: number, y: number) =>
-            update(s => ({ ...s, position: { x, y } })),
-        updateRoom: (room: Room | null) =>
-            update(s => ({ ...s, room, isConnected: !!room })),
-        setError: (error: string) =>
-            update(s => ({ ...s, error })),
-        setHasMic: (hasMic: boolean) =>
-            update(s => ({ ...s, hasMic })),
-        setHasCamera: (hasCamera: boolean) =>
-            update(s => ({ ...s, hasCamera })),
-        setIsSelfMuted: (muted: boolean) =>
-            update(s => ({ ...s, isSelfMuted: muted })),
-        setIsSelfVideoEnabled: (enabled: boolean) =>
-            update(s => ({ ...s, isSelfVideoEnabled: enabled })),
-        setIsScreenSharing: (sharing: boolean) =>
-            update(s => ({ ...s, isScreenSharing: sharing })),
-        setParticipants: (participants: RemoteParticipant[]) =>
-            update(s => ({ ...s, participants })),
-        setActiveSpeaker: (id: string | null) =>
-            update(s => ({ ...s, activeSpeakerId: id }))
+        leave: () => set(initialState),
+        toggleMinimized: () => update(s => ({ ...s, isMinimized: !s.isMinimized })),
+        setPosition: (x: number, y: number) => update(s => ({ ...s, position: { x, y } })),
+        updateRoom: (room: Room | null) => update(s => ({ ...s, room, isConnected: !!room })),
+        setError: (error: string) => update(s => ({ ...s, error })),
+        setHasMic: (hasMic: boolean) => update(s => ({ ...s, hasMic })),
+        setHasCamera: (hasCamera: boolean) => update(s => ({ ...s, hasCamera })),
+        setIsSelfMuted: (muted: boolean) => update(s => ({ ...s, isSelfMuted: muted })),
+        setIsSelfVideoEnabled: (enabled: boolean) => update(s => ({ ...s, isSelfVideoEnabled: enabled })),
+        setIsScreenSharing: (sharing: boolean) => update(s => ({ ...s, isScreenSharing: sharing })),
+        setParticipants: (participants: RemoteParticipant[]) => update(s => ({ ...s, participants })),
+        setActiveSpeaker: (id: string | null) => update(s => ({ ...s, activeSpeakerId: id }))
     };
 }
 
