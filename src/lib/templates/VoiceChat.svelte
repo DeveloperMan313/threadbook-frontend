@@ -144,6 +144,8 @@
       // 🔥 Подключаемся к комнате
       await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       // ✅ Сразу обновляем состояние — пользователь "в чате"
       voiceChatStore.updateRoom(room);
       voiceChatStore.setParticipants(Array.from(room.remoteParticipants.values()));
