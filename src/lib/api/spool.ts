@@ -1,5 +1,10 @@
 import { ApiClient } from './client';
-import type { SpoolProps, SpoolDockProps, GetSpoolInfoRequest } from '$lib/types';
+import type {
+  SpoolProps,
+  SpoolDockProps,
+  GetSpoolInfoRequest,
+  CreateSpoolRequest
+} from '$lib/types';
 
 const MockGetUserSpoolList: SpoolDockProps = {
   spools: [
@@ -64,5 +69,21 @@ export const SpoolApi = {
       method: 'GET',
       body: JSON.stringify(request)
     }) as Promise<SpoolProps>;
+  },
+
+  /**
+   * Create a new spool
+   * @param {CreateSpoolRequest} request - request object with name and banner file
+   */
+  async createSpool(request: CreateSpoolRequest) {
+    const formData = new FormData();
+    formData.append('name', request.name);
+    formData.append('banner', request.banner);
+
+    return ApiClient.fetchJSON('/spool', {
+      method: 'POST',
+      headers: {},
+      body: formData
+    });
   }
 };
