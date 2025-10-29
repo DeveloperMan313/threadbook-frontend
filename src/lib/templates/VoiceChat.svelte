@@ -128,6 +128,10 @@
 
       await newRoom.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
+      await new Promise<void>((resolve) => {
+        newRoom.once('connected', () => resolve());
+      });
+
       // Микрофон
       let audioTrack: LocalAudioTrack | null = null;
       try {
