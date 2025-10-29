@@ -23,6 +23,10 @@ export interface GetSpoolThreadsRequest {
   spool_id: number;
 }
 
+export interface LeaveSpoolRequest {
+  spool_id: number;
+}
+
 export interface ArchiveThreadRequest {
   id: number;
 }

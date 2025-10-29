@@ -2,12 +2,17 @@
   import type { ModalSpoolLeaveProps } from '$lib/types';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
+  import { getContext } from 'svelte';
 
-  let { spoolName, isOpen = $bindable() }: ModalSpoolLeaveProps = $props();
+  let { spoolId, spoolName, isOpen = $bindable() }: ModalSpoolLeaveProps = $props();
+
+  const { leave } = getContext('spools') as {
+    leave: { (spool_id: number): Promise<void> };
+  };
 
   const onLeaveClick = () => {
     isOpen = false;
-    alert(`Leave from spool "${spoolName}"`);
+    leave(spoolId);
   };
 
   const onCancel = () => {
