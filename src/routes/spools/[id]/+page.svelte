@@ -121,16 +121,13 @@
     {/if}
     <ModalThreadCreate bind:isOpen={isThreadCreateModalOpen} />
   </div>
-  <div class="flex w-full flex-col">
-    <div class="h-full rounded-bl-2xl bg-white">
-      {#if currentThreadId}
-        <Chat />
-      {:else}
-        <div class="flex h-full items-center justify-center text-gray-500">
-          Select a thread to start chatting
-        </div>
-      {/if}
-    </div>
-    <div class="h-20"></div>
+  <div class="flex w-full flex-col bg-white">
+    {#if currentThreadId}
+      <Chat />
+    {:else}
+      <div class="flex h-full items-center justify-center text-gray-500">
+        Select a thread to start chatting
+      </div>
+    {/if}
   </div>
 </div>

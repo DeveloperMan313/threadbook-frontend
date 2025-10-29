@@ -142,7 +142,7 @@
       </div>
     {/if}
   </div>
-  <div class="border-t border-gray-200 bg-white p-4">
+  <div class="border-t border-gray-200 p-4">
     <div class="flex gap-2">
       <Input
         bind:value={messageText}
