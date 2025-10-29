@@ -1,34 +1,34 @@
-<!-- src/lib/components/VoiceChat.svelte -->
+<script context="module">
+  export const ssr = false;
+</script>
+
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
   import {
     Room,
+    RemoteParticipant,
+    RemoteTrack,
+    RemoteTrackPublication,
     LocalAudioTrack,
-    LocalVideoTrack,
-    type RemoteParticipant,
-    type Participant,
-    type Track,
-    type TrackPublication
+    LocalVideoTrack
   } from 'livekit-client';
 
-  import { voiceChatStore } from '$lib/stores/voiceChatStore';
-  import type { VoiceChatState } from '$lib/stores/voiceChatStore';
-
-  let isLoading = false;
-  let volumes: Record<string, number> = {};
-  let pinnedParticipantId: string | null = null;
-
-  let state!: VoiceChatState;
-  const unsubscribe = voiceChatStore.subscribe((s) => (state = s));
-
-  let localVideoEl: HTMLVideoElement | null = null;
-  let chatRef: HTMLDivElement | null = null;
-
-  const audioElements = new Map<string, HTMLAudioElement>();
-  const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
-
+  let isConnected = false;
+  let error = '';
   const THREAD_ID = 1;
+  let room: Room | null = null;
+
+  let isSelfMuted = false;
+  let isOthersMuted = false;
+  let hasMic = true;
+  let hasCamera = true;
+  let participants: RemoteParticipant[] = [];
+  let volumes: Record<string, number> = {};
+  let audioElements = new Map<string, HTMLAudioElement>();
+  let localVideoEl: HTMLVideoElement | null = null;
+
+  const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
 
   async function getToken() {
     const res = await fetch('/api/thread/sfu/token', {
@@ -36,317 +36,402 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ thread_id: THREAD_ID })
     });
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Не удалось получить токен');
+      throw new Error(err.error || 'Failed to get token');
     }
+
     const { token } = await res.json();
     return token;
   }
 
-  function attachAudioTrack(track: Track, participantId: string) {
+  function attachAudioTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
-    const el = track.attach() as HTMLAudioElement;
-    el.dataset.participant = participantId;
-    el.muted = false;
-    el.volume = volumes[participantId] ?? 1;
-    el.style.display = 'none';
-    document.body.appendChild(el);
-    audioElements.set(participantId, el);
+    const element = track.attach() as HTMLAudioElement;
+    element.dataset.participant = participantId;
+    element.muted = isOthersMuted;
+    element.volume = volumes[participantId] ?? 1;
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    audioElements.set(participantId, element);
   }
 
-  function attachVideoTrack(track: Track, participantId: string) {
+  function attachVideoTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
-    const el = track.attach() as HTMLVideoElement;
-    el.autoplay = true;
-    el.playsInline = true;
-    el.muted = true;
-    el.className = 'w-full h-full object-cover rounded';
+    const element = track.attach() as HTMLVideoElement;
+    element.autoplay = true;
+    element.playsInline = true;
+    element.muted = true;
+    element.className = 'video-preview';
+
     const container = document.querySelector(
       `.video-container[data-participant="${CSS.escape(participantId)}"]`
     );
     if (container) {
       container.innerHTML = '';
-      container.appendChild(el);
+      container.appendChild(element);
     }
   }
 
   function detachTrack(participantId: string) {
-    const el = audioElements.get(participantId);
-    if (el) {
-      el.remove();
+    if (!isBrowser) return;
+    const audioEl = audioElements.get(participantId);
+    if (audioEl) {
+      audioEl.remove();
       audioElements.delete(participantId);
     }
   }
 
   function updateVolume(participantId: string, volume: number) {
-    volumes[participantId] = volume;
+    volumes = { ...volumes, [participantId]: volume };
+    if (!isBrowser) return;
     const el = audioElements.get(participantId);
-    if (el) el.volume = volume;
+    if (el) {
+      el.volume = volume;
+    }
   }
 
   async function toggleSelfMute() {
-    if (!state.room || !state.hasMic) return;
-    const newMuted = !state.isSelfMuted;
-    await state.room.localParticipant.setMicrophoneEnabled(!newMuted);
-    voiceChatStore.setIsSelfMuted(newMuted);
+    if (!room || !hasMic) return;
+    isSelfMuted = !isSelfMuted;
+    await room.localParticipant.setMicrophoneEnabled(!isSelfMuted);
   }
 
-  async function toggleSelfVideo() {
-    if (!state.room || !state.hasCamera) return;
-    const newEnabled = !state.isSelfVideoEnabled;
-    await state.room.localParticipant.setCameraEnabled(newEnabled);
-    voiceChatStore.setIsSelfVideoEnabled(newEnabled);
+  function toggleOthersMute() {
+    if (!isBrowser) return;
+    isOthersMuted = !isOthersMuted;
+    audioElements.forEach((el) => {
+      el.muted = isOthersMuted;
+    });
   }
 
   function setupParticipantEvents(participant: RemoteParticipant) {
-    // Подписка на будущие треки
-    participant.on('trackPublished', (pub) => {
-      pub.on('subscribed', (track) => {
-        if (track.kind === 'audio') attachAudioTrack(track, participant.identity);
-        else if (track.kind === 'video') attachVideoTrack(track, participant.identity);
+    participant.on('trackPublished', (pub: RemoteTrackPublication) => {
+      pub.on('subscribed', (track: RemoteTrack) => {
+        if (track.kind === 'audio') {
+          attachAudioTrack(track, participant.identity);
+        } else if (track.kind === 'video') {
+          attachVideoTrack(track, participant.identity);
+        }
       });
     });
 
-    // Обработка уже существующих треков
     participant.trackPublications.forEach((pub) => {
       if (pub.isSubscribed && pub.track) {
-        if (pub.track.kind === 'audio') attachAudioTrack(pub.track, participant.identity);
-        else if (pub.track.kind === 'video') attachVideoTrack(pub.track, participant.identity);
+        if (pub.track.kind === 'audio') {
+          attachAudioTrack(pub.track, participant.identity);
+        } else if (pub.track.kind === 'video') {
+          attachVideoTrack(pub.track, participant.identity);
+        }
       }
     });
+
+    if (!participants.some((p) => p.identity === participant.identity)) {
+      participants = [...participants, participant];
+    }
   }
 
   async function joinRoom() {
-    if (!isBrowser || isLoading || state.isConnected) return;
-    isLoading = true;
-    voiceChatStore.setError('');
-
-    let room: Room | null = null;
+    if (!isBrowser) return;
+    error = '';
 
     try {
       const token = await getToken();
       room = new Room({ adaptiveStream: true, dynacast: true });
 
-      // Обработчики комнаты
-      room.on('participantConnected', (participant) => {
-        setupParticipantEvents(participant);
-        voiceChatStore.setParticipants(Array.from(room!.remoteParticipants.values()));
-      });
-
+      room.on('participantConnected', (p) => setupParticipantEvents(p));
       room.on('participantDisconnected', (p) => {
+        participants = participants.filter((part) => part.identity !== p.identity);
         detachTrack(p.identity);
-        voiceChatStore.setParticipants(Array.from(room!.remoteParticipants.values()));
       });
-
-      room.once('disconnected', leaveRoom);
 
       // 🔥 Подключаемся к комнате
       await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // ✅ Сразу помечаем как подключённого
+      isConnected = true;
 
-      // ✅ Сразу обновляем состояние — пользователь "в чате"
-      voiceChatStore.updateRoom(room);
-      voiceChatStore.setParticipants(Array.from(room.remoteParticipants.values()));
+      // 🔥 Ждём немного, чтобы ICE успел установиться
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-      // Инициализация локальных треков
-      let hasMic = false;
-      let hasCamera = false;
-
-      // Микрофон
+      // --- Микрофон ---
+      let audioTrack: LocalAudioTrack | null = null;
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            autoGainControl: true,
+            echoCancellation: true,
+            noiseSuppression: true
+          }
+        });
         if (stream.getAudioTracks().length > 0) {
-          const audioTrack = new LocalAudioTrack(stream.getAudioTracks()[0]);
+          audioTrack = new LocalAudioTrack(stream.getAudioTracks()[0]);
           await room.localParticipant.publishTrack(audioTrack);
           hasMic = true;
         }
       } catch (err) {
         console.warn('Микрофон недоступен:', err);
+        hasMic = false;
       }
-      voiceChatStore.setHasMic(hasMic);
 
-      // Камера
-      if (state.isSelfVideoEnabled) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          if (stream.getVideoTracks().length > 0) {
-            const videoTrack = new LocalVideoTrack(stream.getVideoTracks()[0]);
-            await room.localParticipant.publishTrack(videoTrack);
-            if (videoTrack && localVideoEl) {
-              videoTrack.attach(localVideoEl);
-            }
-            hasCamera = true;
+      // --- Камера ---
+      let videoTrack: LocalVideoTrack | null = null;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (stream.getVideoTracks().length > 0) {
+          videoTrack = new LocalVideoTrack(stream.getVideoTracks()[0]);
+          await room.localParticipant.publishTrack(videoTrack);
+          hasCamera = true;
+          if (videoTrack && localVideoEl) {
+            videoTrack.attach(localVideoEl);
           }
-        } catch (err) {
-          console.warn('Камера недоступна:', err);
         }
-        voiceChatStore.setHasCamera(hasCamera);
+      } catch (err) {
+        console.warn('Камера недоступна:', err);
+        hasCamera = false;
       }
+
+      // Обновляем участников (на случай, если кто-то уже в комнате)
+      room.remoteParticipants.forEach(setupParticipantEvents);
     } catch (err: any) {
-      const msg = err?.message || 'Не удалось подключиться';
-      voiceChatStore.setError(msg);
-      console.error('Ошибка подключения:', err);
-      if (room) {
-        try {
-          room.disconnect();
-        } catch {}
-      }
+      error = err.message || 'Connection failed';
+      console.error('Join error:', err);
       leaveRoom();
-    } finally {
-      isLoading = false;
     }
   }
 
   function leaveRoom() {
-    if (state.room) {
-      state.room.localParticipant.trackPublications.forEach((pub: TrackPublication) => {
+    if (!isBrowser) return;
+
+    if (room) {
+      room.localParticipant.trackPublications.forEach((pub) => {
         try {
-          pub.track?.stop?.();
-          pub.track?.detach?.();
+          pub.track?.stop();
+          pub.track?.detach();
         } catch {}
       });
-      try {
-        state.room.disconnect();
-      } catch {}
+      room.disconnect();
+      room = null;
     }
 
+    participants = [];
     audioElements.forEach((el) => el.remove());
     audioElements.clear();
+    document.querySelectorAll('.video-container').forEach((el) => {
+      (el as HTMLElement).innerHTML = '';
+    });
+    if (localVideoEl) {
+      localVideoEl.srcObject = null;
+      localVideoEl.load();
+    }
 
-    voiceChatStore.leave();
+    isConnected = false;
+    isSelfMuted = false;
+    isOthersMuted = false;
+    hasMic = true;
+    hasCamera = true;
     volumes = {};
-    pinnedParticipantId = null;
   }
 
   onMount(() => {
-    // Инициализация существующих участников при восстановлении состояния
-    if (state.isConnected && state.room) {
-      state.room.remoteParticipants.forEach(setupParticipantEvents);
-    }
-
     const handleBeforeUnload = () => {
-      if (state.isConnected) leaveRoom();
+      if (isConnected) leaveRoom();
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      unsubscribe();
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      if (state.isConnected) leaveRoom();
+      if (isConnected) leaveRoom();
     };
+  });
+
+  onDestroy(() => {
+    leaveRoom();
   });
 </script>
 
-{#if !state.isMinimized}
-  <div
-    bind:this={chatRef}
-    role="dialog"
-    aria-label="Голосовой чат"
-    aria-modal="false"
-    tabindex="0"
-    class="fixed z-50 rounded-xl border border-gray-700 bg-gray-900 text-white shadow-xl select-none focus:ring-2 focus:ring-cyan-500 focus:outline-none"
-    style="left: {state.position.x}px; top: {state.position.y}px; width: 288px;"
-  >
-    <div class="flex cursor-move items-center justify-between rounded-t-xl p-4 pb-3">
-      <h3 class="font-semibold text-cyan-400">Голосовой чат</h3>
-      <button
-        class="rounded text-gray-400 hover:text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"
-        aria-label="Свернуть чат"
-        on:click={voiceChatStore.toggleMinimized}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path d="M5 12h14" />
-        </svg>
-      </button>
+<div class="voice-chat">
+  <h3 class="title">Голосовой чат</h3>
+
+  {#if error}
+    <p class="error">{error}</p>
+  {/if}
+
+  {#if isConnected}
+    <div class="local-video-container">
+      <video bind:this={localVideoEl} class="local-video" autoplay playsinline muted />
     </div>
+  {/if}
 
-    <div class="px-4 pb-4">
-      {#if state.error}
-        <div
-          class="mb-3 rounded bg-red-900/50 p-2 text-sm text-red-200"
-          role="alert"
-          aria-live="polite"
-        >
-          {state.error}
-        </div>
-      {/if}
+  <div class="controls">
+    <button class="button self-mute" on:click={toggleSelfMute} disabled={!isConnected || !hasMic}>
+      {isSelfMuted ? 'Размутить себя' : 'Заглушить себя'}
+    </button>
+    <button class="button others-mute" on:click={toggleOthersMute} disabled={!isConnected}>
+      {isOthersMuted ? 'Включить других' : 'Заглушить всех'}
+    </button>
+  </div>
 
-      {#if state.isConnected}
-        <div class="relative mb-3 aspect-video overflow-hidden rounded-lg bg-black">
-          <video
-            bind:this={localVideoEl}
-            autoplay
-            playsinline
-            muted
-            class="h-full w-full object-cover"
-            aria-label="Ваше видео"
-          ></video>
-          <div class="absolute right-2 bottom-2 flex gap-1" aria-hidden="true">
-            {#if state.hasMic}
-              <span class="rounded bg-black/70 px-1 text-xs text-white">
-                {state.isSelfMuted ? '🔇' : '🎤'}
-              </span>
-            {/if}
+  <div class="participants">
+    {#each participants as p}
+      {#if room && p.identity !== room.localParticipant.identity}
+        <div class="participant">
+          <div class="video-container" data-participant={p.identity}></div>
+          <div class="participant-info">
+            <span class="identity">{p.identity}</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              bind:value={volumes[p.identity]}
+              on:input={(e) =>
+                updateVolume(p.identity, parseFloat((e.target as HTMLInputElement).value))}
+            />
           </div>
         </div>
       {/if}
-
-      <div class="mb-3 grid grid-cols-2 gap-2">
-        <button
-          class="flex items-center justify-center gap-1 rounded bg-gray-800 py-2 text-xs hover:bg-gray-700 focus:ring-2 focus:ring-cyan-400 focus:outline-none disabled:opacity-50"
-          on:click={toggleSelfMute}
-          disabled={!state.isConnected || !state.hasMic}
-        >
-          {state.isSelfMuted ? 'Размутить' : 'Заглушить'}
-        </button>
-
-        <button
-          class="flex items-center justify-center gap-1 rounded bg-gray-800 py-2 text-xs hover:bg-gray-700 focus:ring-2 focus:ring-cyan-400 focus:outline-none disabled:opacity-50"
-          on:click={toggleSelfVideo}
-          disabled={!state.isConnected || !state.hasCamera}
-        >
-          {state.isSelfVideoEnabled ? 'Выкл. камеру' : 'Вкл. камеру'}
-        </button>
-      </div>
-
-      <div class="mb-3 max-h-40 space-y-2 overflow-y-auto">
-        {#each state.participants as p (p.identity)}
-          {#if state.room && p.identity !== state.room.localParticipant.identity}
-            <div class="group relative rounded bg-gray-800 p-2">
-              <div
-                class="video-container relative mb-1 aspect-video w-full rounded bg-black"
-                data-participant={p.identity}
-                aria-label={`Видео участника ${p.identity}`}
-              ></div>
-              <div class="truncate text-xs">{p.identity}</div>
-            </div>
-          {/if}
-        {/each}
-      </div>
-
-      <button
-        class="w-full rounded bg-cyan-600 py-2 text-sm font-medium hover:bg-cyan-500 focus:ring-2 focus:ring-cyan-400 focus:outline-none disabled:opacity-50"
-        on:click={state.isConnected ? leaveRoom : joinRoom}
-        disabled={isLoading || (state.error !== '' && !state.isConnected)}
-      >
-        {isLoading ? 'Подключение…' : state.isConnected ? 'Выйти' : 'Войти в чат'}
-      </button>
-    </div>
+    {/each}
   </div>
-{/if}
+
+  <button
+    class="button join-leave"
+    on:click={isConnected ? leaveRoom : joinRoom}
+    disabled={error !== ''}
+  >
+    {isConnected ? 'Выйти' : 'Войти'}
+  </button>
+</div>
 
 <style>
+  .voice-chat {
+    position: fixed;
+    top: var(--m-4);
+    right: var(--m-4);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--m-3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    width: 16rem;
+    font-size: 0.9rem;
+    color: #000;
+  }
+
+  .title {
+    font-size: var(--font-medium);
+    margin: 0 0 var(--m-2) 0;
+    color: #000;
+  }
+
+  .error {
+    color: #d32f2f;
+    font-size: var(--font-small);
+    margin-bottom: var(--m-2);
+  }
+
+  .button {
+    width: 100%;
+    padding: var(--m-1);
+    margin-bottom: var(--m-1);
+    border: none;
+    border-radius: var(--border-radius);
+    color: white;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .self-mute {
+    background: #333;
+  }
+  .others-mute {
+    background: #555;
+  }
+  .join-leave {
+    background: #000;
+  }
+
+  .button:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  .button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .controls {
+    margin-bottom: var(--m-2);
+  }
+
+  .local-video-container {
+    margin-bottom: var(--m-2);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background: #000;
+  }
+
+  .local-video {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    display: block;
+  }
+
   .video-container {
-    position: relative;
+    width: 100%;
+    height: 80px;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background: #000;
+    margin-bottom: var(--m-1);
+  }
+
+  .video-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .participants {
+    margin: var(--m-2) 0;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  .participant {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--m-1);
+    margin-bottom: var(--m-2);
+    padding: var(--m-1);
+    background: #f0f0f0;
+    border-radius: var(--border-radius);
+  }
+
+  .participant-info {
+    display: flex;
+    align-items: center;
+    gap: var(--m-1);
+    width: 100%;
+  }
+
+  .identity {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    color: #000;
+  }
+
+  input[type='range'] {
+    width: 80px;
+    height: 20px;
   }
 </style>
