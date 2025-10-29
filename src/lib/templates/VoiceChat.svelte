@@ -300,6 +300,10 @@
 
       for (const track of tracksToPublish) {
         const pub = await newRoom.localParticipant.publishTrack(track);
+        if (!pub) {
+          console.warn('Публикация трека вернула undefined');
+          continue;
+        }
         if (track instanceof LocalVideoTrack && localVideoEl) {
           track.attach(localVideoEl);
         }
