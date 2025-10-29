@@ -86,3 +86,17 @@ export function threadTitleGetError(value: string): string | null {
   }
   return `At least ${minLength} symbols`;
 }
+
+/**
+ * Check spool name
+ * @param {string} value - spool name string
+ * @returns {string?} - error message or null
+ */
+export function spoolNameGetError(value: string): string | null {
+  const minLength = 4;
+  const isValid = value.length >= minLength;
+  if (isValid) {
+    return null;
+  }
+  return `At least ${minLength} symbols`;
+}
