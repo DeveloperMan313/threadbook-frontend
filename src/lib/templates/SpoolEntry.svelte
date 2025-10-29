@@ -10,13 +10,6 @@
 
   const contextMenuEntries: Array<ContextMenuEntry> = [
     {
-      type: 'neutral',
-      label: 'Rename',
-      onSelect: () => {
-        alert('Rename spool');
-      }
-    },
-    {
       type: 'danger',
       label: 'Leave',
       onSelect: () => {
