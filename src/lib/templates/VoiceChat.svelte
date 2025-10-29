@@ -18,6 +18,8 @@
 
   let isSelfMuted = false;
   let isOthersMuted = false;
+  let isSelfVideoEnabled = true;
+
   let participants: RemoteParticipant[] = [];
   let volumes: Record<string, number> = {};
   let audioElements = new SvelteMap<string, HTMLAudioElement>();
@@ -55,19 +57,29 @@
 
   function attachVideoTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
+
     const element = track.attach() as HTMLVideoElement;
     element.autoplay = true;
     element.playsInline = true;
     element.muted = true;
     element.className = 'video-preview';
 
-    const container = document.querySelector(
-      `.video-container[data-participant="${participantId}"]`
-    );
-    if (container) {
-      container.innerHTML = '';
-      container.appendChild(element);
-    }
+    const tryAttach = () => {
+      const container = document.querySelector(
+        `.video-container[data-participant="${participantId}"]`
+      ) as HTMLElement | null;
+
+      if (container) {
+        container.innerHTML = '';
+        container.appendChild(element);
+      } else {
+        setTimeout(() => {
+          tryAttach();
+        }, 100);
+      }
+    };
+
+    tryAttach();
   }
 
   function detachTrack(participantId: string) {
@@ -100,6 +112,12 @@
     audioElements.forEach((el) => {
       el.muted = isOthersMuted;
     });
+  }
+
+  async function toggleSelfVideo() {
+    if (!room) return;
+    isSelfVideoEnabled = !isSelfVideoEnabled;
+    await room.localParticipant.setCameraEnabled(isSelfVideoEnabled);
   }
 
   function handleParticipant(participant: RemoteParticipant) {
@@ -168,7 +186,9 @@
 
       await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
-      const videoTracks = await room.localParticipant.createTracks({ video: true, audio: false });
+      const videoTracks = isSelfVideoEnabled
+        ? await room.localParticipant.createTracks({ video: true, audio: false })
+        : [];
       let audioTrack = null;
 
       try {
@@ -247,6 +267,7 @@
     isConnected = false;
     isSelfMuted = false;
     isOthersMuted = false;
+    isSelfVideoEnabled = true;
     volumes = {};
   }
 
@@ -297,6 +318,13 @@
       disabled={!isConnected}
     >
       {isOthersMuted ? 'Включить других' : 'Заглушить всех'}
+    </button>
+    <button
+      class="mb-1 w-full cursor-pointer rounded bg-gray-700 px-2 py-1 text-xs text-white transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+      on:click={toggleSelfVideo}
+      disabled={!isConnected}
+    >
+      {isSelfVideoEnabled ? 'Выключить видео' : 'Включить видео'}
     </button>
   </div>
 
