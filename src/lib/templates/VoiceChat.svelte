@@ -272,7 +272,14 @@
   });
 </script>
 
-<div class="voice-chat">
+<div
+  role="dialog"
+  aria-label="Голосовой чат"
+  aria-modal="false"
+  tabindex="0"
+  class="fixed z-50 rounded-xl border border-gray-700 bg-gray-900 text-white shadow-xl select-none focus:ring-2 focus:ring-cyan-500 focus:outline-none"
+  style="left: 500px; top: 500px; width: 288px;"
+>
   <h3>Голосовой чат (debug)</h3>
 
   {#if error}
@@ -325,13 +332,6 @@
 </div>
 
 <style>
-  .voice-chat {
-    font-family: sans-serif;
-    background: #fff;
-    padding: 1rem;
-    border-radius: 8px;
-    width: 300px;
-  }
   .error {
     color: red;
     font-weight: bold;
