@@ -13,7 +13,6 @@
     type Participant,
     type TrackPublication
   } from 'livekit-client';
-
   import { voiceChatStore } from '$lib/stores/voiceChatStore';
   import type { VoiceChatState } from '$lib/stores/voiceChatStore';
   import { NoiseSuppressionProcessor } from '@shiguredo/noise-suppression';
@@ -26,7 +25,7 @@
   let isDragging = false;
   let dragOffset = { x: 0, y: 0 };
 
-  let state!: VoiceChatState; // definite assignment — подписчик сразу присвоит значение
+  let state!: VoiceChatState;
   const unsubscribe = voiceChatStore.subscribe((s) => (state = s));
 
   let localVideoEl: HTMLVideoElement | null = null;
@@ -97,8 +96,6 @@
       el.remove();
       audioElements.delete(participantId);
     }
-    // Видео-дэтатч происходит через track.detach() в других местах (если трек локальный)
-    // удаляем DOM-аудио, видео контейнеры очистятся при attach нового трека
   }
 
   function updateVolume(participantId: string, volume: number) {
@@ -130,9 +127,7 @@
         await state.room.localParticipant.unpublishTrack(pub.track);
         try {
           pub.track.detach();
-        } catch (e) {
-          // ignore
-        }
+        } catch {}
         voiceChatStore.setIsScreenSharing(false);
       }
     } else {
@@ -187,17 +182,12 @@
   function handleParticipant(participant: RemoteParticipant) {
     try {
       (participant as any).removeAllListeners?.();
-    } catch (e) {
-      // ignore
-    }
+    } catch {}
 
     participant.on('trackPublished', (pub: RemoteTrackPublication) => {
       try {
-        // Установим флаг подписки (если API поддерживает)
-        if ((pub as any).setSubscribed) (pub as any).setSubscribed(true);
-      } catch (e) {
-        // ignore
-      }
+        (pub as any).setSubscribed?.(true);
+      } catch {}
       subscribeToTrack(pub, participant.identity);
     });
 
@@ -205,27 +195,21 @@
       detachTrack(participant.identity);
     });
 
-    // Подписываемся на уже опубликованные треки
     participant.trackPublications.forEach((pub) => {
       try {
-        if (!pub.isSubscribed && (pub as any).setSubscribed) (pub as any).setSubscribed(true);
-      } catch (e) {
-        // ignore
-      }
+        (pub as any).setSubscribed?.(true);
+      } catch {}
       subscribeToTrack(pub as RemoteTrackPublication, participant.identity);
     });
 
-    // Подписка на уровень громкости (если трек поддерживает)
     const audioPub = participant.getTrackPublication(Track.Source.Microphone);
     if (audioPub?.track) {
       const trackWithAudioLevel: any = audioPub.track;
-      if (trackWithAudioLevel && typeof trackWithAudioLevel.on === 'function') {
+      if (trackWithAudioLevel?.on) {
         trackWithAudioLevel.on('audioLevel', (level: number) => {
-          // простая детекция говорящего
           if (level > 0.1) {
             voiceChatStore.setActiveSpeaker(participant.identity);
             setTimeout(() => {
-              // очистим только если тот же участник всё ещё активный
               if (state.activeSpeakerId === participant.identity) {
                 voiceChatStore.setActiveSpeaker(null);
               }
@@ -243,10 +227,7 @@
 
     try {
       const token = await getToken();
-      const newRoom = new Room({
-        adaptiveStream: true,
-        dynacast: true
-      });
+      const newRoom = new Room({ adaptiveStream: true, dynacast: true });
 
       newRoom.on('participantConnected', (p: RemoteParticipant) => handleParticipant(p));
       newRoom.on('participantDisconnected', (p: RemoteParticipant) => {
@@ -260,17 +241,14 @@
 
       await newRoom.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
-      // Аудио
       let audioTrack: LocalTrack | null = null;
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const micTrack = stream.getAudioTracks()[0];
         if (micTrack) {
-          /*
-          const processor = new NoiseSuppressionProcessor();
-          const processedTrack = await processor.startProcessing(micTrack);
-          audioTrack = new LocalAudioTrack(processedTrack);
-          */
+          // const processor = new NoiseSuppressionProcessor();
+          // const processedTrack = await processor.startProcessing(micTrack);
+          // audioTrack = new LocalAudioTrack(processedTrack);
           audioTrack = new LocalAudioTrack(micTrack);
         }
       } catch (micErr) {
@@ -278,15 +256,12 @@
         voiceChatStore.setHasMic(false);
       }
 
-      // Видео
       let videoTrack: LocalTrack | null = null;
       if (state.isSelfVideoEnabled) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
           const videoTrackRaw = stream.getVideoTracks()[0];
-          if (videoTrackRaw) {
-            videoTrack = new LocalVideoTrack(videoTrackRaw);
-          }
+          if (videoTrackRaw) videoTrack = new LocalVideoTrack(videoTrackRaw);
         } catch (vidErr) {
           console.warn('Камера недоступна:', vidErr);
           voiceChatStore.setHasCamera(false);
@@ -300,14 +275,8 @@
 
       for (const track of tracksToPublish) {
         const pub = await newRoom.localParticipant.publishTrack(track);
-        if (!pub) {
-          console.warn('Публикация трека вернула undefined');
-          continue;
-        }
-        console.log('Трек опубликован:', track.kind);
-        if (track instanceof LocalVideoTrack && localVideoEl) {
-          track.attach(localVideoEl);
-        }
+        if (!pub) continue;
+        if (track instanceof LocalVideoTrack && localVideoEl) track.attach(localVideoEl);
       }
 
       voiceChatStore.updateRoom(newRoom);
@@ -327,28 +296,22 @@
           try {
             (pub.track as any).stop?.();
             (pub.track as any).detach?.();
-          } catch (e) {
-            // ignore
-          }
+          } catch {}
         }
       });
       try {
         state.room.disconnect();
-      } catch (e) {
-        // ignore
-      }
+      } catch {}
     }
 
     audioElements.forEach((el) => el.remove());
     audioElements.clear();
-
     voiceChatStore.leave();
     isOthersMuted = false;
     volumes = {};
     pinnedParticipantId = null;
   }
 
-  // Drag
   function startDrag(e: MouseEvent | TouchEvent) {
     if (!chatRef) return;
     isDragging = true;
@@ -372,9 +335,8 @@
     } else if (e instanceof TouchEvent && e.touches.length > 0) {
       clientX = e.touches[0].clientX;
       clientY = e.touches[0].clientY;
-    } else {
-      return;
-    }
+    } else return;
+
     const x = clientX - dragOffset.x;
     const y = clientY - dragOffset.y;
     const maxX = window.innerWidth - chatRef.offsetWidth;
@@ -386,10 +348,8 @@
     isDragging = false;
   }
 
-  // Keyboard navigation for dragging
   function handleKeydown(e: KeyboardEvent) {
     if (!chatRef || document.activeElement !== chatRef) return;
-
     const step = 10;
     let newX = state.position.x;
     let newY = state.position.y;
@@ -415,7 +375,6 @@
     }
 
     e.preventDefault();
-
     const maxX = window.innerWidth - chatRef.offsetWidth;
     const maxY = window.innerHeight - chatRef.offsetHeight;
     voiceChatStore.setPosition(
@@ -445,18 +404,14 @@
     };
   });
 
-  onDestroy(() => {
-    // Преднамеренно не выходим из звонка на destroy — оставил как у вас
-  });
+  onDestroy(() => {});
 </script>
 
 {#if !state.isMinimized}
-  <!-- Исправлено: добавлены правильные ARIA атрибуты и клавиатурная навигация -->
   <div
     bind:this={chatRef}
     role="dialog"
     aria-label="Голосовой чат"
-    aria-modal="false"
     tabindex="0"
     class="fixed z-50 rounded-xl border border-gray-700 bg-gray-900 text-white shadow-xl select-none focus:ring-2 focus:ring-cyan-500 focus:outline-none"
     style="left: {state.position.x}px; top: {state.position.y}px; width: 288px;"
