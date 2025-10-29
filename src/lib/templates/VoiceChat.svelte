@@ -201,7 +201,7 @@
               min="0"
               max="1"
               step="0.01"
-              bind:value={volumes[p.identity] ?? 1}
+              bind:value={p.identity}
               on:input={(e) =>
                 updateVolume(p.identity, parseFloat((e.target as HTMLInputElement).value))}
             />
