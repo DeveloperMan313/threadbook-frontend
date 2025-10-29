@@ -4,6 +4,7 @@
   import ModalThreadRename from './ModalThreadRename.svelte';
   import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
   import { getContext } from 'svelte';
+  import Button from '$lib/components/ui/button/button.svelte';
 
   let { id, title, unreadCnt, mentionCnt }: ThreadProps = $props();
 
@@ -34,8 +35,9 @@
 
 <ContextMenu.Root>
   <ContextMenu.Trigger>
-    <button
-      class="flex h-6 w-full cursor-pointer items-center justify-between rounded border-none bg-white px-3 transition-colors duration-200 hover:bg-amber-100 active:bg-amber-200"
+    <Button
+      variant="outline"
+      class="flex h-6 w-full cursor-pointer items-center justify-between rounded border-none"
       onclick={() => setCurrentThreadId(id)}
     >
       <p class="truncate text-base">{title}</p>
@@ -51,7 +53,7 @@
           <p class="text-sm text-gray-600">{unreadCnt}</p>
         {/if}
       </div>
-    </button>
+    </Button>
   </ContextMenu.Trigger>
   <ContextMenu.Content class="min-w-[10rem]">
     {#each contextMenuEntries as entry (entry.label)}
