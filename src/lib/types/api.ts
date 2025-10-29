@@ -58,6 +58,11 @@ export interface GetCentrifugeTokensResponse {
   ChannelTokens: Record<string, string>;
 }
 
+export interface CreateSpoolRequest {
+  name: string;
+  banner: File;
+}
+
 export interface WsBase {
   type: string;
 }

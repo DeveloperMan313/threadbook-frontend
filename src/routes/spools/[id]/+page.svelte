@@ -17,9 +17,14 @@
 
   let threads: Array<ThreadProps> = $state([]);
   let currentThreadId = $state<number | null>(null);
+  let threadsAreLoading = $state(true);
 
-  data.threads.then((resolvedThreads) => {
-    threads = resolvedThreads;
+  $effect(() => {
+    threadsAreLoading = true;
+    data.threads.then((resolvedThreads) => {
+      threads = resolvedThreads || [];
+      threadsAreLoading = false;
+    });
   });
 
   setContext('threads', {
@@ -93,8 +98,10 @@
     >
       New thread
     </Button>
-    {#if threads.length == 0}
+    {#if threadsAreLoading}
       <p class="text-gray-600">Loading threads...</p>
+    {:else if threads.length == 0}
+      <p class="text-gray-600">No threads. Create one</p>
     {:else}
       <ThreadListSection
         title="Private"

@@ -50,6 +50,10 @@ export interface ModalThreadCreateProps {
   isOpen: boolean; // bindable
 }
 
+export interface ModalSpoolCreateProps {
+  isOpen: boolean; // bindable
+}
+
 export interface ModalThreadRenameProps {
   threadId: number;
   threadTitle: string;
