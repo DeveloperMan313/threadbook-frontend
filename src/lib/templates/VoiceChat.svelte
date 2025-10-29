@@ -304,6 +304,7 @@
           console.warn('Публикация трека вернула undefined');
           continue;
         }
+        console.log('Трек опубликован:', track.kind);
         if (track instanceof LocalVideoTrack && localVideoEl) {
           track.attach(localVideoEl);
         }
