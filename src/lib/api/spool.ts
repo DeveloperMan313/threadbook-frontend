@@ -3,7 +3,8 @@ import type {
   SpoolProps,
   SpoolDockProps,
   GetSpoolInfoRequest,
-  CreateSpoolRequest
+  CreateSpoolRequest,
+  LeaveSpoolRequest
 } from '$lib/types';
 
 const MockGetUserSpoolList: SpoolDockProps = {
@@ -84,6 +85,17 @@ export const SpoolApi = {
       method: 'POST',
       headers: {},
       body: formData
+    });
+  },
+
+  /**
+   * Leave from spool
+   * @param {LeaveSpoolRequest} request - request object with spool_id
+   */
+  async leaveFromSpool(request: LeaveSpoolRequest) {
+    return ApiClient.fetch('/spool/leave', {
+      method: 'POST',
+      body: JSON.stringify(request)
     });
   }
 };
