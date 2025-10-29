@@ -1,3 +1,4 @@
+<!-- src/lib/components/VoiceChat.svelte -->
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
@@ -5,9 +6,9 @@
     Room,
     LocalAudioTrack,
     LocalVideoTrack,
-    Track,
     type RemoteParticipant,
     type Participant,
+    type Track,
     type TrackPublication
   } from 'livekit-client';
 
@@ -24,8 +25,8 @@
   let localVideoEl: HTMLVideoElement | null = null;
   let chatRef: HTMLDivElement | null = null;
 
-  let audioElements = new Map<string, HTMLAudioElement>();
-  const isBrowser = typeof document !== 'undefined';
+  const audioElements = new Map<string, HTMLAudioElement>();
+  const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
 
   const THREAD_ID = 1;
 
@@ -62,7 +63,7 @@
     el.muted = true;
     el.className = 'w-full h-full object-cover rounded';
     const container = document.querySelector(
-      `.video-container[data-participant="${participantId}"]`
+      `.video-container[data-participant="${CSS.escape(participantId)}"]`
     );
     if (container) {
       container.innerHTML = '';
@@ -98,9 +99,18 @@
     voiceChatStore.setIsSelfVideoEnabled(newEnabled);
   }
 
-  function handleParticipant(participant: RemoteParticipant) {
+  function setupParticipantEvents(participant: RemoteParticipant) {
+    // Подписка на будущие треки
+    participant.on('trackPublished', (pub) => {
+      pub.on('subscribed', (track) => {
+        if (track.kind === 'audio') attachAudioTrack(track, participant.identity);
+        else if (track.kind === 'video') attachVideoTrack(track, participant.identity);
+      });
+    });
+
+    // Обработка уже существующих треков
     participant.trackPublications.forEach((pub) => {
-      if (pub.track) {
+      if (pub.isSubscribed && pub.track) {
         if (pub.track.kind === 'audio') attachAudioTrack(pub.track, participant.identity);
         else if (pub.track.kind === 'video') attachVideoTrack(pub.track, participant.identity);
       }
@@ -108,66 +118,79 @@
   }
 
   async function joinRoom() {
-    if (!isBrowser || isLoading) return;
+    if (!isBrowser || isLoading || state.isConnected) return;
     isLoading = true;
     voiceChatStore.setError('');
 
+    let room: Room | null = null;
+
     try {
       const token = await getToken();
-      const newRoom = new Room({ adaptiveStream: true, dynacast: true });
+      room = new Room({ adaptiveStream: true, dynacast: true });
 
-      newRoom.on('participantConnected', handleParticipant);
-      newRoom.on('participantDisconnected', (p) => {
-        voiceChatStore.setParticipants(
-          state.participants.filter((part) => part.identity !== p.identity)
-        );
+      // Обработчики комнаты
+      room.on('participantConnected', (participant) => {
+        setupParticipantEvents(participant);
+        voiceChatStore.setParticipants(Array.from(room!.remoteParticipants.values()));
+      });
+
+      room.on('participantDisconnected', (p) => {
         detachTrack(p.identity);
+        voiceChatStore.setParticipants(Array.from(room!.remoteParticipants.values()));
       });
 
-      newRoom.once('disconnected', leaveRoom);
+      room.once('disconnected', leaveRoom);
 
-      await newRoom.connect(PUBLIC_LIVEKIT_ORIGIN, token);
+      // 🔥 Подключаемся к комнате
+      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
-      await new Promise<void>((resolve) => {
-        newRoom.once('connected', () => resolve());
-      });
+      // ✅ Сразу обновляем состояние — пользователь "в чате"
+      voiceChatStore.updateRoom(room);
+      voiceChatStore.setParticipants(Array.from(room.remoteParticipants.values()));
+
+      // Инициализация локальных треков
+      let hasMic = false;
+      let hasCamera = false;
 
       // Микрофон
-      let audioTrack: LocalAudioTrack | null = null;
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         if (stream.getAudioTracks().length > 0) {
-          audioTrack = new LocalAudioTrack(stream.getAudioTracks()[0]);
-          await newRoom.localParticipant.publishTrack(audioTrack);
+          const audioTrack = new LocalAudioTrack(stream.getAudioTracks()[0]);
+          await room.localParticipant.publishTrack(audioTrack);
+          hasMic = true;
         }
       } catch (err) {
         console.warn('Микрофон недоступен:', err);
-        voiceChatStore.setHasMic(false);
       }
+      voiceChatStore.setHasMic(hasMic);
 
       // Камера
-      let videoTrack: LocalVideoTrack | null = null;
       if (state.isSelfVideoEnabled) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
           if (stream.getVideoTracks().length > 0) {
-            videoTrack = new LocalVideoTrack(stream.getVideoTracks()[0]);
-            await newRoom.localParticipant.publishTrack(videoTrack);
+            const videoTrack = new LocalVideoTrack(stream.getVideoTracks()[0]);
+            await room.localParticipant.publishTrack(videoTrack);
             if (videoTrack && localVideoEl) {
               videoTrack.attach(localVideoEl);
             }
+            hasCamera = true;
           }
         } catch (err) {
           console.warn('Камера недоступна:', err);
-          voiceChatStore.setHasCamera(false);
-          voiceChatStore.setIsSelfVideoEnabled(false);
         }
+        voiceChatStore.setHasCamera(hasCamera);
       }
-
-      voiceChatStore.updateRoom(newRoom);
     } catch (err: any) {
-      voiceChatStore.setError(err?.message || 'Не удалось подключиться');
+      const msg = err?.message || 'Не удалось подключиться';
+      voiceChatStore.setError(msg);
       console.error('Ошибка подключения:', err);
+      if (room) {
+        try {
+          room.disconnect();
+        } catch {}
+      }
       leaveRoom();
     } finally {
       isLoading = false;
@@ -177,8 +200,10 @@
   function leaveRoom() {
     if (state.room) {
       state.room.localParticipant.trackPublications.forEach((pub: TrackPublication) => {
-        pub.track?.stop?.();
-        pub.track?.detach?.();
+        try {
+          pub.track?.stop?.();
+          pub.track?.detach?.();
+        } catch {}
       });
       try {
         state.room.disconnect();
@@ -194,10 +219,21 @@
   }
 
   onMount(() => {
+    // Инициализация существующих участников при восстановлении состояния
     if (state.isConnected && state.room) {
-      state.room.remoteParticipants.forEach(handleParticipant);
+      state.room.remoteParticipants.forEach(setupParticipantEvents);
     }
-    return () => unsubscribe();
+
+    const handleBeforeUnload = () => {
+      if (state.isConnected) leaveRoom();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (state.isConnected) leaveRoom();
+    };
   });
 </script>
 
@@ -211,7 +247,6 @@
     class="fixed z-50 rounded-xl border border-gray-700 bg-gray-900 text-white shadow-xl select-none focus:ring-2 focus:ring-cyan-500 focus:outline-none"
     style="left: {state.position.x}px; top: {state.position.y}px; width: 288px;"
   >
-    <!-- Заголовок -->
     <div class="flex cursor-move items-center justify-between rounded-t-xl p-4 pb-3">
       <h3 class="font-semibold text-cyan-400">Голосовой чат</h3>
       <button
@@ -291,7 +326,7 @@
                 data-participant={p.identity}
                 aria-label={`Видео участника ${p.identity}`}
               ></div>
-              <div class="text-xs">{p.identity}</div>
+              <div class="truncate text-xs">{p.identity}</div>
             </div>
           {/if}
         {/each}
