@@ -173,14 +173,12 @@
 
     try {
       // @ts-ignore - игнорируем проверку типов для динамического импорта из URL
-      const module = await import(
-        'https://cdn.jsdelivr.net/npm/deepfilternet3-noise-filter@1.0.10/dist/index.esm.js'
-      );
+      const module = await import('deepfilternet3-noise-filter');
 
-      console.log('DeepFilterNet3 successfully loaded from CDN');
+      console.log('DeepFilterNet3 successfully loaded');
       return module;
     } catch (err) {
-      console.error('Failed to load DeepFilterNet3 from CDN:', err);
+      console.error('Failed to load DeepFilterNet3: ', err);
       return null;
     }
   }
