@@ -201,6 +201,7 @@
         }
 
         const { DeepFilterNoiseFilterProcessor } = await import('deepfilternet3-noise-filter');
+
         const processor = new DeepFilterNoiseFilterProcessor({
           sampleRate: 48000,
           noiseReductionLevel: 80,
