@@ -15,8 +15,6 @@
   let error = '';
   const THREAD_ID = 1;
   let room: Room | null = null;
-  let noiseProcessor: import('@shiguredo/noise-suppression').NoiseSuppressionProcessor | null =
-    null;
 
   let isSelfMuted = false;
   let isOthersMuted = false;
@@ -123,7 +121,6 @@
   }
 
   function handleParticipant(participant: RemoteParticipant) {
-    // Для будущих треков (новые публикации от этого участника)
     participant.on('trackPublished', (pub: RemoteTrackPublication) => {
       const onSubscribed = (track: RemoteTrack) => {
         if (track.kind === 'audio') {
@@ -146,7 +143,6 @@
       });
     });
 
-    // Для уже существующих треков (на момент подключения)
     participant.trackPublications.forEach((pub) => {
       const onSubscribed = (track: RemoteTrack) => {
         if (track.kind === 'audio') {
@@ -191,34 +187,35 @@
       const videoTracks = isSelfVideoEnabled
         ? await room.localParticipant.createTracks({ video: true, audio: false })
         : [];
+
       let audioTrack = null;
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const micTrack = stream.getAudioTracks()[0];
+        // Усиленные constraints
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            advanced: [
+              { noiseSuppression: { exact: true } },
+              { echoCancellation: { exact: true } },
+              { autoGainControl: { exact: true } }
+            ]
+          }
+        });
 
+        const micTrack = stream.getAudioTracks()[0];
         if (!micTrack) throw new Error('No audio track from microphone');
 
-        const { NoiseSuppressionProcessor } = await import('@shiguredo/noise-suppression');
-        noiseProcessor = new NoiseSuppressionProcessor();
-
-        const processedTrack = await noiseProcessor.startProcessing(micTrack);
-        if (processedTrack.readyState !== 'live') {
-          throw new Error('Processed audio track is not live');
-        }
-
         const { LocalAudioTrack } = await import('livekit-client');
-        audioTrack = new LocalAudioTrack(processedTrack);
+        audioTrack = new LocalAudioTrack(micTrack);
       } catch (err) {
-        console.warn('Shiguredo noise suppression failed, falling back to standard audio:', err);
+        console.warn('Enhanced audio failed, falling back to basic:', err);
 
-        // Fallback
+        // fallback
         const fallbackTracks = await room.localParticipant.createTracks({
-          audio: {
-            autoGainControl: true,
-            echoCancellation: true,
-            noiseSuppression: true
-          },
+          audio: true,
           video: false
         });
         audioTrack = fallbackTracks[0];
@@ -238,7 +235,6 @@
 
       isConnected = true;
       error = '';
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       error = err.message || 'Connection failed';
       console.error('Join error:', err);
@@ -248,13 +244,6 @@
 
   function leaveRoom() {
     if (!isBrowser) return;
-    if (noiseProcessor) {
-      try {
-        noiseProcessor.stopProcessing();
-      } catch (e) {
-        console.warn('Failed to clean up noise processor:', e);
-      }
-    }
 
     if (room) {
       room.disconnect();
