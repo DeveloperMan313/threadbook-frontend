@@ -9,9 +9,7 @@
     RemoteTrackPublication,
     LocalTrack
   } from 'livekit-client';
-  import * as DFModule from 'deepfilternet3-worker-test';
-
-  const DeepFilterNoiseFilterProcessor = (DFModule as any).DeepFilterNoiseFilterProcessor;
+  import { DeepFilterNoiseFilterProcessor } from 'deepfilternet3-noise-filter';
 
   let isConnected = false;
   let error = '';
@@ -46,29 +44,29 @@
 
   function attachAudioTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
-    const element = track.attach() as HTMLAudioElement;
-    element.dataset.participant = participantId;
-    element.muted = isOthersMuted;
-    element.volume = volumes[participantId] ?? 1;
-    element.style.display = 'none';
-    document.body.appendChild(element);
-    audioElements.set(participantId, element);
+    const el = track.attach() as HTMLAudioElement;
+    el.dataset.participant = participantId;
+    el.muted = isOthersMuted;
+    el.volume = volumes[participantId] ?? 1;
+    el.style.display = 'none';
+    document.body.appendChild(el);
+    audioElements.set(participantId, el);
   }
 
   function attachVideoTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
-    const element = track.attach() as HTMLVideoElement;
-    element.autoplay = true;
-    element.playsInline = true;
-    element.muted = true;
-    element.className = 'video-preview';
+    const el = track.attach() as HTMLVideoElement;
+    el.autoplay = true;
+    el.playsInline = true;
+    el.muted = true;
+    el.className = 'video-preview';
     const tryAttach = () => {
       const container = document.querySelector(
         `.video-container[data-participant="${participantId}"]`
       ) as HTMLElement | null;
       if (container) {
         container.innerHTML = '';
-        container.appendChild(element);
+        container.appendChild(el);
       } else {
         setTimeout(tryAttach, 100);
       }
@@ -78,9 +76,9 @@
 
   function detachTrack(participantId: string) {
     if (!isBrowser) return;
-    const audioEl = audioElements.get(participantId);
-    if (audioEl) {
-      audioEl.remove();
+    const el = audioElements.get(participantId);
+    if (el) {
+      el.remove();
       audioElements.delete(participantId);
     }
   }
@@ -98,7 +96,6 @@
   }
 
   function toggleOthersMute() {
-    if (!isBrowser) return;
     isOthersMuted = !isOthersMuted;
     audioElements.forEach((el) => (el.muted = isOthersMuted));
   }
@@ -157,18 +154,22 @@
       const videoTracks = isSelfVideoEnabled
         ? await room.localParticipant.createTracks({ video: true, audio: false })
         : [];
+
       let audioTrack: LocalAudioTrack | null = null;
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         const micTrack = stream.getAudioTracks()[0];
-        if (!micTrack) throw new Error('No audio track from microphone');
+        if (!micTrack) throw new Error('No audio track');
 
-        const noiseProc = new DeepFilterNoiseFilterProcessor({ sampleRate: 48000, frameSize: 480 });
-        await noiseProc.init({ track: micTrack });
-        const processed = noiseProc.processedTrack;
-        if (!processed) throw new Error('Failed to get processed track');
-        audioTrack = new LocalAudioTrack(processed);
+        const dfProcessor = new DeepFilterNoiseFilterProcessor({
+          sampleRate: 48000,
+          noiseReductionLevel: 50,
+          enabled: true
+        });
+
+        await dfProcessor.init({ track: micTrack });
+        audioTrack = new LocalAudioTrack(dfProcessor.processedTrack!);
         await room.localParticipant.publishTrack(audioTrack);
       } catch {
         const fallbackTracks = await room.localParticipant.createTracks({
@@ -182,6 +183,7 @@
       const tracks = [...videoTracks, audioTrack].filter(Boolean);
       for (const track of tracks) {
         if (!track) continue;
+        await room.localParticipant.publishTrack(track);
         if (track.kind === 'video') {
           pendingLocalVideoTrack = track;
           if (localVideoEl) track.attach(localVideoEl);
@@ -205,9 +207,7 @@
     participants = [];
     audioElements.forEach((el) => el.remove());
     audioElements.clear();
-    document
-      .querySelectorAll('.video-container')
-      .forEach((el) => ((el as HTMLElement).innerHTML = ''));
+    document.querySelectorAll('.video-container').forEach((el) => (el.innerHTML = ''));
     if (localVideoEl) {
       localVideoEl.srcObject = null;
       localVideoEl.load();

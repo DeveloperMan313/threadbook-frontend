@@ -46,6 +46,6 @@
     "vite": "^7.0.4"
   },
   "dependencies": {
-    "deepfilternet3-worker-test": "^1.1.4"
+    "deepfilternet3-noise-filter": "^1.0.10"
   }
 }
