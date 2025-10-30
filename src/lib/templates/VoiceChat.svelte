@@ -200,13 +200,8 @@
         const { LocalAudioTrack } = await import('livekit-client');
         audioTrack = new LocalAudioTrack(micTrack);
 
-        // DeepFilterNet3
-        const { DeepFilterNoiseFilterProcessor } = await import('deepfilternet3-noise-filter');
-        const processor = new DeepFilterNoiseFilterProcessor({
-          sampleRate: 48000,
-          noiseReductionLevel: 80,
-          enabled: true
-        });
+        const processor = await createDeepFilterProcessor(micTrack);
+        if (!processor) throw new Error('Failed to init DeepFilter');
 
         await processor.init({ track: micTrack });
         await audioTrack.setProcessor(processor);
