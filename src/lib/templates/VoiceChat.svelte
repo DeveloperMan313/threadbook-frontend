@@ -203,6 +203,9 @@
         noiseProcessor = new NoiseSuppressionProcessor();
 
         const processedTrack = await noiseProcessor.startProcessing(micTrack);
+        if (processedTrack.readyState !== 'live') {
+          throw new Error('Processed audio track is not live');
+        }
 
         const { LocalAudioTrack } = await import('livekit-client');
         audioTrack = new LocalAudioTrack(processedTrack);
