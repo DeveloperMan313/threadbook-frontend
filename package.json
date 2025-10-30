@@ -44,8 +44,5 @@
     "typescript": "^5.0.0",
     "typescript-eslint": "^8.20.0",
     "vite": "^7.0.4"
-  },
-  "dependencies": {
-    "deepfilternet3-noise-filter": "^1.0.10"
   }
 }

@@ -10,6 +10,7 @@
     RemoteTrackPublication,
     LocalTrack
   } from 'livekit-client';
+  import { DeepFilterNoiseFilterProcessor } from '$lib/deepfilternet3/index.esm.js';
 
   let isConnected = false;
   let error = '';
@@ -168,21 +169,6 @@
     }
   }
 
-  async function loadDeepFilterNet3() {
-    if (!isBrowser) return null;
-
-    try {
-      // @ts-ignore - игнорируем проверку типов для динамического импорта из URL
-      const module = await import('deepfilternet3-noise-filter');
-
-      console.log('DeepFilterNet3 successfully loaded');
-      return module;
-    } catch (err) {
-      console.error('Failed to load DeepFilterNet3: ', err);
-      return null;
-    }
-  }
-
   async function joinRoom() {
     if (!isBrowser) return;
     try {
@@ -210,14 +196,6 @@
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const micTrack = stream.getAudioTracks()[0];
         if (!micTrack) throw new Error('No audio track from microphone');
-
-        const deepFilterModule = await loadDeepFilterNet3();
-
-        if (!deepFilterModule) {
-          throw new Error('Failed to load DeepFilterNet3 module');
-        }
-
-        const { DeepFilterNoiseFilterProcessor } = deepFilterModule;
 
         const processor = new DeepFilterNoiseFilterProcessor({
           sampleRate: 48000,
