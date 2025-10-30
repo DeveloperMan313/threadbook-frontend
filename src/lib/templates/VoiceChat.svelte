@@ -9,7 +9,6 @@
     RemoteTrackPublication,
     LocalTrack
   } from 'livekit-client';
-  import { DeepFilterNoiseFilterProcessor } from 'deepfilternet3-noise-filter';
 
   let isConnected = false;
   let error = '';
@@ -156,15 +155,21 @@
         : [];
 
       let audioTrack: LocalAudioTrack | null = null;
+      let DeepFilterNoiseFilterProcessor: any;
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         const micTrack = stream.getAudioTracks()[0];
         if (!micTrack) throw new Error('No audio track');
 
+        if (!DeepFilterNoiseFilterProcessor) {
+          const module = await import('deepfilternet3-noise-filter');
+          DeepFilterNoiseFilterProcessor = module.DeepFilterNoiseFilterProcessor;
+        }
+
         const dfProcessor = new DeepFilterNoiseFilterProcessor({
           sampleRate: 48000,
-          noiseReductionLevel: 50,
+          noiseReductionLevel: 80,
           enabled: true
         });
 
