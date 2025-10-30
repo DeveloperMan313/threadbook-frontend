@@ -3,13 +3,14 @@
   import { SvelteMap } from 'svelte/reactivity';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
 
-  import { Room } from 'livekit-client';
+  import { Room, LocalAudioTrack } from 'livekit-client';
   import type {
     RemoteParticipant,
     RemoteTrack,
     RemoteTrackPublication,
     LocalTrack
   } from 'livekit-client';
+  import { DeepFilterNet3Worker } from 'deepfilternet3-worker-test';
 
   let isConnected = false;
   let error = '';
@@ -188,37 +189,60 @@
         ? await room.localParticipant.createTracks({ video: true, audio: false })
         : [];
 
-      let audioTrack = null;
+      let audioTrack: LocalAudioTrack | null = null;
 
       try {
-        // Усиленные constraints
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true
-          }
+          },
+          video: false
         });
-
         const micTrack = stream.getAudioTracks()[0];
         if (!micTrack) throw new Error('No audio track from microphone');
 
-        const { LocalAudioTrack } = await import('livekit-client');
-        audioTrack = new LocalAudioTrack(micTrack);
-      } catch (err) {
-        console.warn('Enhanced audio failed, falling back to basic:', err);
+        const dfWorker = new DeepFilterNet3Worker({
+          sampleRate: 48000, // DFN3 обычно ожидает 48 kHz
+          aggressive: 1, // степень шумоподавления, 0..2
+          modelUrl: '/models/dfn3.wasm'
+        });
 
-        // fallback
-        const fallbackTracks = await room.localParticipant.createTracks({
-          audio: true,
+        await dfWorker.start();
+        dfWorker.connectInput(micTrack);
+
+        const processedTrack = dfWorker.getProcessedTrack();
+        if (!processedTrack) throw new Error('Failed to get processed track from DFN3 worker');
+
+        audioTrack = new LocalAudioTrack(processedTrack);
+        await room!.localParticipant.publishTrack(audioTrack);
+
+        console.log('DeepFilterNet3 worker track published successfully');
+      } catch (err) {
+        console.warn(
+          'DeepFilterNet3 integration failed or not available, falling back to browser audio:',
+          err
+        );
+
+        const fallbackTracks = await room!.localParticipant.createTracks({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
           video: false
         });
-        audioTrack = fallbackTracks[0];
+        audioTrack = fallbackTracks[0] as LocalAudioTrack;
+        if (audioTrack) {
+          await room!.localParticipant.publishTrack(audioTrack);
+        }
       }
 
       const tracks = [...videoTracks, audioTrack].filter(Boolean);
 
       for (const track of tracks) {
+        if (!track) continue;
         await room.localParticipant.publishTrack(track);
         if (track.kind === 'video') {
           pendingLocalVideoTrack = track;
