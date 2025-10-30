@@ -10,6 +10,7 @@
     RemoteTrackPublication,
     LocalTrack
   } from 'livekit-client';
+  import { createDeepFilterProcessor } from '$lib/deepfilter-wrapper';
 
   let isConnected = false;
   let error = '';
