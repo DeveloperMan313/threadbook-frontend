@@ -196,6 +196,10 @@
         const micTrack = stream.getAudioTracks()[0];
         if (!micTrack) throw new Error('No audio track from microphone');
 
+        if (typeof window === 'undefined' || !window.Worker) {
+          throw new Error('Audio processing not available in this environment');
+        }
+
         const { DeepFilterNoiseFilterProcessor } = await import('deepfilternet3-noise-filter');
         const processor = new DeepFilterNoiseFilterProcessor({
           sampleRate: 48000,
