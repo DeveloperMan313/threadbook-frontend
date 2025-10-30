@@ -12,5 +12,8 @@ export default defineConfig({
       outdir: './src/lib/paraglide'
     })
   ],
+  ssr: {
+    noExternal: ['deepfilternet3-noise-filter']
+  },
   assetsInclude: ['**/*.wasm']
 });
