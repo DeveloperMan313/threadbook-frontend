@@ -196,12 +196,7 @@
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
-            autoGainControl: true,
-            advanced: [
-              { noiseSuppression: { exact: true } },
-              { echoCancellation: { exact: true } },
-              { autoGainControl: { exact: true } }
-            ]
+            autoGainControl: true
           }
         });
 
