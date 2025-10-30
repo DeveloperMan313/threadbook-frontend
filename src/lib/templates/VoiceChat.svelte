@@ -10,12 +10,13 @@
     RemoteTrackPublication,
     LocalTrack
   } from 'livekit-client';
-  import { createDeepFilterProcessor } from '$lib/deepfilter-wrapper';
 
   let isConnected = false;
   let error = '';
   const THREAD_ID = 1;
   let room: Room | null = null;
+  let noiseProcessor: import('@shiguredo/noise-suppression').NoiseSuppressionProcessor | null =
+    null;
 
   let isSelfMuted = false;
   let isOthersMuted = false;
@@ -198,16 +199,15 @@
 
         if (!micTrack) throw new Error('No audio track from microphone');
 
+        const { NoiseSuppressionProcessor } = await import('@shiguredo/noise-suppression');
+        noiseProcessor = new NoiseSuppressionProcessor();
+
+        const processedTrack = await noiseProcessor.startProcessing(micTrack);
+
         const { LocalAudioTrack } = await import('livekit-client');
-        audioTrack = new LocalAudioTrack(micTrack);
-
-        const processor = await createDeepFilterProcessor(micTrack);
-        if (!processor) throw new Error('Failed to init DeepFilter');
-
-        await processor.init({ track: micTrack });
-        await audioTrack.setProcessor(processor);
+        audioTrack = new LocalAudioTrack(processedTrack);
       } catch (err) {
-        console.warn('DeepFilterNet3 failed, falling back to standard audio:', err);
+        console.warn('Shiguredo noise suppression failed, falling back to standard audio:', err);
 
         // Fallback
         const fallbackTracks = await room.localParticipant.createTracks({
@@ -245,6 +245,13 @@
 
   function leaveRoom() {
     if (!isBrowser) return;
+    if (noiseProcessor) {
+      try {
+        noiseProcessor.stopProcessing();
+      } catch (e) {
+        console.warn('Failed to clean up noise processor:', e);
+      }
+    }
 
     if (room) {
       room.disconnect();

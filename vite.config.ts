@@ -12,16 +12,13 @@ export default defineConfig({
       outdir: './src/lib/paraglide'
     })
   ],
-  define: {
-    'import.meta.vitest': 'undefined'
+  optimizeDeps: {
+    exclude: ['@shiguredo/noise-suppression']
+  },
+  ssr: {
+    noExternal: ['@shiguredo/noise-suppression']
   },
   build: {
     ssrEmitAssets: true
-  },
-  ssr: {
-    noExternal: ['deepfilternet3-noise-filter']
-  },
-  optimizeDeps: {
-    exclude: ['deepfilternet3-noise-filter']
   }
 });
