@@ -168,6 +168,23 @@
     }
   }
 
+  async function loadDeepFilterNet3() {
+    if (!isBrowser) return null;
+
+    try {
+      // @ts-ignore - игнорируем проверку типов для динамического импорта из URL
+      const module = await import(
+        'https://cdn.jsdelivr.net/npm/deepfilternet3-noise-filter@1.0.10/dist/index.esm.js'
+      );
+
+      console.log('DeepFilterNet3 successfully loaded from CDN');
+      return module;
+    } catch (err) {
+      console.error('Failed to load DeepFilterNet3 from CDN:', err);
+      return null;
+    }
+  }
+
   async function joinRoom() {
     if (!isBrowser) return;
     try {
@@ -196,11 +213,13 @@
         const micTrack = stream.getAudioTracks()[0];
         if (!micTrack) throw new Error('No audio track from microphone');
 
-        if (typeof window === 'undefined' || !window.Worker) {
-          throw new Error('Audio processing not available in this environment');
+        const deepFilterModule = await loadDeepFilterNet3();
+
+        if (!deepFilterModule) {
+          throw new Error('Failed to load DeepFilterNet3 module');
         }
 
-        const { DeepFilterNoiseFilterProcessor } = await import('deepfilternet3-noise-filter');
+        const { DeepFilterNoiseFilterProcessor } = deepFilterModule;
 
         const processor = new DeepFilterNoiseFilterProcessor({
           sampleRate: 48000,

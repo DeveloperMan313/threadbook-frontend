@@ -42,23 +42,14 @@ declare module 'deepfilternet3-noise-filter' {
     }
 
     export function DeepFilterNoiseFilter(options?: DeepFilterConfig): DeepFilterNoiseFilterProcessor;
+}
 
-    export class AssetLoader {
-        constructor(config?: { cdnUrl?: string; version?: string });
-        getCdnUrl(relativePath: string): string;
-        getAssetUrls(): { wasm: string; model: string };
-        fetchAsset(url: string): Promise<ArrayBuffer>;
+declare global {
+    interface Window {
+        DeepFilterNet3: {
+            DeepFilterNoiseFilterProcessor: typeof import('deepfilternet3-noise-filter').DeepFilterNoiseFilterProcessor;
+            DeepFilterNet3Processor: typeof import('deepfilternet3-noise-filter').DeepFilterNet3Processor;
+            DeepFilterNoiseFilter: typeof import('deepfilternet3-noise-filter').DeepFilterNoiseFilter;
+        };
     }
-
-    export function getAssetLoader(config?: { cdnUrl?: string; version?: string }): AssetLoader;
-
-    export const WorkerMessageTypes: {
-        INIT: string;
-        SET_SUPPRESSION_LEVEL: string;
-        STOP: string;
-        SET_BYPASS: string;
-        FETCH_WASM: string;
-        SETUP_AWP: string;
-        ERROR: string;
-    };
 }

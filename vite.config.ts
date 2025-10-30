@@ -13,11 +13,9 @@ export default defineConfig({
     })
   ],
   assetsInclude: ['**/*.wasm'],
-
   optimizeDeps: {
     exclude: ['deepfilternet3-noise-filter']
   },
-
   build: {
     rollupOptions: {
       external: ['deepfilternet3-noise-filter']
