@@ -5,7 +5,7 @@
   import ThreadListSection from '$lib/templates/ThreadListSection.svelte';
   import { setContext } from 'svelte';
   import type { PageProps } from './$types';
-  import { CentrifugeClient, ThreadApi } from '$lib/api';
+  import { ThreadApi } from '$lib/api';
   import type { ChatProps, MessageProps, ThreadProps, ThreadType, WsMessageSent } from '$lib/types';
   import ModalThreadCreate from '$lib/templates/ModalThreadCreate.svelte';
   import Chat from '$lib/templates/Chat.svelte';
@@ -69,7 +69,7 @@
 
   let isThreadCreateModalOpen = $state(false);
 
-  CentrifugeClient.subToUser((message: WsMessageSent) => {
+  data.centrifugeClient.subToUser((message: WsMessageSent) => {
     if (message.username == 'paveldurov') {
       return; // TODO think about duplication logic, update message.id
     }

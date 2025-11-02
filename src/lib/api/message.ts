@@ -2,8 +2,7 @@ import { ApiClient } from './client';
 import type {
   GetThreadMessagesRequest,
   MessageProps,
-  SendThreadMessagesRequest,
-  InitThreadWebsocketRequest
+  SendThreadMessagesRequest
 } from '$lib/types';
 
 const MockGetThreadMessages: Array<MessageProps> = [

@@ -52,9 +52,8 @@ export interface SendThreadMessagesRequest {
   content: string;
 }
 
-export interface InitThreadWebsocketRequest {
-  thread_id: number;
-  token: string;
+export interface GetCentrifugeTokensRequest {
+  spool_id: number;
 }
 
 export interface GetCentrifugeTokensResponse {
