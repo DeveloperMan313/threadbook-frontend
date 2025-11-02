@@ -10,9 +10,15 @@ export interface RegisterRequest {
   password: string;
 }
 
-export interface LoginRequest {
+export interface LogInRequest {
   email: string;
   password: string;
+}
+
+export interface UserProfile {
+  username: string;
+  email: string;
+  pfp_url?: string;
 }
 
 export interface GetSpoolInfoRequest {

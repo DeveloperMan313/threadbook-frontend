@@ -20,10 +20,12 @@
 
   const makeRequest = async () => {
     try {
-      await AuthApi.logIn({
+      const profile = await AuthApi.logIn({
         email: emailValue,
         password: passwordValue
       });
+
+      localStorage.setItem('userProfile', JSON.stringify(profile));
 
       goto(resolve('/spools'));
     } catch (error) {

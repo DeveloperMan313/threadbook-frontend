@@ -26,7 +26,14 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_PROXY_API_ORIGIN,
           changeOrigin: true,
           secure: true
-        }
+        },
+        '/connection/websocket': {
+          target: env.VITE_PROXY_CENTRIFUGE_ORIGIN,
+          ws: true,
+          rewriteWsOrigin: true,
+          changeOrigin: true,
+          secure: true
+        },
       }
     }
   };

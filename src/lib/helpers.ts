@@ -1,7 +1,16 @@
+import { goto } from '$app/navigation';
+import { resolve } from '$app/paths';
+import type { UserProfile } from '$lib/types';
+
 /**
- * Helper to explicitly mark a promise as deferred for SvelteKit load functions.
- * This prevents TypeScript from auto-unwrapping the Promise type in PageData.
+ * Tries to get user profile data and if not present redirects to /signin
+ * @returns {UserProfile?} user profile data or null
  */
-export function defer<T>(promise: Promise<T>): Promise<T> {
-  return promise;
+export const tryGetUserProfile = (): UserProfile | null => {
+  const profileStored = localStorage.getItem('userProfile');
+  if (!profileStored) {
+    goto(resolve('/signin'));
+    return null;
+  }
+  return JSON.parse(profileStored) as UserProfile;
 }
