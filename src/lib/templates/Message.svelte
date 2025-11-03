@@ -10,6 +10,8 @@
     getProfile: (username: string) => UserProfilePublic | undefined;
   };
 
+  const nickname = $derived(getProfile(username) ? getProfile(username)!.nickname : undefined);
+
   const avatarSrc = $derived(
     getProfile(username) ? ImageApi.getUserAvatarURL(getProfile(username)!.avatar_link) : undefined
   );
@@ -26,7 +28,9 @@
   </div>
   <div class="flex-1">
     <div class="w-full">
-      <h4 class="me-2 inline scroll-m-20 text-xl font-semibold tracking-tight">{username}</h4>
+      <h4 class="me-2 inline scroll-m-20 text-xl font-semibold tracking-tight">
+        {nickname || username}
+      </h4>
       <p class="inline text-sm text-muted-foreground">
         {new Date(created_at).toLocaleTimeString()}
       </p>

@@ -35,8 +35,7 @@
     const currentChat = threadChats.get(currentThread.id) as ChatState;
     threadChats.set(currentThread.id, {
       ...currentChat,
-      messages: [...currentChat.messages, message],
-      messageText: ''
+      messages: [...currentChat.messages, message]
     });
   };
 
@@ -122,8 +121,10 @@
 
   const profile = $derived($userProfile as UserProfileFull);
 
-  const sendMessage = () => {
-    if (!currentThread) return;
+  let isSendingMessage = $state(false);
+
+  const sendMessage = async () => {
+    if (!currentThread || isSendingMessage) return;
 
     if (messageText.trim() === '') return;
 
@@ -135,7 +136,20 @@
       updated_at: new Date().toISOString()
     };
 
-    MessageApi.sendThreadMessages({ thread_id: currentThread.id, content: message.content });
+    isSendingMessage = true;
+    try {
+      await MessageApi.sendThreadMessages({
+        thread_id: currentThread.id,
+        content: message.content
+      });
+      const currentChat = threadChats.get(currentThread.id) as ChatState;
+      threadChats.set(currentThread.id, {
+        ...currentChat,
+        messageText: ''
+      });
+    } finally {
+      isSendingMessage = false;
+    }
   };
 
   const handleKeyPress = (event: KeyboardEvent) => {
@@ -180,7 +194,11 @@
         class="flex-1"
         onkeydown={handleKeyPress}
       />
-      <Button class="cursor-pointer" onclick={sendMessage} disabled={messageText.trim() === ''}>
+      <Button
+        class="cursor-pointer"
+        onclick={sendMessage}
+        disabled={messageText.trim() === '' || isSendingMessage}
+      >
         Send
       </Button>
     </div>
