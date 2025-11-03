@@ -5,8 +5,16 @@
   import ThreadListSection from '$lib/templates/ThreadListSection.svelte';
   import { setContext } from 'svelte';
   import type { PageProps } from './$types';
-  import { CentrifugeClient, ThreadApi } from '$lib/api';
-  import type { ChatProps, MessageProps, ThreadProps, ThreadType, WsMessageSent } from '$lib/types';
+  import { CentrifugeClient, ProfileApi, ThreadApi } from '$lib/api';
+  import type {
+    ChatProps,
+    MessageProps,
+    ThreadProps,
+    ThreadType,
+    UserProfileFull,
+    UserProfilePublic,
+    WsMessageSent
+  } from '$lib/types';
   import ModalThreadCreate from '$lib/templates/ModalThreadCreate.svelte';
   import Chat from '$lib/templates/Chat.svelte';
   import { SvelteMap } from 'svelte/reactivity';
@@ -64,6 +72,29 @@
       ThreadApi.updateThread({ id, title, type: thread.type }).catch(() => {
         thread.title = oldThreadTitle;
       });
+    }
+  });
+
+  const userProfiles = new SvelteMap<string, UserProfilePublic>();
+
+  setContext('userProfiles', {
+    cacheProfilesFromMessages: async (messages: Array<MessageProps>): Promise<void> => {
+      const unknownUsernames = messages
+        .map((m) => m.username)
+        .reduce((unique, username) => {
+          if (!unique.includes(username) && !userProfiles.has(username)) {
+            unique.push(username);
+          }
+          return unique;
+        }, [] as Array<string>);
+      if (unknownUsernames.length == 0) return;
+      const fetchedProfiles = await ProfileApi.getProfiles({ usernames: unknownUsernames });
+      fetchedProfiles.profiles.forEach((profile) => {
+        userProfiles.set(profile.username, profile);
+      });
+    },
+    getProfile: (username: string): UserProfilePublic | undefined => {
+      return userProfiles.get(username);
     }
   });
 

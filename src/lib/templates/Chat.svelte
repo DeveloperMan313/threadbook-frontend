@@ -14,6 +14,10 @@
     getThreads: () => ThreadProps[];
   };
 
+  const { cacheProfilesFromMessages } = getContext('userProfiles') as {
+    cacheProfilesFromMessages: (messages: Array<MessageProps>) => Promise<void>;
+  };
+
   const renderMessage = (message: MessageProps, mine: boolean = false) => {
     if (!currentThread) return;
 
@@ -48,12 +52,13 @@
       messageText: ''
     });
 
-    MessageApi.getThreadMessages({ thread_id: threadId }).then((msgs) => {
-      msgs ||= [];
+    MessageApi.getThreadMessages({ thread_id: threadId }).then((messages) => {
+      messages ||= [];
+      cacheProfilesFromMessages(messages);
       // Use captured threadId instead of currentThread.id to avoid race condition
       threadChats.set(threadId, {
         thread: currentThread,
-        messages: msgs,
+        messages: messages,
         messageText: ''
       });
     });
