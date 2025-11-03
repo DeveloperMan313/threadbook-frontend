@@ -3,9 +3,10 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import Message from './Message.svelte';
-  import type { ChatProps, MessageProps, ThreadProps } from '$lib/types';
+  import type { ChatProps, MessageProps, ThreadProps, UserProfileFull } from '$lib/types';
   import type { SvelteMap } from 'svelte/reactivity';
   import { MessageApi } from '$lib/api/message';
+  import { userProfile } from '$lib/userProfile';
 
   const { threadChats, getCurrentThreadId, getThreads } = getContext('threads') as {
     threadChats: SvelteMap<number, ChatProps>;
@@ -100,6 +101,8 @@
     }
   };
 
+  const profile = $derived($userProfile as UserProfileFull);
+
   const sendMessage = () => {
     if (!currentThread) return;
 
@@ -107,7 +110,7 @@
 
     const message: MessageProps = {
       id: -tempMsgId++, // use negative ids as temporary before WS message comes
-      username: 'user', // TODO get from context
+      username: profile.username,
       content: messageText,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

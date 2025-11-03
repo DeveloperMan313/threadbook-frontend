@@ -1,11 +1,11 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { page } from '$app/state';
   import logo from '$lib/assets/icons/logo.svg';
   import * as Avatar from '$lib/components/ui/avatar/index.js';
   import type { UserProfileFull } from '$lib/types';
+  import { userProfile } from '$lib/userProfile';
 
-  const profile = $derived(page.data.userProfile) as UserProfileFull;
+  const profile = $derived($userProfile as UserProfileFull);
 </script>
 
 <div

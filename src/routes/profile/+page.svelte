@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { page } from '$app/state';
   import { ProfileApi } from '$lib/api/profile';
   import * as Avatar from '$lib/components/ui/avatar/index.js';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -8,10 +7,10 @@
   import InputField from '$lib/templates/InputField.svelte';
   import Navbar from '$lib/templates/Navbar.svelte';
   import type { UserProfileFull } from '$lib/types';
+  import { userProfile } from '$lib/userProfile';
   import { nicknameGetError } from '$lib/validation';
 
-  let profile = $derived(page.data.userProfile) as UserProfileFull;
-
+  const profile = $derived($userProfile as UserProfileFull);
   // svelte-ignore state_referenced_locally
   let nickname = $state(profile.nickname); // make a copy
   // svelte-ignore state_referenced_locally
@@ -39,12 +38,12 @@
     try {
       isLoading = true;
       const profileChanges = await ProfileApi.updateProfile({ nickname, avatar });
-      profile = {
+      const newProfile = {
         ...profile,
         ...profileChanges
-      };
-      localStorage.setItem('userProfile', JSON.stringify(profile));
-      // TODO rework so profile updates reactively, probably context
+      } as UserProfileFull;
+      localStorage.setItem('userProfile', JSON.stringify(newProfile));
+      userProfile.set(newProfile);
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Profile update failed');
     } finally {

@@ -1,11 +1,6 @@
 import type { PageLoad } from './$types';
-import { tryGetUserProfile } from '$lib/helpers';
+import { tryInitUserProfile } from '$lib/userProfile';
 
 export const load: PageLoad = async () => {
-  const userProfile = tryGetUserProfile();
-  if (!userProfile) return;
-
-  return {
-    userProfile
-  };
+  tryInitUserProfile();
 };
