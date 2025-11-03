@@ -67,7 +67,45 @@
     }
   });
 
+  const userProfiles = new SvelteMap<string, UserProfilePublic>();
+
+  setContext('userProfiles', {
+    cacheProfilesFromMessages: async (messages: Array<MessageProps>): Promise<void> => {
+      const unknownUsernames = messages
+        .map((m) => m.username)
+        .reduce((unique, username) => {
+          if (!unique.includes(username) && !userProfiles.has(username)) {
+            unique.push(username);
+          }
+          return unique;
+        }, [] as Array<string>);
+      if (unknownUsernames.length == 0) return;
+      const fetchedProfiles = await ProfileApi.getProfiles({ usernames: unknownUsernames });
+      fetchedProfiles.profiles.forEach((profile) => {
+        userProfiles.set(profile.username, profile);
+      });
+    },
+    getProfile: (username: string): UserProfilePublic | undefined => {
+      return userProfiles.get(username);
+    }
+  });
+
   let isThreadCreateModalOpen = $state(false);
+
+  CentrifugeClient.subToUser((message: WsMessageSent) => {
+    if (message.username == 'paveldurov') {
+      return; // TODO think about duplication logic, update message.id
+    }
+    let chat = threadChats.get(message.thread_id) as ChatProps;
+    if (!chat) {
+      return; // ignore messages from not loaded threads
+    }
+    chat.messages = [...chat.messages, message as MessageProps];
+    threadChats.set(message.thread_id, {
+      ...chat,
+      messages: chat.messages
+    } as ChatProps);
+  });
 </script>
 
 <Navbar />

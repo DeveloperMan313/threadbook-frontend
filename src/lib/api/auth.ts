@@ -1,12 +1,12 @@
 import { ApiClient } from './client';
-import type { RegisterRequest, LoginRequest } from '$lib/types';
+import type { RegisterRequest, LogInRequest, UserProfileFull } from '$lib/types';
 
 export const AuthApi = {
   /**
    * Get auth info
-   * @returns {Promise<object>} - API response
+   * @returns {Promise<UserProfileFull>} - API response
    */
-  async getAuth(): Promise<object> {
+  async getAuth(): Promise<UserProfileFull> {
     return ApiClient.fetchJSON('/auth/user', {
       method: 'GET',
       headers: {}
@@ -27,10 +27,10 @@ export const AuthApi = {
 
   /**
    * Log in to user account
-   * @param {LoginRequest} request - request object
-   * @returns {Promise<object>} - API response
+   * @param {LogInRequest} request - request object
+   * @returns {Promise<UserProfileFull>} - API response
    */
-  async logIn(request: LoginRequest): Promise<object> {
+  async logIn(request: LogInRequest): Promise<UserProfileFull> {
     return ApiClient.fetchJSON('/auth/user/login', {
       method: 'POST',
       body: JSON.stringify(request)

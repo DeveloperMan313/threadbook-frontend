@@ -10,9 +10,19 @@ export interface RegisterRequest {
   password: string;
 }
 
-export interface LoginRequest {
+export interface LogInRequest {
   email: string;
   password: string;
+}
+
+export interface UserProfilePublic {
+  username: string;
+  nickname: string;
+  avatar_link: string;
+}
+
+export interface UserProfileFull extends UserProfilePublic {
+  email: string;
 }
 
 export interface GetSpoolInfoRequest {
@@ -66,16 +76,19 @@ export interface CreateSpoolRequest {
   banner: File;
 }
 
-export interface WsBase {
-  type: string;
+export interface GetProfilesRequest {
+  usernames: Array<string>;
 }
 
-export interface WsMessageSent extends WsBase {
+export interface GetProfilesResponse {
+  profiles: Array<UserProfilePublic>;
+}
+
+export interface UpdateProfileRequest {
+  nickname?: string;
+  avatar?: File;
+}
+
+export interface WsMessageSent {
   payload: MessageProps;
-}
-
-export interface Credentials {
-  username?: string;
-  email: string;
-  password: string;
 }

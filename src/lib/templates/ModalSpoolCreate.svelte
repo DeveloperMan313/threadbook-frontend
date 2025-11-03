@@ -3,9 +3,10 @@
   import { Label } from '$lib/components/ui/label/index.js';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import InputField from './InputField.svelte';
-  import { SpoolApi } from '$lib/api/spool';
+  import { SpoolApi } from '$lib/api';
   import { spoolNameGetError } from '$lib/validation';
   import type { CreateSpoolRequest, ModalSpoolCreateProps } from '$lib/types';
+  import Input from '$lib/components/ui/input/input.svelte';
 
   let { isOpen = $bindable(false) }: ModalSpoolCreateProps = $props();
 
@@ -69,21 +70,18 @@
       getError={spoolNameGetError}
       bind:value={spoolName}
       bind:isValid={nameIsValid}
-      label="Spool Name"
+      label="Spool name"
       placeholder="Enter spool name"
     />
     <div class="flex w-full max-w-sm flex-col gap-1.5">
-      <Label for="banner" class="text-right">Banner Image</Label>
-      <input
+      <Label for="banner" class="text-right">Banner image</Label>
+      <Input
+        class="cursor-pointer"
         id="banner"
         type="file"
         accept="image/*"
         onchange={onFileChange}
-        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       />
-      {#if bannerFile}
-        <p class="text-sm text-muted-foreground">Selected: {bannerFile.name}</p>
-      {/if}
     </div>
     <Dialog.Footer>
       <Button variant="outline" class="cursor-pointer" onclick={onCancel} disabled={isLoading}>

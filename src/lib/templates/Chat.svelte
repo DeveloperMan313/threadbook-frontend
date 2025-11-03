@@ -5,7 +5,7 @@
   import Message from './Message.svelte';
   import type { ChatState, ChatProps, MessageProps, ThreadProps, WsMessageSent } from '$lib/types';
   import type { SvelteMap } from 'svelte/reactivity';
-  import { MessageApi } from '$lib/api/message';
+  import { MessageApi } from '$lib/api';
 
   const { centrifugeClient }: ChatProps = $props();
 
@@ -15,12 +15,16 @@
     getThreads: () => ThreadProps[];
   };
 
+  const { cacheProfilesFromMessages } = getContext('userProfiles') as {
+    cacheProfilesFromMessages: (messages: Array<MessageProps>) => Promise<void>;
+  };
+
   const renderMessage = (message: MessageProps, mine: boolean = false) => {
     if (!currentThread) return;
 
     lastMessageMine = mine;
 
-    const currentChat = threadChats.get(currentThread.id) as ChatState;
+    const currentChat = threadChats.get(currentThread.id) as ChatProps;
     threadChats.set(currentThread.id, {
       ...currentChat,
       messages: [...currentChat.messages, message],
@@ -49,20 +53,15 @@
       messageText: ''
     });
 
-    MessageApi.getThreadMessages({ thread_id: threadId }).then((msgs) => {
-      msgs ||= [];
+    MessageApi.getThreadMessages({ thread_id: threadId }).then((messages) => {
+      messages ||= [];
+      cacheProfilesFromMessages(messages);
       // Use captured threadId instead of currentThread.id to avoid race condition
       threadChats.set(threadId, {
         thread: currentThread,
-        messages: msgs,
+        messages: messages,
         messageText: ''
       });
-    });
-
-    centrifugeClient.subToThread(threadId, (msg: WsMessageSent) => {
-      const mine = msg.payload.username == 'paveldurov';
-      msg.payload.id = msg.payload!.message_id as number; // HOTFIX
-      renderMessage(msg.payload, mine);
     });
   };
 
@@ -107,6 +106,8 @@
     }
   };
 
+  const profile = $derived($userProfile as UserProfileFull);
+
   const sendMessage = () => {
     if (!currentThread) return;
 
@@ -114,7 +115,7 @@
 
     const message: MessageProps = {
       id: 0,
-      username: 'user', // TODO get from context
+      username: profile.username,
       content: messageText,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
