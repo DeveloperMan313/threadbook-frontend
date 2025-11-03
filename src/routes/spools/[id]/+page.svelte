@@ -6,14 +6,14 @@
   import { setContext } from 'svelte';
   import type { PageProps } from './$types';
   import { ThreadApi } from '$lib/api';
-  import type { ChatProps, MessageProps, ThreadProps, ThreadType, WsMessageSent } from '$lib/types';
+  import type { ChatState, ThreadProps, ThreadType } from '$lib/types';
   import ModalThreadCreate from '$lib/templates/ModalThreadCreate.svelte';
   import Chat from '$lib/templates/Chat.svelte';
   import { SvelteMap } from 'svelte/reactivity';
 
   let { data, params }: PageProps = $props();
 
-  let threadChats = new SvelteMap<number, ChatProps>();
+  let threadChats = new SvelteMap<number, ChatState>();
 
   let threads: Array<ThreadProps> = $state([]);
   let currentThreadId = $state<number | null>(null);
@@ -68,21 +68,6 @@
   });
 
   let isThreadCreateModalOpen = $state(false);
-
-  data.centrifugeClient.subToUser((message: WsMessageSent) => {
-    if (message.username == 'paveldurov') {
-      return; // TODO think about duplication logic, update message.id
-    }
-    let chat = threadChats.get(message.thread_id) as ChatProps;
-    if (!chat) {
-      return; // ignore messages from not loaded threads
-    }
-    chat.messages = [...chat.messages, message as MessageProps];
-    threadChats.set(message.thread_id, {
-      ...chat,
-      messages: chat.messages
-    } as ChatProps);
-  });
 </script>
 
 <Navbar />
@@ -123,7 +108,7 @@
   </div>
   <div class="flex w-full flex-col bg-white">
     {#if currentThreadId}
-      <Chat />
+      <Chat centrifugeClient={data.centrifugeClient} />
     {:else}
       <div class="flex h-full items-center justify-center text-gray-500">
         Select a thread to start chatting

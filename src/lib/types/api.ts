@@ -70,8 +70,8 @@ export interface WsBase {
   type: string;
 }
 
-export interface WsMessageSent extends WsBase, MessageProps {
-  thread_id: number;
+export interface WsMessageSent extends WsBase {
+  payload: MessageProps;
 }
 
 export interface Credentials {

@@ -1,11 +1,17 @@
+import type { CentrifugeClient } from '$lib/api';
+
 /**
  * Component properties interfaces
  */
 
-export interface ChatProps {
+export interface ChatState {
   thread: ThreadProps;
   messages: Array<MessageProps>;
   messageText: string;
+}
+
+export interface ChatProps {
+  centrifugeClient: CentrifugeClient;
 }
 
 export interface ContextMenuEntry {
@@ -27,6 +33,7 @@ export interface InputFieldProps {
 }
 
 export interface MessageProps {
+  message_id: number; // HOTFIX
   id: number;
   username: string;
   content: string;
