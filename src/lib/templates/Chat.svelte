@@ -3,13 +3,14 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import Message from './Message.svelte';
-  import type { ChatProps, MessageProps, ThreadProps, UserProfileFull } from '$lib/types';
+  import type { ChatState, ChatProps, MessageProps, ThreadProps, WsMessageSent } from '$lib/types';
   import type { SvelteMap } from 'svelte/reactivity';
   import { MessageApi } from '$lib/api';
-  import { userProfile } from '$lib/userProfile';
+
+  const { centrifugeClient }: ChatProps = $props();
 
   const { threadChats, getCurrentThreadId, getThreads } = getContext('threads') as {
-    threadChats: SvelteMap<number, ChatProps>;
+    threadChats: SvelteMap<number, ChatState>;
     getCurrentThreadId: () => number | null;
     getThreads: () => ThreadProps[];
   };
@@ -93,7 +94,6 @@
     }
   });
 
-  let tempMsgId = 0;
   let messagesContainer: HTMLDivElement;
   let isAtBottom = $state(true);
   let lastMessageMine = false;
@@ -114,7 +114,7 @@
     if (messageText.trim() === '') return;
 
     const message: MessageProps = {
-      id: -tempMsgId++, // use negative ids as temporary before WS message comes
+      id: 0,
       username: profile.username,
       content: messageText,
       created_at: new Date().toISOString(),
@@ -122,7 +122,6 @@
     };
 
     MessageApi.sendThreadMessages({ thread_id: currentThread.id, content: message.content });
-    renderMessage(message, true);
   };
 
   const handleKeyPress = (event: KeyboardEvent) => {

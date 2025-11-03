@@ -24,3 +24,4 @@ vite.config.ts.timestamp-*
 
 # Paraglide
 src/lib/paraglide
+livekit-deepfilternet3-noise-filter

@@ -29,7 +29,6 @@
     "bits-ui": "^2.14.0",
     "centrifuge": "^5.5.2",
     "clsx": "^2.1.1",
-    "deepfilternet3-noise-filter": "^1.0.8",
     "eslint": "^9.22.0",
     "eslint-plugin-svelte": "^3.0.0",
     "globals": "^16.0.0",

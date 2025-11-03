@@ -5,23 +5,15 @@
   import ThreadListSection from '$lib/templates/ThreadListSection.svelte';
   import { setContext } from 'svelte';
   import type { PageProps } from './$types';
-  import { CentrifugeClient, ProfileApi, ThreadApi } from '$lib/api';
-  import type {
-    ChatProps,
-    MessageProps,
-    ThreadProps,
-    ThreadType,
-    UserProfileFull,
-    UserProfilePublic,
-    WsMessageSent
-  } from '$lib/types';
+  import { ThreadApi } from '$lib/api';
+  import type { ChatState, ThreadProps, ThreadType } from '$lib/types';
   import ModalThreadCreate from '$lib/templates/ModalThreadCreate.svelte';
   import Chat from '$lib/templates/Chat.svelte';
   import { SvelteMap } from 'svelte/reactivity';
 
   let { data, params }: PageProps = $props();
 
-  let threadChats = new SvelteMap<number, ChatProps>();
+  let threadChats = new SvelteMap<number, ChatState>();
 
   let threads: Array<ThreadProps> = $state([]);
   let currentThreadId = $state<number | null>(null);
@@ -154,7 +146,7 @@
   </div>
   <div class="flex w-full flex-col bg-white">
     {#if currentThreadId}
-      <Chat />
+      <Chat centrifugeClient={data.centrifugeClient} />
     {:else}
       <div class="flex h-full items-center justify-center text-gray-500">
         Select a thread to start chatting

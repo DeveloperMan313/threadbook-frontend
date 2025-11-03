@@ -10,6 +10,7 @@
     RemoteTrackPublication,
     LocalTrack
   } from 'livekit-client';
+  import { DeepFilterNoiseFilterProcessor } from '$lib/deepfilternet3/index.esm.js';
 
   let isConnected = false;
   let error = '';
@@ -18,6 +19,8 @@
 
   let isSelfMuted = false;
   let isOthersMuted = false;
+  let isSelfVideoEnabled = true;
+
   let participants: RemoteParticipant[] = [];
   let volumes: Record<string, number> = {};
   let audioElements = new SvelteMap<string, HTMLAudioElement>();
@@ -55,19 +58,29 @@
 
   function attachVideoTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
+
     const element = track.attach() as HTMLVideoElement;
     element.autoplay = true;
     element.playsInline = true;
     element.muted = true;
     element.className = 'video-preview';
 
-    const container = document.querySelector(
-      `.video-container[data-participant="${participantId}"]`
-    );
-    if (container) {
-      container.innerHTML = '';
-      container.appendChild(element);
-    }
+    const tryAttach = () => {
+      const container = document.querySelector(
+        `.video-container[data-participant="${participantId}"]`
+      ) as HTMLElement | null;
+
+      if (container) {
+        container.innerHTML = '';
+        container.appendChild(element);
+      } else {
+        setTimeout(() => {
+          tryAttach();
+        }, 100);
+      }
+    };
+
+    tryAttach();
   }
 
   function detachTrack(participantId: string) {
@@ -102,32 +115,51 @@
     });
   }
 
+  async function toggleSelfVideo() {
+    if (!room) return;
+    isSelfVideoEnabled = !isSelfVideoEnabled;
+    await room.localParticipant.setCameraEnabled(isSelfVideoEnabled);
+  }
+
   function handleParticipant(participant: RemoteParticipant) {
-    // Обработка будущих публикаций
+    // Для будущих треков (новые публикации от этого участника)
     participant.on('trackPublished', (pub: RemoteTrackPublication) => {
-      pub.on('subscribed', (track: RemoteTrack) => {
+      const onSubscribed = (track: RemoteTrack) => {
         if (track.kind === 'audio') {
           attachAudioTrack(track, participant.identity);
         } else if (track.kind === 'video') {
           attachVideoTrack(track, participant.identity);
         }
-      });
+        pub.off('subscribed', onSubscribed);
+      };
+
+      if (pub.isSubscribed && pub.track) {
+        onSubscribed(pub.track);
+      } else {
+        pub.on('subscribed', onSubscribed);
+        pub.setSubscribed(true);
+      }
 
       pub.on('unsubscribed', () => {
         detachTrack(participant.identity);
       });
     });
 
-    // Обработка УЖЕ существующих публикаций
+    // Для уже существующих треков (на момент подключения)
     participant.trackPublications.forEach((pub) => {
-      if (pub.isSubscribed && pub.track) {
-        if (pub.track.kind === 'audio') {
-          attachAudioTrack(pub.track, participant.identity);
-        } else if (pub.track.kind === 'video') {
-          attachVideoTrack(pub.track, participant.identity);
+      const onSubscribed = (track: RemoteTrack) => {
+        if (track.kind === 'audio') {
+          attachAudioTrack(track, participant.identity);
+        } else if (track.kind === 'video') {
+          attachVideoTrack(track, participant.identity);
         }
-      } else if (!pub.isSubscribed) {
-        // Подписываемся явно, если ещё не подписаны
+        pub.off('subscribed', onSubscribed);
+      };
+
+      if (pub.isSubscribed && pub.track) {
+        onSubscribed(pub.track);
+      } else {
+        pub.on('subscribed', onSubscribed);
         pub.setSubscribed(true);
       }
     });
@@ -155,20 +187,16 @@
 
       await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
-      const videoTracks = await room.localParticipant.createTracks({ video: true, audio: false });
-      let audioTrack = null;
+      const videoTracks = isSelfVideoEnabled
+        ? await room.localParticipant.createTracks({ video: true, audio: false })
+        : [];
 
+      let audioTrack = null;
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const micTrack = stream.getAudioTracks()[0];
-
         if (!micTrack) throw new Error('No audio track from microphone');
 
-        const { LocalAudioTrack } = await import('livekit-client');
-        audioTrack = new LocalAudioTrack(micTrack);
-
-        // DeepFilterNet3
-        const { DeepFilterNoiseFilterProcessor } = await import('deepfilternet3-noise-filter');
         const processor = new DeepFilterNoiseFilterProcessor({
           sampleRate: 48000,
           noiseReductionLevel: 80,
@@ -176,7 +204,13 @@
         });
 
         await processor.init({ track: micTrack });
-        await audioTrack.setProcessor(processor);
+
+        if (!processor.processedTrack) {
+          throw new Error('DeepFilterNet3 did not produce a processed track');
+        }
+
+        const { LocalAudioTrack } = await import('livekit-client');
+        audioTrack = new LocalAudioTrack(processor.processedTrack);
       } catch (err) {
         console.warn('DeepFilterNet3 failed, falling back to standard audio:', err);
 
@@ -192,8 +226,8 @@
         audioTrack = fallbackTracks[0];
       }
 
+      // Публикация треков
       const tracks = [...videoTracks, audioTrack].filter(Boolean);
-
       for (const track of tracks) {
         await room.localParticipant.publishTrack(track);
         if (track.kind === 'video') {
@@ -206,7 +240,6 @@
 
       isConnected = true;
       error = '';
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       error = err.message || 'Connection failed';
       console.error('Join error:', err);
@@ -234,6 +267,7 @@
     isConnected = false;
     isSelfMuted = false;
     isOthersMuted = false;
+    isSelfVideoEnabled = true;
     volumes = {};
   }
 
@@ -284,6 +318,13 @@
       disabled={!isConnected}
     >
       {isOthersMuted ? 'Включить других' : 'Заглушить всех'}
+    </button>
+    <button
+      class="mb-1 w-full cursor-pointer rounded bg-gray-700 px-2 py-1 text-xs text-white transition-opacity duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+      on:click={toggleSelfVideo}
+      disabled={!isConnected}
+    >
+      {isSelfVideoEnabled ? 'Выключить видео' : 'Включить видео'}
     </button>
   </div>
 
