@@ -1,3 +1,5 @@
+import { goto } from '$app/navigation';
+import { resolve } from '$app/paths';
 import { PUBLIC_API_ORIGIN } from '$env/static/public';
 
 /**
@@ -17,6 +19,11 @@ export const ApiClient = {
     }
 
     const response = await fetch(PUBLIC_API_ORIGIN + inputRelative, init);
+
+    if (response.status == 401) {
+      goto(resolve('/signin'));
+      throw Error('unauthorized');
+    }
 
     // turned off because i worry for epileptic people
     // if (response.status >= 500) {

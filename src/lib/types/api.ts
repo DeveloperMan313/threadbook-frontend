@@ -15,10 +15,14 @@ export interface LogInRequest {
   password: string;
 }
 
-export interface UserProfile {
+export interface UserProfilePublic {
   username: string;
+  nickname: string;
+  avatar_link: string;
+}
+
+export interface UserProfileFull extends UserProfilePublic {
   email: string;
-  pfp_url?: string;
 }
 
 export interface GetSpoolInfoRequest {
@@ -73,16 +77,23 @@ export interface CreateSpoolRequest {
   banner: File;
 }
 
+export interface GetProfilesRequest {
+  usernames: Array<string>;
+}
+
+export interface GetProfilesResponse {
+  profiles: Array<UserProfilePublic>;
+}
+
+export interface UpdateProfileRequest {
+  nickname?: string;
+  avatar?: File;
+}
+
 export interface WsBase {
   type: string;
 }
 
 export interface WsMessageSent extends WsBase, MessageProps {
   thread_id: number;
-}
-
-export interface Credentials {
-  username?: string;
-  email: string;
-  password: string;
 }

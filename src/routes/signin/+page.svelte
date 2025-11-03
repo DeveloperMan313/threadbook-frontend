@@ -20,10 +20,11 @@
 
   const makeRequest = async () => {
     try {
-      const profile = await AuthApi.logIn({
+      let profile = await AuthApi.logIn({
         email: emailValue,
         password: passwordValue
       });
+      profile.nickname = profile.username; // TODO return from backend
 
       localStorage.setItem('userProfile', JSON.stringify(profile));
 
