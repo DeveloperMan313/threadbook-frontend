@@ -1,5 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
+  import { ImageApi } from '$lib/api';
   import logo from '$lib/assets/icons/logo.svg';
   import * as Avatar from '$lib/components/ui/avatar/index.js';
   import type { UserProfileFull } from '$lib/types';
@@ -9,7 +10,7 @@
 </script>
 
 <div
-  class="fixed top-0 z-100 flex h-16 w-full items-center justify-between border-2 border-border bg-background px-6"
+  class="fixed top-0 z-10 flex h-16 w-full items-center justify-between border-2 border-border bg-background px-6"
 >
   <a class="flex items-center gap-2 text-inherit no-underline" href={resolve('/spools')}>
     <img class="h-12 w-12" src={logo} alt="logo" />
@@ -17,7 +18,7 @@
   </a>
   <a class="flex items-center gap-2 text-inherit no-underline" href={resolve('/profile')}>
     <Avatar.Root class="size-[3rem]">
-      <Avatar.Image src={profile.avatar_link} alt={profile.nickname} />
+      <Avatar.Image src={ImageApi.getUserAvatarURL(profile.avatar_link)} alt={profile.nickname} />
       <Avatar.Fallback>{profile.nickname.slice(0, 2).toUpperCase()}</Avatar.Fallback>
     </Avatar.Root>
     <div class="text-left" title="profile">

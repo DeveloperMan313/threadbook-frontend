@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ProfileApi } from '$lib/api/profile';
+  import { ImageApi, ProfileApi } from '$lib/api';
   import * as Avatar from '$lib/components/ui/avatar/index.js';
   import Button from '$lib/components/ui/button/button.svelte';
   import Input from '$lib/components/ui/input/input.svelte';
@@ -58,7 +58,11 @@
     <h2 class="w-full scroll-m-20 border-b pb-2 text-3xl font-semibold">Profile settings</h2>
     <Avatar.Root class="size-40 self-center">
       <Label class="contents cursor-pointer" for="avatar">
-        <Avatar.Image id="avatar-preview" src={avatarSrc} alt={profile.nickname} />
+        <Avatar.Image
+          id="avatar-preview"
+          src={ImageApi.getUserAvatarURL(profile.avatar_link)}
+          alt={profile.nickname}
+        />
         <Avatar.Fallback>{profile.nickname.slice(0, 2).toUpperCase()}</Avatar.Fallback>
       </Label>
     </Avatar.Root>

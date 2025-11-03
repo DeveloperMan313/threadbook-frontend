@@ -3,7 +3,7 @@
   import { Label } from '$lib/components/ui/label/index.js';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import InputField from './InputField.svelte';
-  import { SpoolApi } from '$lib/api/spool';
+  import { SpoolApi } from '$lib/api';
   import { spoolNameGetError } from '$lib/validation';
   import type { CreateSpoolRequest, ModalSpoolCreateProps } from '$lib/types';
   import Input from '$lib/components/ui/input/input.svelte';

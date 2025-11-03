@@ -5,7 +5,7 @@
   import Message from './Message.svelte';
   import type { ChatProps, MessageProps, ThreadProps, UserProfileFull } from '$lib/types';
   import type { SvelteMap } from 'svelte/reactivity';
-  import { MessageApi } from '$lib/api/message';
+  import { MessageApi } from '$lib/api';
   import { userProfile } from '$lib/userProfile';
 
   const { threadChats, getCurrentThreadId, getThreads } = getContext('threads') as {
