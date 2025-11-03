@@ -5,8 +5,8 @@
   import ThreadListSection from '$lib/templates/ThreadListSection.svelte';
   import { setContext } from 'svelte';
   import type { PageProps } from './$types';
-  import { ThreadApi } from '$lib/api';
-  import type { ChatState, ThreadProps, ThreadType } from '$lib/types';
+  import { ProfileApi, ThreadApi } from '$lib/api';
+  import type { ChatState, MessageProps, ThreadProps, ThreadType, UserProfilePublic } from '$lib/types';
   import ModalThreadCreate from '$lib/templates/ModalThreadCreate.svelte';
   import Chat from '$lib/templates/Chat.svelte';
   import { SvelteMap } from 'svelte/reactivity';
@@ -91,21 +91,6 @@
   });
 
   let isThreadCreateModalOpen = $state(false);
-
-  CentrifugeClient.subToUser((message: WsMessageSent) => {
-    if (message.username == 'paveldurov') {
-      return; // TODO think about duplication logic, update message.id
-    }
-    let chat = threadChats.get(message.thread_id) as ChatProps;
-    if (!chat) {
-      return; // ignore messages from not loaded threads
-    }
-    chat.messages = [...chat.messages, message as MessageProps];
-    threadChats.set(message.thread_id, {
-      ...chat,
-      messages: chat.messages
-    } as ChatProps);
-  });
 </script>
 
 <Navbar />

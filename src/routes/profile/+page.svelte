@@ -14,7 +14,7 @@
   // svelte-ignore state_referenced_locally
   let nickname = $state(profile.nickname); // make a copy
   // svelte-ignore state_referenced_locally
-  let avatarSrc = $state(profile.avatar_link); // make a copy
+  let avatarLocal = $state('');
   let avatar = $state<File | undefined>(undefined);
 
   let isLoading = $state(false);
@@ -28,7 +28,7 @@
     var reader = new FileReader();
 
     reader.onload = function (event) {
-      avatarSrc = event.target!.result as string;
+      avatarLocal = event.target!.result as string;
     };
 
     reader.readAsDataURL(avatar);
@@ -43,6 +43,7 @@
         ...profileChanges
       } as UserProfileFull;
       userProfile.set(newProfile);
+      avatarLocal = '';
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Profile update failed');
     } finally {
@@ -59,7 +60,7 @@
       <Label class="contents cursor-pointer" for="avatar">
         <Avatar.Image
           id="avatar-preview"
-          src={ImageApi.getUserAvatarURL(profile.avatar_link)}
+          src={avatarLocal || ImageApi.getUserAvatarURL(profile.avatar_link)}
           alt={profile.nickname}
         />
         <Avatar.Fallback>{profile.nickname.slice(0, 2).toUpperCase()}</Avatar.Fallback>

@@ -3,9 +3,17 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import Message from './Message.svelte';
-  import type { ChatState, ChatProps, MessageProps, ThreadProps, WsMessageSent } from '$lib/types';
+  import type {
+    ChatState,
+    ChatProps,
+    MessageProps,
+    ThreadProps,
+    WsMessageSent,
+    UserProfileFull
+  } from '$lib/types';
   import type { SvelteMap } from 'svelte/reactivity';
   import { MessageApi } from '$lib/api';
+  import { userProfile } from '$lib/userProfile';
 
   const { centrifugeClient }: ChatProps = $props();
 
@@ -24,7 +32,7 @@
 
     lastMessageMine = mine;
 
-    const currentChat = threadChats.get(currentThread.id) as ChatProps;
+    const currentChat = threadChats.get(currentThread.id) as ChatState;
     threadChats.set(currentThread.id, {
       ...currentChat,
       messages: [...currentChat.messages, message],
@@ -62,6 +70,12 @@
         messages: messages,
         messageText: ''
       });
+    });
+
+    centrifugeClient.subToThread(threadId, (msg: WsMessageSent) => {
+      const mine = msg.payload.username == profile.username;
+      msg.payload.id = msg.payload!.message_id as number; // HOTFIX
+      renderMessage(msg.payload, mine);
     });
   };
 
