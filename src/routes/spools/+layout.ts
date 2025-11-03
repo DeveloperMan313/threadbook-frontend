@@ -1,9 +1,9 @@
 import type { LayoutLoad } from './$types';
 import { CentrifugeClient, SpoolApi } from '$lib/api';
-import { tryInitUserProfile } from '$lib/userProfile';
+import { tryGetUserProfile } from '$lib/userProfile';
 
 export const load: LayoutLoad = async () => {
-  if (!tryInitUserProfile()) return;
+  if (!(await tryGetUserProfile())) return;
   CentrifugeClient.connect();
 
   const spoolDockProps = await SpoolApi.getUserSpoolList();

@@ -4,9 +4,9 @@ import type { RegisterRequest, LogInRequest, UserProfileFull } from '$lib/types'
 export const AuthApi = {
   /**
    * Get auth info
-   * @returns {Promise<object>} - API response
+   * @returns {Promise<UserProfileFull>} - API response
    */
-  async getAuth(): Promise<object> {
+  async getAuth(): Promise<UserProfileFull> {
     return ApiClient.fetchJSON('/auth/user', {
       method: 'GET',
       headers: {}

@@ -42,7 +42,6 @@
         ...profile,
         ...profileChanges
       } as UserProfileFull;
-      localStorage.setItem('userProfile', JSON.stringify(newProfile));
       userProfile.set(newProfile);
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Profile update failed');
