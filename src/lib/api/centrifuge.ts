@@ -5,13 +5,18 @@ import type { GetCentrifugeTokensResponse, WsMessageSent } from '$lib/types';
 
 type MessageHandler = (message: WsMessageSent) => void;
 
-const routeUserPublication = (ctx: PublicationContext, onMessage: MessageHandler) => {
-  switch (
-  'sent' as string // TODO ctx.data.type as string
-  ) {
-    case 'sent':
+const routeThreadPublication = (ctx: PublicationContext, onMessage: MessageHandler) => {
+  switch (ctx.data.type) {
+    case 'message.created':
       onMessage(ctx.data);
       break;
+    default:
+      throw Error(`unknown message type: ${ctx.data.type}`);
+  }
+};
+
+const routeUserPublication = (ctx: PublicationContext) => {
+  switch (ctx.data.type) {
     default:
       throw Error(`unknown message type: ${ctx.data.type}`);
   }
@@ -35,7 +40,24 @@ export class CentrifugeClient {
     this.centrifuge.connect();
   }
 
-  public async subToUser(onMessage: MessageHandler): Promise<void> {
+  public async subToThread(thread_id: number, onMessage: MessageHandler): Promise<void> {
+    if (!this.centrifuge || !this.tokens) {
+      throw Error('not connected');
+    }
+
+    const [channel, token] = Object.entries(this.tokens.ChannelTokens).find(([channel]) =>
+      channel == `thread#${thread_id}`
+    ) as [string, string];
+    const sub = this.centrifuge.newSubscription(channel, { token });
+
+    sub.on('publication', (ctx) => {
+      routeThreadPublication(ctx, onMessage);
+    });
+
+    sub.subscribe();
+  }
+
+  public async subToUser(): Promise<void> {
     if (!this.centrifuge || !this.tokens) {
       throw Error('not connected');
     }
@@ -46,7 +68,7 @@ export class CentrifugeClient {
     const sub = this.centrifuge.newSubscription(channel, { token });
 
     sub.on('publication', (ctx) => {
-      routeUserPublication(ctx, onMessage);
+      routeUserPublication(ctx);
     });
 
     sub.subscribe();

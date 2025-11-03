@@ -3,12 +3,14 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import Message from './Message.svelte';
-  import type { ChatProps, MessageProps, ThreadProps } from '$lib/types';
+  import type { ChatState, ChatProps, MessageProps, ThreadProps, WsMessageSent } from '$lib/types';
   import type { SvelteMap } from 'svelte/reactivity';
   import { MessageApi } from '$lib/api/message';
 
+  const { centrifugeClient }: ChatProps = $props();
+
   const { threadChats, getCurrentThreadId, getThreads } = getContext('threads') as {
-    threadChats: SvelteMap<number, ChatProps>;
+    threadChats: SvelteMap<number, ChatState>;
     getCurrentThreadId: () => number | null;
     getThreads: () => ThreadProps[];
   };
@@ -18,7 +20,7 @@
 
     lastMessageMine = mine;
 
-    const currentChat = threadChats.get(currentThread.id) as ChatProps;
+    const currentChat = threadChats.get(currentThread.id) as ChatState;
     threadChats.set(currentThread.id, {
       ...currentChat,
       messages: [...currentChat.messages, message],
@@ -56,6 +58,12 @@
         messageText: ''
       });
     });
+
+    centrifugeClient.subToThread(threadId, (msg: WsMessageSent) => {
+      const mine = msg.payload.username == 'paveldurov';
+      msg.payload.id = msg.payload!.message_id as number; // HOTFIX
+      renderMessage(msg.payload, mine);
+    });
   };
 
   let currentThread = $derived(
@@ -87,7 +95,6 @@
     }
   });
 
-  let tempMsgId = 0;
   let messagesContainer: HTMLDivElement;
   let isAtBottom = $state(true);
   let lastMessageMine = false;
@@ -106,7 +113,7 @@
     if (messageText.trim() === '') return;
 
     const message: MessageProps = {
-      id: -tempMsgId++, // use negative ids as temporary before WS message comes
+      id: 0,
       username: 'user', // TODO get from context
       content: messageText,
       created_at: new Date().toISOString(),
@@ -114,7 +121,6 @@
     };
 
     MessageApi.sendThreadMessages({ thread_id: currentThread.id, content: message.content });
-    renderMessage(message, true);
   };
 
   const handleKeyPress = (event: KeyboardEvent) => {
