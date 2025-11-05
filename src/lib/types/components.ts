@@ -41,6 +41,12 @@ export interface MessageProps {
   updated_at: string;
 }
 
+export interface ModalInviteUsersToSpool {
+  spoolId: number;
+  spoolName: string;
+  isOpen: boolean; // bindable
+}
+
 export interface ModalSpoolLeaveProps {
   spoolId: number;
   spoolName: string;

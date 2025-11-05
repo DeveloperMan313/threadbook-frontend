@@ -37,6 +37,11 @@ export interface LeaveSpoolRequest {
   spool_id: number;
 }
 
+export interface InviteUsersToSpoolRequest {
+  spool_id: number;
+  member_usernames: Array<string>;
+}
+
 export interface ArchiveThreadRequest {
   id: number;
 }

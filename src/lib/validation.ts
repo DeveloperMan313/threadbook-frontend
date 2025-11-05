@@ -3,7 +3,10 @@
  * @param {string} value - string
  * @returns {string?} - error message or null
  */
-export function lengthGetError(value: string, bounds: { min?: number, max?: number }): string | null {
+export function lengthGetError(
+  value: string,
+  bounds: { min?: number; max?: number }
+): string | null {
   if (!bounds.min && !bounds.max) {
     throw Error('should pass at least one of bounds');
   }
@@ -66,10 +69,7 @@ export function signupPasswordGetError(value: string): string | null {
   if (lengthError) {
     return lengthError;
   }
-  const isValid =
-    /[a-z]+/.test(value) &&
-    /[A-Z]+/.test(value) &&
-    /[0-9]+/.test(value);
+  const isValid = /[a-z]+/.test(value) && /[A-Z]+/.test(value) && /[0-9]+/.test(value);
   if (isValid) {
     return null;
   }
@@ -120,4 +120,21 @@ export function threadTitleGetError(value: string): string | null {
  */
 export function spoolNameGetError(value: string): string | null {
   return lengthGetError(value, { min: 3, max: 32 });
+}
+
+/**
+ * Check invite usernames
+ * @param {string} value - username list string
+ * @returns {string?} - error message or null
+ */
+export function inviteUsernamesGetError(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed!) {
+    return 'Input usernames';
+  }
+  const limit = 100;
+  if (trimmed.split(' ').length > limit) {
+    return `No more than ${limit} usernames`;
+  }
+  return null;
 }

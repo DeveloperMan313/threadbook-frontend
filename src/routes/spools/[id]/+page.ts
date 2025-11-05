@@ -13,6 +13,7 @@ export const load: PageLoad = async ({ params, parent }) => {
   await centrifugeClient.connect(spool_id);
 
   return {
+    spoolId: spool_id,
     spools: spools as Array<SpoolProps>,
     threads: threadsPromise,
     centrifugeClient

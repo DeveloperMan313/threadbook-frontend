@@ -6,10 +6,17 @@
   import { setContext } from 'svelte';
   import type { PageProps } from './$types';
   import { ProfileApi, ThreadApi } from '$lib/api';
-  import type { ChatState, MessageProps, ThreadProps, ThreadType, UserProfilePublic } from '$lib/types';
+  import type {
+    ChatState,
+    MessageProps,
+    ThreadProps,
+    ThreadType,
+    UserProfilePublic
+  } from '$lib/types';
   import ModalThreadCreate from '$lib/templates/ModalThreadCreate.svelte';
   import Chat from '$lib/templates/Chat.svelte';
   import { SvelteMap } from 'svelte/reactivity';
+  import ModalInviteUsersToSpool from '$lib/templates/ModalInviteUsersToSpool.svelte';
 
   let { data, params }: PageProps = $props();
 
@@ -18,6 +25,8 @@
   let threads: Array<ThreadProps> = $state([]);
   let currentThreadId = $state<number | null>(null);
   let threadsAreLoading = $state(true);
+
+  const spoolName = data.spools.find((spool) => spool.id == data.spoolId)?.name as string;
 
   $effect(() => {
     threadsAreLoading = true;
@@ -91,12 +100,23 @@
   });
 
   let isThreadCreateModalOpen = $state(false);
+  let isInviteUsersToSpoolModalOpen = $state(false);
 </script>
 
 <Navbar />
 <div class="fixed inset-0 top-16 flex flex-row">
   <SpoolDock spools={data.spools} />
   <div class="flex w-72 flex-shrink-0 flex-col gap-6 p-4 pt-3 pr-3">
+    <h2 class="w-full scroll-m-20 border-b pb-2 text-3xl font-semibold">{spoolName}</h2>
+    <Button
+      variant="outline"
+      class="cursor-pointer"
+      onclick={() => {
+        isInviteUsersToSpoolModalOpen = true;
+      }}
+    >
+      Invite users
+    </Button>
     <Button
       variant="outline"
       class="cursor-pointer"
@@ -128,6 +148,11 @@
       />
     {/if}
     <ModalThreadCreate bind:isOpen={isThreadCreateModalOpen} />
+    <ModalInviteUsersToSpool
+      spoolId={data.spoolId}
+      {spoolName}
+      bind:isOpen={isInviteUsersToSpoolModalOpen}
+    />
   </div>
   <div class="flex w-full flex-col bg-white">
     {#if currentThreadId}

@@ -4,7 +4,8 @@ import type {
   SpoolDockProps,
   GetSpoolInfoRequest,
   CreateSpoolRequest,
-  LeaveSpoolRequest
+  LeaveSpoolRequest,
+  InviteUsersToSpoolRequest
 } from '$lib/types';
 
 const MockGetUserSpoolList: SpoolDockProps = {
@@ -94,6 +95,17 @@ export const SpoolApi = {
    */
   async leaveFromSpool(request: LeaveSpoolRequest) {
     return ApiClient.fetch('/spool/leave', {
+      method: 'POST',
+      body: JSON.stringify(request)
+    });
+  },
+
+  /**
+   * Invite users to spool
+   * @param {InviteUsersToSpoolRequest} request - request object with spool_id and username list
+   */
+  async inviteUsersToSpool(request: InviteUsersToSpoolRequest) {
+    return ApiClient.fetch('/spool/invite', {
       method: 'POST',
       body: JSON.stringify(request)
     });
