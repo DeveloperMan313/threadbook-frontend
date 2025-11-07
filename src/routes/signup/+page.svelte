@@ -27,6 +27,8 @@
 
   let registrationStage = $state(0);
 
+  let errorMsg = $state('');
+
   const advanceStage = () => {
     registrationStage += 1;
   };
@@ -43,14 +45,19 @@
 
       goto(resolve('/spools'));
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Registration failed');
+      if (!(error instanceof Error)) return;
+      if (error.message == 'user already exists') {
+        errorMsg = 'User already exists'; // TODO more detailed errors
+        return;
+      }
+      errorMsg = 'Could not sign you up, retry later';
     }
   };
 </script>
 
 <div class="flex h-full w-full items-center justify-center">
   <div class="w-72 overflow-hidden rounded-2xl bg-background py-5">
-    <h2 class="w-full text-center text-3xl font-semibold">Sign up</h2>
+    <h2 class="w-full text-center text-3xl">Sign up</h2>
     <div class="flex w-full flex-row">
       <div
         class="flex w-full flex-shrink-0 flex-col gap-4 p-6 transition-all duration-500"
@@ -71,7 +78,7 @@
           bind:value={usernameValue}
           bind:isValid={usernameIsValid}
           label="Username"
-          placeholder="Enter username"
+          placeholder="user123"
           noSpaces={true}
           tabindex={-1}
         />
@@ -98,7 +105,7 @@
           bind:value={emailValue}
           bind:isValid={emailIsValid}
           label="Email"
-          placeholder="Enter email"
+          placeholder="email@example.com"
           noSpaces={true}
           tabindex={-1}
         />
@@ -132,11 +139,14 @@
           noSpaces={true}
           tabindex={-1}
         />
-        <Button class="cursor-pointer" onclick={makeRequest} disabled={!passwordRepeatedIsValid}
-          >Sign up</Button
+        <Button
+          class="cursor-pointer"
+          onclick={makeRequest}
+          disabled={!passwordRepeatedIsValid || errorMsg != ''}>Sign up</Button
         >
       </div>
     </div>
+    {#if errorMsg}<p class="mb-4 text-center text-sm text-destructive">{errorMsg}</p>{/if}
     <p class="mb-1 text-center text-sm">Already have an account?</p>
     <p class="text-center text-sm underline"><a href={resolve('/signin')}>sign in</a></p>
   </div>
