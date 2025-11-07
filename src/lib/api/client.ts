@@ -2,10 +2,17 @@ import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { PUBLIC_API_ORIGIN } from '$env/static/public';
 
+// use window.fetch by default
+let svelteFetch: typeof window.fetch;
+
 /**
  * Base API client that sends JSON, cookies and works with CORS
  */
 export const ApiClient = {
+  setFetch(newFetch: typeof svelteFetch) {
+    svelteFetch = newFetch;
+  },
+
   async fetch(inputRelative: string, init?: RequestInit): Promise<Response> {
     if (!init) {
       init = {};
@@ -18,7 +25,7 @@ export const ApiClient = {
       };
     }
 
-    const response = await fetch(PUBLIC_API_ORIGIN + inputRelative, init);
+    const response = await svelteFetch(PUBLIC_API_ORIGIN + inputRelative, init);
 
     if (response.status == 401) {
       goto(resolve('/signin'));

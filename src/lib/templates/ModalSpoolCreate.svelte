@@ -7,6 +7,7 @@
   import { spoolNameGetError } from '$lib/validation';
   import type { CreateSpoolRequest, ModalSpoolCreateProps } from '$lib/types';
   import Input from '$lib/components/ui/input/input.svelte';
+  import { invalidate } from '$app/navigation';
 
   let { isOpen = $bindable(false) }: ModalSpoolCreateProps = $props();
 
@@ -31,6 +32,8 @@
       spoolName = '';
       bannerFile = null;
       nameIsValid = false;
+
+      invalidate('/api/spool/user');
     } catch (error) {
       console.error('Failed to create spool:', error);
     } finally {

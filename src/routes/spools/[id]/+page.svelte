@@ -26,7 +26,7 @@
   let currentThreadId = $state<number | null>(null);
   let threadsAreLoading = $state(true);
 
-  const spoolName = data.spools.find((spool) => spool.id == data.spoolId)?.name as string;
+  const spoolName = $derived(data.spools.find((spool) => spool.id == data.spoolId)?.name as string);
 
   $effect(() => {
     threadsAreLoading = true;
@@ -107,7 +107,7 @@
 <div class="fixed inset-0 top-16 flex flex-row">
   <SpoolDock spools={data.spools} />
   <div class="flex w-72 flex-shrink-0 flex-col gap-6 p-4 pt-3 pr-3">
-    <h2 class="w-full scroll-m-20 border-b pb-2 text-3xl font-semibold">{spoolName}</h2>
+    <h2 class="w-full scroll-m-20 border-b pb-2 text-3xl">{spoolName}</h2>
     <Button
       variant="outline"
       class="cursor-pointer"
