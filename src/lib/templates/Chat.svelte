@@ -74,6 +74,7 @@
     centrifugeClient.subToThread(threadId, (msg: WsMessageSent) => {
       const mine = msg.payload.username == profile.username;
       msg.payload.id = msg.payload!.message_id as number; // HOTFIX
+      cacheProfilesFromMessages([msg.payload]);
       renderMessage(msg.payload, mine);
     });
   };
