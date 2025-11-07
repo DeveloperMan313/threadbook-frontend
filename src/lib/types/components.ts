@@ -34,6 +34,7 @@ export interface InputFieldProps {
   disabled?: boolean;
   noSpaces?: boolean;
   class?: string;
+  tabindex?: number;
 }
 
 export interface MessageProps {

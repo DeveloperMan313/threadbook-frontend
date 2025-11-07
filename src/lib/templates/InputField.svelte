@@ -12,7 +12,8 @@
     placeholder,
     disabled,
     noSpaces,
-    class: className
+    class: className,
+    tabindex
   }: InputFieldProps = $props();
 
   let errorMsg = $state('');
@@ -46,6 +47,7 @@
     aria-invalid={errorMsg != ''}
     onkeydown={noSpaces ? filterSpaces : undefined}
     class={'w-full' + (errorMsg ? ' border-destructive focus-visible:ring-destructive/20' : '')}
+    {tabindex}
   />
   {#if errorMsg}
     <p class="text-sm text-destructive">{errorMsg}</p>
