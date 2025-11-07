@@ -1,10 +1,10 @@
 <script lang="ts">
   import InputField from '$lib/templates/InputField.svelte';
   import {
-    usernameGetError,
-    emailGetError,
+    signupUsernameGetError,
     signupPasswordGetError,
-    getPasswordRepeatGetError
+    getPasswordRepeatGetError,
+    signupEmailGetError
   } from '$lib/validation';
   import { AuthApi } from '$lib/api';
   import { Button } from '$lib/components/ui/button/index.js';
@@ -31,6 +31,8 @@
     registrationStage += 1;
   };
 
+  let isChecking = $state(false);
+
   const makeRequest = async () => {
     try {
       await AuthApi.register({
@@ -54,27 +56,51 @@
     >
       <InputField
         type="text"
-        getError={usernameGetError}
+        getError={async (value: string) => {
+          isChecking = true;
+          try {
+            let error = await signupUsernameGetError(value);
+            isChecking = false;
+            return error;
+          } catch {
+            return null;
+          }
+        }}
         bind:value={usernameValue}
         bind:isValid={usernameIsValid}
         label="Username"
         placeholder="Enter username"
         noSpaces={true}
       />
-      <Button class="cursor-pointer" onclick={advanceStage} disabled={!usernameIsValid}>Next</Button
+      <Button
+        class="cursor-pointer"
+        onclick={advanceStage}
+        disabled={!usernameIsValid || isChecking}
+        >{#if isChecking}Checking...{:else}Next{/if}</Button
       >
     </div>
     <div class="flex w-full flex-shrink-0 flex-col gap-4 p-6">
       <InputField
         type="email"
-        getError={emailGetError}
+        getError={async (value: string) => {
+          isChecking = true;
+          try {
+            let error = await signupEmailGetError(value);
+            isChecking = false;
+            return error;
+          } catch {
+            return null;
+          }
+        }}
         bind:value={emailValue}
         bind:isValid={emailIsValid}
         label="Email"
         placeholder="Enter email"
         noSpaces={true}
       />
-      <Button class="cursor-pointer" onclick={advanceStage} disabled={!emailIsValid}>Next</Button>
+      <Button class="cursor-pointer" onclick={advanceStage} disabled={!emailIsValid || isChecking}
+        >{#if isChecking}Checking...{:else}Next{/if}</Button
+      >
     </div>
     <div class="flex w-full flex-shrink-0 flex-col gap-4 p-6">
       <InputField

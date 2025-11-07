@@ -1,5 +1,13 @@
 import { ApiClient } from './client';
-import type { RegisterRequest, LogInRequest, UserProfileFull } from '$lib/types';
+import type {
+  RegisterRequest,
+  LogInRequest,
+  UserProfileFull,
+  CheckEmailRequest,
+  CheckUsernameRequest,
+  CheckEmailResponse,
+  CheckUsernameResponse
+} from '$lib/types';
 
 export const AuthApi = {
   /**
@@ -45,6 +53,30 @@ export const AuthApi = {
     return ApiClient.fetchJSON('/auth/user/logout', {
       method: 'POST',
       headers: {}
+    });
+  },
+
+  /**
+   * Check if email exists
+   * @param {CheckEmailRequest} request - request object
+   * @returns {Promise<CheckEmailResponse>} - API response
+   */
+  async checkEmail(request: CheckEmailRequest): Promise<CheckEmailResponse> {
+    return ApiClient.fetchJSON('/auth/validation/email', {
+      method: 'POST',
+      body: JSON.stringify(request)
+    });
+  },
+
+  /**
+   * Check if username exists
+   * @param {CheckUsernameRequest} request - request object
+   * @returns {Promise<CheckUsernameResponse>} - API response
+   */
+  async checkUsername(request: CheckUsernameRequest): Promise<CheckUsernameResponse> {
+    return ApiClient.fetchJSON('/auth/validation/username', {
+      method: 'POST',
+      body: JSON.stringify(request)
     });
   }
 };

@@ -15,6 +15,22 @@ export interface LogInRequest {
   password: string;
 }
 
+export interface CheckEmailRequest {
+  email: string;
+}
+
+export interface CheckEmailResponse {
+  is_exist: boolean;
+}
+
+export interface CheckUsernameRequest {
+  username: string;
+}
+
+export interface CheckUsernameResponse {
+  is_exist: boolean;
+}
+
 export interface UserProfilePublic {
   username: string;
   nickname: string;

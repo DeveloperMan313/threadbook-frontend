@@ -20,9 +20,13 @@ export interface ContextMenuEntry {
   onSelect: (event: Event) => void;
 }
 
+type InputFieldGetError =
+  | ((value: string) => string | null)
+  | ((value: string) => Promise<string | null>);
+
 export interface InputFieldProps {
   type: 'text' | 'email' | 'password';
-  getError: (value: string) => string | null;
+  getError: InputFieldGetError;
   value: string; // bindable
   isValid: boolean; // bindable
   label?: string;

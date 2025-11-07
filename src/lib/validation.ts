@@ -1,3 +1,6 @@
+import { AuthApi } from './api';
+import { debounce } from './helpers';
+
 /**
  * Check if length is in bounds
  * @param {string} value - string
@@ -22,18 +25,28 @@ export function lengthGetError(
   if (isValid) {
     return null;
   }
-  if (min && max) return `Between ${min} and ${max} symbols`;
-  if (min) return `At least ${min} symbols`;
+  if (bounds.min && bounds.max) return `Between ${min} and ${max} symbols`;
+  if (bounds.min) return `At least ${min} symbols`;
   return `No more than ${max} symbols`;
 }
 
+const checkUsernameDebounced = debounce(AuthApi.checkUsername, 1000);
+
 /**
- * Check username
+ * Check username in signup
  * @param {string} value - username string
- * @returns {string?} - error message or null
+ * @returns {Promise<string?>} - error message or null
  */
-export function usernameGetError(value: string): string | null {
-  return lengthGetError(value, { min: 3, max: 16 });
+export async function signupUsernameGetError(value: string): Promise<string | null> {
+  const lengthError = lengthGetError(value, { min: 3, max: 32 });
+  if (lengthError) {
+    return lengthError;
+  }
+  const checkUsernamePromise = checkUsernameDebounced({ username: value });
+  if (!checkUsernamePromise) return null;
+  const response = await checkUsernamePromise;
+  if (response.is_exist) return 'Username already taken';
+  return null;
 }
 
 /**
@@ -42,7 +55,27 @@ export function usernameGetError(value: string): string | null {
  * @returns {string?} - error message or null
  */
 export function nicknameGetError(value: string): string | null {
-  return lengthGetError(value, { min: 3, max: 16 });
+  return lengthGetError(value, { min: 3, max: 32 });
+}
+
+const checkEmailDebounced = debounce(AuthApi.checkEmail, 1000);
+
+/**
+ * Check email in signup
+ * @param {string} value - email string
+ * @returns {Promise<string?>} - error message or null
+ */
+export async function signupEmailGetError(value: string): Promise<string | null> {
+  const emailRegexp = /^[^@]+@[^@]+\.[^@]+$/;
+  const isValid = emailRegexp.test(value);
+  if (!isValid) {
+    return 'Invalid email';
+  }
+  const checkUsernamePromise = checkEmailDebounced({ email: value });
+  if (!checkUsernamePromise) return null;
+  const response = await checkUsernamePromise;
+  if (response.is_exist) return 'Email already taken';
+  return null;
 }
 
 /**
@@ -128,12 +161,11 @@ export function spoolNameGetError(value: string): string | null {
  * @returns {string?} - error message or null
  */
 export function inviteUsernamesGetError(value: string): string | null {
-  const trimmed = value.trim();
-  if (trimmed!) {
+  if (value!) {
     return 'Input usernames';
   }
   const limit = 100;
-  if (trimmed.split(' ').length > limit) {
+  if (value.split(' ').length > limit) {
     return `No more than ${limit} usernames`;
   }
   return null;

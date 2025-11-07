@@ -16,6 +16,7 @@
   }: InputFieldProps = $props();
 
   let errorMsg = $state('');
+  let rawValue = $state(value);
 
   const filterSpaces = (e: KeyboardEvent) => {
     if (e.key == ' ') {
@@ -23,8 +24,9 @@
     }
   };
 
-  const validate = () => {
-    const error = getError(value);
+  const validate = async () => {
+    value = rawValue.trim();
+    const error = await getError(value);
     errorMsg = error || '';
     isValid = error === null;
   };
@@ -37,7 +39,7 @@
   <Input
     id="input-{label}"
     {type}
-    bind:value
+    bind:value={rawValue}
     {placeholder}
     {disabled}
     oninput={validate}
