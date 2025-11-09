@@ -21,7 +21,7 @@
     getProfile(username) ? ImageApi.getUserAvatarURL(getProfile(username)!.avatar_link) : undefined
   );
 
-  const shouldRenderProfileInfo = (): boolean => {
+  const shouldRenderProfileInfo = $derived.by((): boolean => {
     if (!index || !thread_id) return true;
 
     if (index == 0) return true;
@@ -31,20 +31,22 @@
     const thisDT = new Date(created_at).getTime();
     const maxDelta = 60 * 1000; // 1 minute
     return prevMsg.username != username || Math.abs(thisDT - prevDT) > maxDelta;
-  };
+  });
 </script>
 
-<div class="flex w-full">
+<div class="flex w-full" class:mt-4={shouldRenderProfileInfo}>
   <div class="w-[5rem] flex-none">
-    <Avatar.Root class="size-[3rem]">
-      <Avatar.Image src={avatarSrc} alt="@{username}" />
-      {#if !avatarSrc}
-        <Avatar.Fallback>{username.slice(0, 2).toUpperCase()}</Avatar.Fallback>
-      {/if}
-    </Avatar.Root>
+    {#if shouldRenderProfileInfo}
+      <Avatar.Root class="size-[3rem]">
+        <Avatar.Image src={avatarSrc} alt="@{username}" />
+        {#if !avatarSrc}
+          <Avatar.Fallback>{username.slice(0, 2).toUpperCase()}</Avatar.Fallback>
+        {/if}
+      </Avatar.Root>
+    {/if}
   </div>
   <div class="flex-1">
-    {#if shouldRenderProfileInfo()}
+    {#if shouldRenderProfileInfo}
       <div class="w-full">
         <p class="inline text-sm text-muted-foreground">
           {nickname || username}
