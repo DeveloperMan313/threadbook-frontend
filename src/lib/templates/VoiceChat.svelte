@@ -39,12 +39,25 @@
   let initialWidth = 320;
   let initialHeight = 400;
 
-  // Позиция по умолчанию - справа под навбаром
-  let position = { x: 16, y: 80 };
+  // Позиция по умолчанию - справа с отступом
+  let position = { x: 0, y: 0 };
   let dimensions = { width: 320, height: 400 };
 
   const isBrowser = typeof document !== 'undefined';
   let pendingLocalVideoTrack: LocalTrack | null = null;
+
+  // Вычисляем позицию справа при монтировании
+  function setDefaultPosition() {
+    if (isBrowser) {
+      position.x = window.innerWidth - dimensions.width - 16; // 16px отступ от правого края
+      position.y = 80; // 80px от верхнего края (под навбаром)
+    }
+  }
+
+  // Вызываем при инициализации
+  if (isBrowser) {
+    setDefaultPosition();
+  }
 
   async function getToken(threadId: number) {
     const res = await fetch('/api/thread/sfu/token', {
