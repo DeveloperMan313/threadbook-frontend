@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { getContext, onDestroy } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
 
@@ -11,9 +11,12 @@
     LocalTrack
   } from 'livekit-client';
 
+  const { getCurrentThreadId } = getContext('threads') as {
+    getCurrentThreadId: () => number | null;
+  };
+
   let isConnected = false;
   let error = '';
-  const THREAD_ID = 1;
   let room: Room | null = null;
 
   let isSelfMuted = false;
@@ -28,11 +31,11 @@
   const isBrowser = typeof document !== 'undefined';
   let pendingLocalVideoTrack: LocalTrack | null = null;
 
-  async function getToken() {
+  async function getToken(threadId: number) {
     const res = await fetch('/api/thread/sfu/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ thread_id: THREAD_ID })
+      body: JSON.stringify({ thread_id: threadId })
     });
 
     if (!res.ok) {
@@ -171,7 +174,7 @@
   async function joinRoom() {
     if (!isBrowser) return;
     try {
-      const token = await getToken();
+      const token = await getToken(getCurrentThreadId()!);
       room = new Room();
 
       room.on('participantConnected', (p) => handleParticipant(p));
