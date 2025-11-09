@@ -8,7 +8,7 @@ import { PUBLIC_API_ORIGIN } from '$env/static/public';
  */
 const getImageURL = (bucket: string, filename: string): string => {
   return `${PUBLIC_API_ORIGIN}/uploads/${bucket}/${filename}`;
-}
+};
 
 export const ImageApi = {
   /**
@@ -26,6 +26,6 @@ export const ImageApi = {
    * @returns {string} - banner URL
    */
   getSpoolBannerURL(filename: string): string {
-    return getImageURL('uploads', filename);
+    return getImageURL('spools', filename);
   }
-}
+};

@@ -161,7 +161,7 @@ export function spoolNameGetError(value: string): string | null {
  * @returns {string?} - error message or null
  */
 export function inviteUsernamesGetError(value: string): string | null {
-  if (value!) {
+  if (!value) {
     return 'Input usernames';
   }
   const limit = 100;
