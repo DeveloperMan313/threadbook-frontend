@@ -43,6 +43,8 @@ export interface MessageProps {
   content: string;
   created_at: string;
   updated_at: string;
+  thread_id: number;
+  index?: number;
 }
 
 export interface ModalInviteUsersToSpool {

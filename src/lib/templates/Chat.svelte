@@ -167,8 +167,8 @@
       </div>
     {:else}
       <div class="space-y-4">
-        {#each messages as message (message.id)}
-          <Message {...message} />
+        {#each messages as message, i (message.id)}
+          <Message {...message} index={i} />
         {/each}
       </div>
     {/if}

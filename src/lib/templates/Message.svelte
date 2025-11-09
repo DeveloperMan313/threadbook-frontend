@@ -1,10 +1,15 @@
 <script lang="ts">
-  import type { MessageProps, UserProfilePublic } from '$lib/types';
+  import type { ChatState, MessageProps, UserProfilePublic } from '$lib/types';
   import * as Avatar from '$lib/components/ui/avatar/index.js';
   import { getContext } from 'svelte';
   import { ImageApi } from '$lib/api';
+  import type { SvelteMap } from 'svelte/reactivity';
 
-  const { username, content, created_at }: MessageProps = $props();
+  const { username, content, created_at, index, thread_id }: MessageProps = $props();
+
+  const { threadChats } = getContext('threads') as {
+    threadChats: SvelteMap<number, ChatState>;
+  };
 
   const { getProfile } = getContext('userProfiles') as {
     getProfile: (username: string) => UserProfilePublic | undefined;
@@ -15,26 +20,40 @@
   const avatarSrc = $derived(
     getProfile(username) ? ImageApi.getUserAvatarURL(getProfile(username)!.avatar_link) : undefined
   );
+
+  const shouldRenderProfileInfo = (): boolean => {
+    if (!index || !thread_id) return true;
+
+    if (index == 0) return true;
+
+    const prevMsg = threadChats.get(thread_id)!.messages[index - 1];
+    const prevDT = new Date(prevMsg.created_at).getTime();
+    const thisDT = new Date(created_at).getTime();
+    const maxDelta = 60 * 1000; // 1 minute
+    return prevMsg.username != username || Math.abs(thisDT - prevDT) > maxDelta;
+  };
 </script>
 
 <div class="flex w-full">
   <div class="w-[5rem] flex-none">
-    {#if avatarSrc}
-      <Avatar.Root class="size-[3rem]">
-        <Avatar.Image src={avatarSrc} alt="@{username}" />
+    <Avatar.Root class="size-[3rem]">
+      <Avatar.Image src={avatarSrc} alt="@{username}" />
+      {#if !avatarSrc}
         <Avatar.Fallback>{username.slice(0, 2).toUpperCase()}</Avatar.Fallback>
-      </Avatar.Root>
-    {/if}
+      {/if}
+    </Avatar.Root>
   </div>
   <div class="flex-1">
-    <div class="w-full">
-      <h4 class="me-2 inline scroll-m-20 text-xl font-semibold tracking-tight">
-        {nickname || username}
-      </h4>
-      <p class="inline text-sm text-muted-foreground">
-        {new Date(created_at).toLocaleTimeString()}
-      </p>
-    </div>
+    {#if shouldRenderProfileInfo()}
+      <div class="w-full">
+        <p class="inline text-sm text-muted-foreground">
+          {nickname || username}
+        </p>
+        <p class="inline text-sm text-muted-foreground">
+          {new Date(created_at).toLocaleTimeString()}
+        </p>
+      </div>
+    {/if}
     <p class="w-full">{content}</p>
   </div>
 </div>
