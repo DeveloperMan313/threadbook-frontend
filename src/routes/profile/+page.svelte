@@ -5,6 +5,7 @@
   import Input from '$lib/components/ui/input/input.svelte';
   import Label from '$lib/components/ui/label/label.svelte';
   import InputField from '$lib/templates/InputField.svelte';
+  import ModalLogOut from '$lib/templates/ModalLogOut.svelte';
   import Navbar from '$lib/templates/Navbar.svelte';
   import type { UserProfileFull } from '$lib/types';
   import { userProfile } from '$lib/userProfile';
@@ -13,7 +14,6 @@
   const profile = $derived($userProfile as UserProfileFull);
   // svelte-ignore state_referenced_locally
   let nickname = $state(profile.nickname); // make a copy
-  // svelte-ignore state_referenced_locally
   let avatarLocal = $state('');
   let avatar = $state<File | undefined>(undefined);
 
@@ -50,6 +50,8 @@
       isLoading = false;
     }
   };
+
+  let isLogOutModalOpen = $state(false);
 </script>
 
 <Navbar />
@@ -110,5 +112,15 @@
         Update profile
       {/if}
     </Button>
+    <Button
+      variant="destructive"
+      class="cursor-pointer"
+      onclick={() => {
+        isLogOutModalOpen = true;
+      }}
+    >
+      Log out
+    </Button>
   </div>
 </div>
+<ModalLogOut bind:isOpen={isLogOutModalOpen} />

@@ -38,7 +38,6 @@ export interface InputFieldProps {
 }
 
 export interface MessageProps {
-  message_id: number; // HOTFIX
   id: number;
   username: string;
   content: string;
@@ -69,6 +68,10 @@ export interface ModalThreadCreateProps {
 }
 
 export interface ModalSpoolCreateProps {
+  isOpen: boolean; // bindable
+}
+
+export interface ModalLogOutProps {
   isOpen: boolean; // bindable
 }
 

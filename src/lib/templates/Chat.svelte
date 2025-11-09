@@ -27,13 +27,12 @@
     cacheProfilesFromMessages: (messages: Array<MessageProps>) => Promise<void>;
   };
 
-  const renderMessage = (message: MessageProps, mine: boolean = false) => {
-    if (!currentThread) return;
-
+  // Use captured threadId instead of currentThread.id to avoid race condition
+  const renderMessage = (threadId: number, message: MessageProps, mine: boolean = false) => {
     lastMessageMine = mine;
 
-    const currentChat = threadChats.get(currentThread.id) as ChatState;
-    threadChats.set(currentThread.id, {
+    const currentChat = threadChats.get(threadId) as ChatState;
+    threadChats.set(threadId, {
       ...currentChat,
       messages: [...currentChat.messages, message]
     });
@@ -45,37 +44,32 @@
     }
   });
 
-  const handleEmptyThreadMessages = () => {
-    if (!currentThread) return;
-
-    const threadId = currentThread.id;
-
-    if (threadChats.has(threadId)) {
+  // Use captured thread instead of currentThread to avoid race condition
+  const handleEmptyThreadMessages = (thread: ThreadProps) => {
+    if (threadChats.has(thread.id)) {
       return;
     }
 
-    threadChats.set(threadId, {
-      thread: currentThread,
+    threadChats.set(thread.id, {
+      thread: thread,
       messages: [],
       messageText: ''
     });
 
-    MessageApi.getThreadMessages({ thread_id: threadId }).then((messages) => {
+    MessageApi.getThreadMessages({ thread_id: thread.id }).then((messages) => {
       messages ||= [];
       cacheProfilesFromMessages(messages);
-      // Use captured threadId instead of currentThread.id to avoid race condition
-      threadChats.set(threadId, {
-        thread: currentThread,
+      threadChats.set(thread.id, {
+        thread: thread,
         messages: messages,
         messageText: ''
       });
     });
 
-    centrifugeClient.subToThread(threadId, (msg: WsMessageSent) => {
+    centrifugeClient.subToThread(thread.id, (msg: WsMessageSent) => {
       const mine = msg.payload.username == profile.username;
-      msg.payload.id = msg.payload!.message_id as number; // HOTFIX
       cacheProfilesFromMessages([msg.payload]);
-      renderMessage(msg.payload, mine);
+      renderMessage(thread.id, msg.payload, mine);
     });
   };
 
@@ -104,7 +98,8 @@
 
   $effect(() => {
     if (currentThread) {
-      handleEmptyThreadMessages();
+      let thread = currentThread;
+      handleEmptyThreadMessages(thread);
     }
   });
 
