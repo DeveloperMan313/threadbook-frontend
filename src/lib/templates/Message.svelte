@@ -47,11 +47,9 @@
   </div>
   <div class="flex-1">
     {#if shouldRenderProfileInfo}
-      <div class="w-full">
-        <p class="inline text-sm text-muted-foreground">
-          {nickname || username}
-        </p>
-        <p class="inline text-sm text-muted-foreground">
+      <div class="flex w-full flex-row items-end gap-1">
+        <p class="font-semibold">{nickname || username}</p>
+        <p class="text-sm text-muted-foreground">
           {new Date(created_at).toLocaleTimeString()}
         </p>
       </div>
