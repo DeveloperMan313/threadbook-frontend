@@ -80,7 +80,6 @@
     element.autoplay = true;
     element.playsInline = true;
     element.muted = true;
-    element.className = 'video-preview';
 
     const tryAttach = () => {
       const container = document.querySelector(
@@ -267,75 +266,30 @@
 
       await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
-      // Восстановленная логика создания треков из первого сообщения
-      const videoTracks = isSelfVideoEnabled
-        ? await room.localParticipant.createTracks({ video: true, audio: false })
-        : [];
-      let audioTrack = null;
+      // Создаем треки с правильными настройками для подавления эха
+      const tracks = await room.localParticipant.createTracks({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          googEchoCancellation: true,
+          googAutoGainControl: true,
+          googNoiseSuppression: true,
+          sampleRate: 48000,
+          channelCount: 1
+        },
+        video: isSelfVideoEnabled
+      });
 
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            googEchoCancellation: true,
-            googAutoGainControl: true,
-            googNoiseSuppression: true,
-            googHighpassFilter: true,
-            sampleRate: 48000,
-            channelCount: 1
-          },
-          video: false
-        });
-        const micTrack = stream.getAudioTracks()[0];
+      // Публикуем треки
+      await Promise.all(tracks.map((track) => room!.localParticipant.publishTrack(track)));
 
-        if (!micTrack) throw new Error('No audio track from microphone');
-
-        const { LocalAudioTrack } = await import('livekit-client');
-        audioTrack = new LocalAudioTrack(micTrack);
-
-        // Пробуем DeepFilterNet3 если доступен
-        try {
-          const { DeepFilterNoiseFilterProcessor } = await import('deepfilternet3-noise-filter');
-          const processor = new DeepFilterNoiseFilterProcessor({
-            sampleRate: 48000,
-            noiseReductionLevel: 80,
-            enabled: true
-          });
-
-          await processor.init({ track: micTrack });
-          await audioTrack.setProcessor(processor);
-        } catch (dfError) {
-          console.warn('DeepFilterNet3 not available, using browser noise suppression:', dfError);
-        }
-      } catch (err) {
-        console.warn('Advanced audio processing failed, falling back to standard audio:', err);
-
-        // Фолбек с базовыми настройками
-        const fallbackTracks = await room.localParticipant.createTracks({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            googEchoCancellation: true,
-            googAutoGainControl: true,
-            googNoiseSuppression: true
-          },
-          video: false
-        });
-        audioTrack = fallbackTracks[0];
-      }
-
-      const tracks = [...videoTracks, audioTrack].filter(Boolean);
-
-      for (const track of tracks) {
-        await room.localParticipant.publishTrack(track);
-        if (track.kind === 'video') {
-          pendingLocalVideoTrack = track;
-          if (localVideoEl) {
-            track.attach(localVideoEl);
-          }
+      // Находим видео трек для локального превью
+      const videoTrack = tracks.find((track) => track.kind === 'video');
+      if (videoTrack) {
+        pendingLocalVideoTrack = videoTrack;
+        if (localVideoEl) {
+          videoTrack.attach(localVideoEl);
         }
       }
 
@@ -397,7 +351,7 @@
 />
 
 <div
-  class="fixed rounded-lg border-2 border-gray-300 bg-white text-sm shadow-lg"
+  class="fixed rounded-lg border-2 border-border bg-background text-sm shadow-lg"
   style="left: {position.x}px; top: {position.y}px; width: {dimensions.width}px; height: {isMinimized
     ? 'auto'
     : dimensions.height + 'px'}; z-index: 50;"
@@ -406,12 +360,12 @@
   <div
     role="application"
     aria-label="Voice chat window controls"
-    class="flex cursor-move items-center justify-between border-b border-gray-300 p-3"
+    class="-m-3 mb-3 flex cursor-move items-center justify-between border-b border-border p-3"
     on:mousedown={startDrag}
   >
-    <h3 class="text-xl font-medium text-gray-800">Голосовой чат</h3>
+    <h3 class="text-xl font-medium">Голосовой чат</h3>
     <button
-      class="cursor-pointer rounded p-1 transition-colors duration-200 hover:bg-gray-200"
+      class="cursor-pointer rounded p-1 transition-colors duration-200 hover:bg-accent"
       on:click={toggleMinimize}
       aria-label={isMinimized ? 'Развернуть окно' : 'Свернуть окно'}
     >
@@ -434,12 +388,12 @@
   </div>
 
   {#if error}
-    <p class="p-3 text-sm text-red-600">{error}</p>
+    <p class="mb-2 text-sm text-destructive">{error}</p>
   {/if}
 
   {#if !isMinimized}
     <!-- Main content -->
-    <div class="flex flex-col p-3" style="height: calc(100% - 60px);">
+    <div class="flex flex-col" style="height: calc(100% - 80px);">
       {#if isConnected}
         <!-- Local video preview -->
         <div class="mb-3 overflow-hidden rounded bg-black">
@@ -458,14 +412,14 @@
         <div class="flex flex-row flex-wrap gap-2">
           {#each participants as p (p.sid)}
             {#if room && p.identity !== room.localParticipant.identity}
-              <div class="flex w-32 flex-col items-center gap-1 rounded bg-gray-100 p-2">
+              <div class="flex w-32 flex-col items-center gap-1 rounded bg-muted p-2">
                 <div
                   class="video-container h-20 w-full overflow-hidden rounded bg-black"
                   data-participant={p.identity}
                 ></div>
                 <div class="flex w-full flex-col items-center gap-1">
                   <span
-                    class="w-full overflow-hidden text-center text-xs text-ellipsis whitespace-nowrap text-gray-700"
+                    class="w-full overflow-hidden text-center text-xs text-ellipsis whitespace-nowrap"
                     >{p.identity}</span
                   >
                   <input
@@ -486,11 +440,11 @@
       </div>
 
       <!-- Control buttons at bottom -->
-      <div class="flex justify-center gap-2 border-t border-gray-300 pt-3">
+      <div class="flex justify-center gap-2 border-t border-border pt-3">
         <button
           class="flex cursor-pointer flex-col items-center gap-1 rounded p-2 transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 {isSelfMuted
-            ? 'bg-red-500 text-white hover:bg-red-600'
-            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}"
+            ? 'text-destructive-foreground bg-destructive hover:bg-destructive/90'
+            : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
           on:click={toggleSelfMute}
           disabled={!isConnected}
           title={isSelfMuted ? 'Размутить себя' : 'Заглушить себя'}
@@ -511,8 +465,8 @@
 
         <button
           class="flex cursor-pointer flex-col items-center gap-1 rounded p-2 transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 {isOthersMuted
-            ? 'bg-red-500 text-white hover:bg-red-600'
-            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}"
+            ? 'text-destructive-foreground bg-destructive hover:bg-destructive/90'
+            : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
           on:click={toggleOthersMute}
           disabled={!isConnected}
           title={isOthersMuted ? 'Включить других' : 'Заглушить всех'}
@@ -537,8 +491,8 @@
 
         <button
           class="flex cursor-pointer flex-col items-center gap-1 rounded p-2 transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 {!isSelfVideoEnabled
-            ? 'bg-red-500 text-white hover:bg-red-600'
-            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}"
+            ? 'text-destructive-foreground bg-destructive hover:bg-destructive/90'
+            : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
           on:click={toggleSelfVideo}
           disabled={!isConnected}
           title={isSelfVideoEnabled ? 'Выключить видео' : 'Включить видео'}
@@ -557,9 +511,9 @@
         </button>
 
         <button
-          class="flex cursor-pointer flex-col items-center gap-1 rounded p-2 text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:opacity-50 {isConnected
-            ? 'bg-red-600 hover:bg-red-700'
-            : 'bg-green-600 hover:bg-green-700'}"
+          class="flex cursor-pointer flex-col items-center gap-1 rounded p-2 text-primary-foreground transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 {isConnected
+            ? 'bg-destructive hover:bg-destructive/90'
+            : 'bg-primary hover:bg-primary/90'}"
           on:click={isConnected ? leaveRoom : joinRoom}
           disabled={error !== ''}
           title={isConnected ? 'Выйти' : 'Войти'}
@@ -582,11 +536,11 @@
     </div>
   {:else}
     <!-- Minimized state - only buttons -->
-    <div class="flex justify-center gap-2 p-3">
+    <div class="flex justify-center gap-2">
       <button
         class="flex cursor-pointer flex-col items-center gap-1 rounded p-2 transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 {isSelfMuted
-          ? 'bg-red-500 text-white hover:bg-red-600'
-          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}"
+          ? 'text-destructive-foreground bg-destructive hover:bg-destructive/90'
+          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
         on:click={toggleSelfMute}
         disabled={!isConnected}
         title={isSelfMuted ? 'Размутить себя' : 'Заглушить себя'}
@@ -606,9 +560,9 @@
       </button>
 
       <button
-        class="flex cursor-pointer flex-col items-center gap-1 rounded p-2 text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:bg-gray-400 disabled:opacity-50 {isConnected
-          ? 'bg-red-600 hover:bg-red-700'
-          : 'bg-green-600 hover:bg-green-700'}"
+        class="flex cursor-pointer flex-col items-center gap-1 rounded p-2 text-primary-foreground transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 {isConnected
+          ? 'bg-destructive hover:bg-destructive/90'
+          : 'bg-primary hover:bg-primary/90'}"
         on:click={isConnected ? leaveRoom : joinRoom}
         disabled={error !== ''}
         title={isConnected ? 'Выйти' : 'Войти'}
@@ -643,7 +597,7 @@
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        class="absolute right-0 bottom-0 text-gray-500"
+        class="absolute right-0 bottom-0 text-muted-foreground"
       >
         <path d="m21 11-8-8-8 8" /><path d="M21 21h-8a8 8 0 0 1-8-8v0" />
       </svg>
@@ -660,11 +614,5 @@
   .flex-1.overflow-auto {
     -ms-overflow-style: none;
     scrollbar-width: none;
-  }
-
-  .video-preview {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
   }
 </style>
