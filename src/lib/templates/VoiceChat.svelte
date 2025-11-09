@@ -10,7 +10,6 @@
     RemoteTrackPublication,
     LocalTrack
   } from 'livekit-client';
-  import { DeepFilterNoiseFilterProcessor } from '$lib/deepfilternet3/index.esm.js';
 
   let isConnected = false;
   let error = '';
@@ -190,13 +189,19 @@
       const videoTracks = isSelfVideoEnabled
         ? await room.localParticipant.createTracks({ video: true, audio: false })
         : [];
-
       let audioTrack = null;
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const micTrack = stream.getAudioTracks()[0];
+
         if (!micTrack) throw new Error('No audio track from microphone');
 
+        const { LocalAudioTrack } = await import('livekit-client');
+        audioTrack = new LocalAudioTrack(micTrack);
+
+        // DeepFilterNet3
+        const { DeepFilterNoiseFilterProcessor } = await import('deepfilternet3-noise-filter');
         const processor = new DeepFilterNoiseFilterProcessor({
           sampleRate: 48000,
           noiseReductionLevel: 80,
@@ -204,13 +209,7 @@
         });
 
         await processor.init({ track: micTrack });
-
-        if (!processor.processedTrack) {
-          throw new Error('DeepFilterNet3 did not produce a processed track');
-        }
-
-        const { LocalAudioTrack } = await import('livekit-client');
-        audioTrack = new LocalAudioTrack(processor.processedTrack);
+        await audioTrack.setProcessor(processor);
       } catch (err) {
         console.warn('DeepFilterNet3 failed, falling back to standard audio:', err);
 
@@ -226,8 +225,8 @@
         audioTrack = fallbackTracks[0];
       }
 
-      // Публикация треков
       const tracks = [...videoTracks, audioTrack].filter(Boolean);
+
       for (const track of tracks) {
         await room.localParticipant.publishTrack(track);
         if (track.kind === 'video') {
@@ -240,6 +239,7 @@
 
       isConnected = true;
       error = '';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       error = err.message || 'Connection failed';
       console.error('Join error:', err);
