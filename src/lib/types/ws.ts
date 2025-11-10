@@ -1,3 +1,5 @@
+import type { ThreadType } from './components';
+
 /**
  * Centrifuge WS message payload interfaces
  */
@@ -52,6 +54,7 @@ export interface WsThreadClosed {
 export interface WsThreadInvited {
   id: number;
   spool_id: number;
+  type: ThreadType;
   title: string;
   channel: string;
   token: string;
@@ -59,19 +62,19 @@ export interface WsThreadInvited {
 
 // spool events
 
-export interface SpoolUpdated {
+export interface WsSpoolUpdated {
   id: number;
   banner_link?: string;
   name: string;
   updated_at: number;
 }
 
-export interface SpoolDeleted {
+export interface WsSpoolDeleted {
   id: number;
   deleted_by?: string;
 }
 
-export interface SpoolInvited {
+export interface WsSpoolInvited {
   id: number;
   banner_link?: string;
   name: string;

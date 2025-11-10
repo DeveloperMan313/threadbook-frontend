@@ -1,28 +1,70 @@
 import { Centrifuge, type PublicationContext } from 'centrifuge';
 import { ThreadApi } from './thread';
 import { PUBLIC_CENTRIFUGE_ORIGIN } from '$env/static/public';
-import type { GetCentrifugeTokensResponse, WsMessageCreated } from '$lib/types';
+import type {
+  GetCentrifugeTokensResponse,
+  WsMessageCreated,
+  WsMessageDeleted,
+  WsMessageUpdated,
+  WsSpoolDeleted,
+  WsSpoolInvited,
+  WsSpoolUpdated,
+  WsThreadClosed,
+  WsThreadCreated,
+  WsThreadInvited,
+  WsThreadUpdated
+} from '$lib/types';
 
 type WsMsgHandler<T> = (payload: T) => void;
 
-const routeThreadPublication = (
-  ctx: PublicationContext,
-  onMessageCreated: WsMsgHandler<WsMessageCreated>
-) => {
-  switch (ctx.data.type) {
-    case 'message.created':
-      onMessageCreated(ctx.data.payload);
-      break;
-    default:
-      throw Error(`unknown message type: ${ctx.data.type}`);
-  }
+interface ThreadHandlers {
+  onMessageCreated: WsMsgHandler<WsMessageCreated>;
+  onMessageUpdated: WsMsgHandler<WsMessageUpdated>;
+  onMessageDeleted: WsMsgHandler<WsMessageDeleted>;
+}
+
+const typeToThreadHandler: Record<string, keyof ThreadHandlers> = {
+  'message.created': 'onMessageCreated',
+  'message.updated': 'onMessageUpdated',
+  'message.deleted': 'onMessageDeleted'
 };
 
-const routeUserPublication = (ctx: PublicationContext) => {
-  switch (ctx.data.type) {
-    default:
-      throw Error(`unknown message type: ${ctx.data.type}`);
+const routeThreadPublication = (ctx: PublicationContext, handlers: ThreadHandlers) => {
+  const type = ctx.data.type;
+  if (!(type in typeToThreadHandler)) {
+    throw Error(`unknown message type: ${type}`);
   }
+  const handlerKey = typeToThreadHandler[type];
+  handlers[handlerKey](ctx.data.payload);
+};
+
+interface UserHandlers {
+  onThreadCreated: WsMsgHandler<WsThreadCreated>;
+  onThreadUpdated: WsMsgHandler<WsThreadUpdated>;
+  onThreadClosed: WsMsgHandler<WsThreadClosed>;
+  onThreadInvited: WsMsgHandler<WsThreadInvited>;
+  onSpoolUpdated: WsMsgHandler<WsSpoolUpdated>;
+  onSpoolDeleted: WsMsgHandler<WsSpoolDeleted>;
+  onSpoolInvited: WsMsgHandler<WsSpoolInvited>;
+}
+
+const typeToUserHandler: Record<string, keyof UserHandlers> = {
+  'thread.created': 'onThreadCreated',
+  'thread.updated': 'onThreadUpdated',
+  'thread.closed': 'onThreadClosed',
+  'thread.invited': 'onThreadInvited',
+  'spool.updated': 'onSpoolUpdated',
+  'spool.deleted': 'onSpoolDeleted',
+  'spool.invited': 'onSpoolInvited'
+};
+
+const routeUserPublication = (ctx: PublicationContext, handlers: UserHandlers) => {
+  const type = ctx.data.type;
+  if (!(type in typeToUserHandler)) {
+    throw Error(`unknown message type: ${type}`);
+  }
+  const handlerKey = typeToUserHandler[type];
+  handlers[handlerKey](ctx.data.payload);
 };
 
 export class CentrifugeClient {
@@ -50,7 +92,7 @@ export class CentrifugeClient {
     this.tokens = await ThreadApi.getCentrifugeTokens({ spool_id });
   }
 
-  public subToThread(thread_id: number, onMessageCreated: MessageHandler): void {
+  public subToThread(thread_id: number, handlers: ThreadHandlers): void {
     if (!this.centrifuge) {
       throw Error('not connected');
     }
@@ -72,13 +114,13 @@ export class CentrifugeClient {
     const sub = this.centrifuge.newSubscription(channel, { token });
 
     sub.on('publication', (ctx) => {
-      routeThreadPublication(ctx, onMessageCreated);
+      routeThreadPublication(ctx, handlers);
     });
 
     sub.subscribe();
   }
 
-  public subToUser(): void {
+  public subToUser(handlers: UserHandlers): void {
     if (!this.centrifuge) {
       throw Error('not connected');
     }
@@ -101,7 +143,7 @@ export class CentrifugeClient {
     const sub = this.centrifuge.newSubscription(channel, { token });
 
     sub.on('publication', (ctx) => {
-      routeUserPublication(ctx);
+      routeUserPublication(ctx, handlers);
     });
 
     sub.subscribe();

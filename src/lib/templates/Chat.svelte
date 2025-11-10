@@ -66,11 +66,17 @@
       });
     });
 
-    centrifugeClient.subToThread(thread.id, (payload: WsMessageCreated) => {
-      const mine = payload.username == profile.username;
-      cacheProfilesFromMessages([payload]);
-      renderMessage(thread.id, payload, mine);
-    });
+    const threadHandlers = {
+      onMessageCreated: (payload: WsMessageCreated) => {
+        const mine = payload.username == profile.username;
+        cacheProfilesFromMessages([payload]);
+        renderMessage(thread.id, payload, mine);
+      },
+      onMessageUpdated: () => {}, // TODO
+      onMessageDeleted: () => {} // TODO
+    };
+
+    centrifugeClient.subToThread(thread.id, threadHandlers);
   };
 
   let currentThread = $derived(
