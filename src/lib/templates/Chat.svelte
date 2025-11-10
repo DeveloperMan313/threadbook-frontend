@@ -8,7 +8,7 @@
     ChatProps,
     MessageProps,
     ThreadProps,
-    WsMessageSent,
+    WsMessageCreated,
     UserProfileFull
   } from '$lib/types';
   import type { SvelteMap } from 'svelte/reactivity';
@@ -66,10 +66,10 @@
       });
     });
 
-    centrifugeClient.subToThread(thread.id, (msg: WsMessageSent) => {
-      const mine = msg.payload.username == profile.username;
-      cacheProfilesFromMessages([msg.payload]);
-      renderMessage(thread.id, msg.payload, mine);
+    centrifugeClient.subToThread(thread.id, (payload: WsMessageCreated) => {
+      const mine = payload.username == profile.username;
+      cacheProfilesFromMessages([payload]);
+      renderMessage(thread.id, payload, mine);
     });
   };
 
@@ -128,8 +128,9 @@
       id: 0,
       username: profile.username,
       content: messageText,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: new Date().getTime(),
+      updated_at: new Date().getTime(),
+      thread_id: currentThread.id
     };
 
     isSendingMessage = true;

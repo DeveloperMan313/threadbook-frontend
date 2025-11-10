@@ -39,11 +39,12 @@ export interface InputFieldProps {
 
 export interface MessageProps {
   id: number;
-  username: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
   thread_id: number;
+  content: string;
+  username: string;
+  pauloads?: string;
+  created_at: number;
+  updated_at?: number;
   index?: number;
 }
 

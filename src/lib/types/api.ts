@@ -1,4 +1,4 @@
-import type { MessageProps, ThreadType } from './components';
+import type { ThreadType } from './components';
 
 /**
  * API request and response interfaces
@@ -108,8 +108,4 @@ export interface GetProfilesResponse {
 export interface UpdateProfileRequest {
   nickname?: string;
   avatar?: File;
-}
-
-export interface WsMessageSent {
-  payload: MessageProps;
 }

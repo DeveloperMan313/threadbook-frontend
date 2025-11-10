@@ -1,14 +1,17 @@
 import { Centrifuge, type PublicationContext } from 'centrifuge';
 import { ThreadApi } from './thread';
 import { PUBLIC_CENTRIFUGE_ORIGIN } from '$env/static/public';
-import type { GetCentrifugeTokensResponse, WsMessageSent } from '$lib/types';
+import type { GetCentrifugeTokensResponse, WsMessageCreated } from '$lib/types';
 
-type MessageHandler = (message: WsMessageSent) => void;
+type WsMsgHandler<T> = (payload: T) => void;
 
-const routeThreadPublication = (ctx: PublicationContext, onMessage: MessageHandler) => {
+const routeThreadPublication = (
+  ctx: PublicationContext,
+  onMessageCreated: WsMsgHandler<WsMessageCreated>
+) => {
   switch (ctx.data.type) {
     case 'message.created':
-      onMessage(ctx.data);
+      onMessageCreated(ctx.data.payload);
       break;
     default:
       throw Error(`unknown message type: ${ctx.data.type}`);
@@ -47,7 +50,7 @@ export class CentrifugeClient {
     this.tokens = await ThreadApi.getCentrifugeTokens({ spool_id });
   }
 
-  public subToThread(thread_id: number, onMessage: MessageHandler): void {
+  public subToThread(thread_id: number, onMessageCreated: MessageHandler): void {
     if (!this.centrifuge) {
       throw Error('not connected');
     }
@@ -69,7 +72,7 @@ export class CentrifugeClient {
     const sub = this.centrifuge.newSubscription(channel, { token });
 
     sub.on('publication', (ctx) => {
-      routeThreadPublication(ctx, onMessage);
+      routeThreadPublication(ctx, onMessageCreated);
     });
 
     sub.subscribe();

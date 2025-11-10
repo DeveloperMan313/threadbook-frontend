@@ -6,15 +6,15 @@ const MockGetThreadMessages: Array<MessageProps> = [
     id: 1,
     username: 'Alex',
     content: 'hi, how everyone doing?',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    created_at: new Date().getTime(),
+    updated_at: new Date().getTime()
   },
   {
     id: 2,
     username: 'Bob',
     content: 'doing great, hbu?',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    created_at: new Date().getTime(),
+    updated_at: new Date().getTime()
   }
 ];
 
