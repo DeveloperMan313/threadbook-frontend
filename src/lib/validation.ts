@@ -42,6 +42,9 @@ export async function signupUsernameGetError(value: string): Promise<string | nu
   if (lengthError) {
     return lengthError;
   }
+  if (!/^[a-zA-Z0-9]+$/.test(value)) {
+    return 'Only letters and digits';
+  }
   const checkUsernamePromise = checkUsernameDebounced({ username: value });
   if (!checkUsernamePromise) return null;
   const response = await checkUsernamePromise;

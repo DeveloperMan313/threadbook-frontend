@@ -53,6 +53,11 @@
       errorMsg = 'Could not sign you up, retry later';
     }
   };
+
+  let currentValidationId = 0;
+
+  let currentEmailError: string | null = null;
+  let currentUsernameError: string | null = null;
 </script>
 
 <div class="flex h-full w-full items-center justify-center">
@@ -64,15 +69,53 @@
         style:margin-left={`${-100 * registrationStage}%`}
       >
         <InputField
+          type="email"
+          getError={async (value: string) => {
+            isChecking = true;
+            let validationId = ++currentValidationId;
+            try {
+              let error = await signupEmailGetError(value);
+              if (validationId < currentValidationId) {
+                return currentEmailError;
+              }
+              currentEmailError = error;
+              isChecking = false;
+              return currentEmailError;
+            } catch {
+              // old call that was debounced, so either we wait for fetch and don't need error, or we will get sync error instantly
+              currentEmailError = null;
+              return currentEmailError;
+            }
+          }}
+          bind:value={emailValue}
+          bind:isValid={emailIsValid}
+          label="Email"
+          placeholder="email@example.com"
+          noSpaces={true}
+          tabindex={-1}
+        />
+        <Button class="cursor-pointer" onclick={advanceStage} disabled={!emailIsValid || isChecking}
+          >{#if isChecking}Checking...{:else}Next{/if}</Button
+        >
+      </div>
+      <div class="flex w-full flex-shrink-0 flex-col gap-4 p-6">
+        <InputField
           type="text"
           getError={async (value: string) => {
             isChecking = true;
+            let validationId = ++currentValidationId;
             try {
               let error = await signupUsernameGetError(value);
+              if (validationId < currentValidationId) {
+                return currentUsernameError;
+              }
+              currentUsernameError = error;
               isChecking = false;
-              return error;
+              return currentUsernameError;
             } catch {
-              return null;
+              // old call that was debounced, so either we wait for fetch and don't need error, or we will get sync error instantly
+              currentUsernameError = null;
+              return currentUsernameError;
             }
           }}
           bind:value={usernameValue}
@@ -86,30 +129,6 @@
           class="cursor-pointer"
           onclick={advanceStage}
           disabled={!usernameIsValid || isChecking}
-          >{#if isChecking}Checking...{:else}Next{/if}</Button
-        >
-      </div>
-      <div class="flex w-full flex-shrink-0 flex-col gap-4 p-6">
-        <InputField
-          type="email"
-          getError={async (value: string) => {
-            isChecking = true;
-            try {
-              let error = await signupEmailGetError(value);
-              isChecking = false;
-              return error;
-            } catch {
-              return null;
-            }
-          }}
-          bind:value={emailValue}
-          bind:isValid={emailIsValid}
-          label="Email"
-          placeholder="email@example.com"
-          noSpaces={true}
-          tabindex={-1}
-        />
-        <Button class="cursor-pointer" onclick={advanceStage} disabled={!emailIsValid || isChecking}
           >{#if isChecking}Checking...{:else}Next{/if}</Button
         >
       </div>
