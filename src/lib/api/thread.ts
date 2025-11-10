@@ -119,10 +119,15 @@ export const ThreadApi = {
    * @param {GetCentrifugeTokensRequest} request - request object
    * @returns {Promise<GetCentrifugeTokensResponse>} - API response
    */
-  async getCentrifugeTokens(request: GetCentrifugeTokensRequest): Promise<GetCentrifugeTokensResponse> {
-    return ApiClient.fetchJSON(`/thread/ws/token?spool_id=${request.spool_id}`, {
-      method: 'GET',
-      headers: {}
-    });
+  async getCentrifugeTokens(
+    request: GetCentrifugeTokensRequest
+  ): Promise<GetCentrifugeTokensResponse> {
+    return ApiClient.fetchJSON(
+      `/thread/ws/token${request.spool_id ? `?spool_id=${request.spool_id}` : ''}`,
+      {
+        method: 'GET',
+        headers: {}
+      }
+    );
   }
 };

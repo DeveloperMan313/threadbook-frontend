@@ -1,21 +1,19 @@
 import type { PageLoad } from './$types';
-import { CentrifugeClient, ThreadApi } from '$lib/api';
-import type { SpoolProps } from '$lib/types';
+import { ThreadApi } from '$lib/api';
 
 export const load: PageLoad = async ({ params, parent }) => {
   const spool_id = Number(params.id);
 
-  const { spools } = await parent();
+  const { spools, centrifugeClient } = await parent();
+
+  centrifugeClient!.getSpoolTokens(spool_id);
 
   const threadsPromise = ThreadApi.getSpoolThreads({ spool_id });
 
-  const centrifugeClient = new CentrifugeClient();
-  await centrifugeClient.connect(spool_id);
-
   return {
     spoolId: spool_id,
-    spools: spools as Array<SpoolProps>,
+    spools: spools!,
     threads: threadsPromise,
-    centrifugeClient
+    centrifugeClient: centrifugeClient!
   };
 };

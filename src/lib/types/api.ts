@@ -84,7 +84,7 @@ export interface SendThreadMessagesRequest {
 }
 
 export interface GetCentrifugeTokensRequest {
-  spool_id: number;
+  spool_id?: number;
 }
 
 export interface GetCentrifugeTokensResponse {

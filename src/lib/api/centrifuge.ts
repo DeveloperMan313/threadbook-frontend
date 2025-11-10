@@ -26,28 +26,45 @@ export class CentrifugeClient {
   private centrifuge: Centrifuge | null = null;
   private tokens: GetCentrifugeTokensResponse | null = null;
 
-  public async connect(spool_id: number): Promise<void> {
-    this.tokens = await ThreadApi.getCentrifugeTokens({ spool_id });
+  public async connect(): Promise<void> {
+    this.tokens = await ThreadApi.getCentrifugeTokens({});
 
     this.centrifuge = new Centrifuge(PUBLIC_CENTRIFUGE_ORIGIN, {
       token: this.tokens.ConnectToken
     });
 
     this.centrifuge.on('connected', (ctx) => console.log(`Centrifuge Connected: ${ctx.client}`));
-    this.centrifuge.on('disconnected', (ctx) => console.log(`Centrifuge Disconnected: ${ctx.reason}`));
+    this.centrifuge.on('disconnected', (ctx) =>
+      console.log(`Centrifuge Disconnected: ${ctx.reason}`)
+    );
     this.centrifuge.on('error', (err) => console.log(`Centrifuge Error: ${JSON.stringify(err)}`));
 
     this.centrifuge.connect();
   }
 
+  public async getSpoolTokens(spool_id: number): Promise<void> {
+    this.tokens = await ThreadApi.getCentrifugeTokens({ spool_id });
+  }
+
   public async subToThread(thread_id: number, onMessage: MessageHandler): Promise<void> {
-    if (!this.centrifuge || !this.tokens) {
+    if (!this.centrifuge) {
       throw Error('not connected');
     }
 
-    const [channel, token] = Object.entries(this.tokens.ChannelTokens).find(([channel]) =>
-      channel == `thread#${thread_id}`
+    if (!this.tokens) {
+      throw Error('no tokens');
+    }
+
+    const channelToken = Object.entries(this.tokens.ChannelTokens).find(
+      ([channel]) => channel == `thread#${thread_id}`
     ) as [string, string];
+
+    if (!channelToken) {
+      throw Error('thread token not found');
+    }
+
+    const [channel, token] = channelToken;
+
     const sub = this.centrifuge.newSubscription(channel, { token });
 
     sub.on('publication', (ctx) => {
@@ -73,4 +90,4 @@ export class CentrifugeClient {
 
     sub.subscribe();
   }
-};
+}
