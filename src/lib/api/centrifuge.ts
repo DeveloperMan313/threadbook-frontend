@@ -25,6 +25,7 @@ const routeUserPublication = (ctx: PublicationContext) => {
 export class CentrifugeClient {
   private centrifuge: Centrifuge | null = null;
   private tokens: GetCentrifugeTokensResponse | null = null;
+  private userChannel: string | null = null;
 
   public async connect(): Promise<void> {
     this.tokens = await ThreadApi.getCentrifugeTokens({});
@@ -46,7 +47,7 @@ export class CentrifugeClient {
     this.tokens = await ThreadApi.getCentrifugeTokens({ spool_id });
   }
 
-  public async subToThread(thread_id: number, onMessage: MessageHandler): Promise<void> {
+  public subToThread(thread_id: number, onMessage: MessageHandler): void {
     if (!this.centrifuge) {
       throw Error('not connected');
     }
@@ -74,14 +75,26 @@ export class CentrifugeClient {
     sub.subscribe();
   }
 
-  public async subToUser(): Promise<void> {
-    if (!this.centrifuge || !this.tokens) {
+  public subToUser(): void {
+    if (!this.centrifuge) {
       throw Error('not connected');
     }
 
-    const [channel, token] = Object.entries(this.tokens.ChannelTokens).find(([channel]) =>
+    if (!this.tokens) {
+      throw Error('no tokens');
+    }
+
+    const channelToken = Object.entries(this.tokens.ChannelTokens).find(([channel]) =>
       channel.startsWith('user')
     ) as [string, string];
+
+    if (!channelToken) {
+      throw Error('user token not found');
+    }
+
+    const [channel, token] = channelToken;
+    this.userChannel = channel;
+
     const sub = this.centrifuge.newSubscription(channel, { token });
 
     sub.on('publication', (ctx) => {
@@ -89,5 +102,19 @@ export class CentrifugeClient {
     });
 
     sub.subscribe();
+  }
+
+  public unsubFromUser(): void {
+    if (!this.centrifuge) {
+      throw Error('not connected');
+    }
+
+    if (!this.userChannel) {
+      throw Error('not subscribed to user');
+    }
+
+    const sub = this.centrifuge.getSubscription(this.userChannel)!;
+
+    sub.removeAllListeners('publication');
   }
 }
