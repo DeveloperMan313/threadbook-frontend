@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ContextMenuEntry, ThreadProps } from '$lib/types';
-  import ModalThreadArchive from './ModalThreadArchive.svelte';
+  import ModalThreadClose from './ModalThreadClose.svelte';
   import ModalThreadRename from './ModalThreadRename.svelte';
   import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
   import { getContext } from 'svelte';
@@ -13,7 +13,7 @@
   };
 
   let isThreadRenameModalOpen = $state(false);
-  let isThreadArchiveModalOpen = $state(false);
+  let isThreadCloseModalOpen = $state(false);
 
   const contextMenuEntries: Array<ContextMenuEntry> = [
     {
@@ -25,9 +25,9 @@
     },
     {
       type: 'danger',
-      label: 'Archive',
+      label: 'Close',
       onSelect: () => {
-        isThreadArchiveModalOpen = true;
+        isThreadCloseModalOpen = true;
       }
     }
   ];
@@ -67,4 +67,4 @@
   </ContextMenu.Content>
 </ContextMenu.Root>
 <ModalThreadRename threadId={id} threadTitle={title} bind:isOpen={isThreadRenameModalOpen} />
-<ModalThreadArchive threadId={id} threadTitle={title} bind:isOpen={isThreadArchiveModalOpen} />
+<ModalThreadClose threadId={id} threadTitle={title} bind:isOpen={isThreadCloseModalOpen} />

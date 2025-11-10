@@ -60,7 +60,7 @@ export interface ModalSpoolLeaveProps {
   isOpen: boolean; // bindable
 }
 
-export interface ModalThreadArchiveProps {
+export interface ModalThreadCloseProps {
   threadId: number;
   threadTitle: string;
   isOpen: boolean; // bindable

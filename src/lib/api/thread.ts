@@ -1,6 +1,6 @@
 import { ApiClient } from './client';
 import type {
-  ArchiveThreadRequest,
+  CloseThreadRequest,
   CreateThreadRequest,
   GetSpoolThreadsRequest,
   UpdateThreadRequest,
@@ -76,10 +76,10 @@ export const ThreadApi = {
   },
 
   /**
-   * Archive thread
-   * @param {ArchiveThreadRequest} request - request object
+   * Close thread
+   * @param {CloseThreadRequest} request - request object
    */
-  async archiveThread(request: ArchiveThreadRequest) {
+  async closeThread(request: CloseThreadRequest) {
     // await new Promise((r) => setTimeout(r, 750)); // emulate API delay
     // return {};
     return ApiClient.fetchJSON(`/thread/close?id=${request.id}`, {

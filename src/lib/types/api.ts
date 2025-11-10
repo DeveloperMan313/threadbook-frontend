@@ -58,7 +58,7 @@ export interface InviteUsersToSpoolRequest {
   member_usernames: Array<string>;
 }
 
-export interface ArchiveThreadRequest {
+export interface CloseThreadRequest {
   id: number;
 }
 

@@ -3,15 +3,21 @@
   import Navbar from '$lib/templates/Navbar.svelte';
   import SpoolDock from '$lib/templates/SpoolDock.svelte';
   import ThreadListSection from '$lib/templates/ThreadListSection.svelte';
-  import { setContext } from 'svelte';
-  import type { PageProps } from './$types';
+  import { onDestroy, setContext } from 'svelte';
   import { ProfileApi, ThreadApi } from '$lib/api';
   import type {
     ChatState,
     MessageProps,
     ThreadProps,
     ThreadType,
-    UserProfilePublic
+    UserProfilePublic,
+    WsSpoolDeleted,
+    WsSpoolInvited,
+    WsSpoolUpdated,
+    WsThreadClosed,
+    WsThreadCreated,
+    WsThreadInvited,
+    WsThreadUpdated
   } from '$lib/types';
   import ModalThreadCreate from '$lib/templates/ModalThreadCreate.svelte';
   import Chat from '$lib/templates/Chat.svelte';
@@ -19,7 +25,7 @@
   import ModalInviteUsersToSpool from '$lib/templates/ModalInviteUsersToSpool.svelte';
   import VoiceChat from '$lib/templates/VoiceChat.svelte';
 
-  let { data, params }: PageProps = $props();
+  let { data } = $props();
 
   let threadChats = new SvelteMap<number, ChatState>();
 
@@ -39,23 +45,14 @@
 
   setContext('threads', {
     threadChats,
-    archiveThread: (id: number) => {
-      let thread = threads.filter((t) => t.id == id)[0];
-      thread.is_closed = true;
-      ThreadApi.archiveThread({ id }).catch(() => {
-        thread.is_closed = false;
-      });
+    closeThread: (id: number) => {
+      ThreadApi.closeThread({ id });
     },
     createThread: (title: string, type: ThreadType) => {
-      const spool_id = Number(params.id);
       ThreadApi.createThread({
         title,
-        spool_id,
+        spool_id: data.spoolId,
         type
-      }).then(() => {
-        ThreadApi.getSpoolThreads({ spool_id }).then((newThreads) => {
-          threads = newThreads;
-        });
       });
     },
     getCurrentThreadId: () => {
@@ -98,6 +95,53 @@
     getProfile: (username: string): UserProfilePublic | undefined => {
       return userProfiles.get(username);
     }
+  });
+
+  const userHandlers = {
+    onThreadCreated: (payload: WsThreadCreated) => {
+      if (payload.spool_id != data.spoolId) return;
+      const thread = {
+        id: payload.id,
+        title: payload.title,
+        type: 'public',
+        is_closed: false,
+        unreadCnt: 0,
+        mentionCnt: 0
+      } as ThreadProps;
+      threads = [...threads, thread];
+      data.centrifugeClient.addToken(payload.channel, payload.token);
+    },
+    onThreadUpdated: (payload: WsThreadUpdated) => {
+      if (payload.spool_id != data.spoolId) return;
+      let thread = threads.filter((t) => t.id == payload.id)[0];
+      thread.title = payload.title;
+    },
+    onThreadClosed: (payload: WsThreadClosed) => {
+      if (payload.spool_id != data.spoolId) return;
+      let thread = threads.filter((t) => t.id == payload.id)[0];
+      thread.is_closed = true;
+    },
+    onThreadInvited: (payload: WsThreadInvited) => {
+      if (payload.spool_id != data.spoolId) return;
+      const thread = {
+        id: payload.id,
+        title: payload.title,
+        type: 'private',
+        is_closed: false,
+        unreadCnt: 0,
+        mentionCnt: 0
+      } as ThreadProps;
+      threads = [...threads, thread];
+    },
+    onSpoolUpdated: (payload: WsSpoolUpdated) => {},
+    onSpoolDeleted: (payload: WsSpoolDeleted) => {},
+    onSpoolInvited: (payload: WsSpoolInvited) => {}
+  };
+
+  data.centrifugeClient.subToUser(userHandlers);
+
+  onDestroy(() => {
+    data.centrifugeClient.unsubFromUser();
   });
 
   let isThreadCreateModalOpen = $state(false);
@@ -144,7 +188,7 @@
         expanded={true}
       />
       <ThreadListSection
-        title="History"
+        title="Closed"
         entries={threads.filter((t) => t.is_closed)}
         expanded={false}
       />

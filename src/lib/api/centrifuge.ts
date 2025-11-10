@@ -51,7 +51,7 @@ interface UserHandlers {
 const typeToUserHandler: Record<string, keyof UserHandlers> = {
   'thread.created': 'onThreadCreated',
   'thread.updated': 'onThreadUpdated',
-  'thread.closed': 'onThreadClosed',
+  'thread.deleted': 'onThreadClosed',
   'thread.invited': 'onThreadInvited',
   'spool.updated': 'onSpoolUpdated',
   'spool.deleted': 'onSpoolDeleted',
@@ -88,8 +88,24 @@ export class CentrifugeClient {
     this.centrifuge.connect();
   }
 
+  public disconnect(): void {
+    if (!this.centrifuge) {
+      throw Error('not connected');
+    }
+
+    this.centrifuge.disconnect();
+  }
+
   public async getSpoolTokens(spool_id: number): Promise<void> {
     this.tokens = await ThreadApi.getCentrifugeTokens({ spool_id });
+  }
+
+  public addToken(channel: string, token: string): void {
+    if (!this.tokens) {
+      throw Error('no tokens');
+    }
+
+    this.tokens.ChannelTokens[channel] = token;
   }
 
   public subToThread(thread_id: number, handlers: ThreadHandlers): void {
@@ -118,6 +134,25 @@ export class CentrifugeClient {
     });
 
     sub.subscribe();
+  }
+
+  public unsubFromThreads(): void {
+    if (!this.centrifuge) {
+      throw Error('not connected');
+    }
+
+    if (!this.tokens) {
+      throw Error('no tokens');
+    }
+
+    Object.entries(this.tokens.ChannelTokens).forEach(([channel]) => {
+      if (channel.startsWith('user')) return;
+      const sub = this.centrifuge!.getSubscription(channel);
+      if (!sub) return;
+      sub.unsubscribe();
+      sub.removeAllListeners();
+      this.centrifuge!.removeSubscription(sub);
+    }, this);
   }
 
   public subToUser(handlers: UserHandlers): void {
@@ -160,6 +195,8 @@ export class CentrifugeClient {
 
     const sub = this.centrifuge.getSubscription(this.userChannel)!;
 
-    sub.removeAllListeners('publication');
+    sub.unsubscribe();
+    sub.removeAllListeners();
+    this.centrifuge.removeSubscription(sub);
   }
 }

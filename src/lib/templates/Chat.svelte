@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getContext } from 'svelte';
+  import { getContext, onDestroy } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import Message from './Message.svelte';
@@ -68,6 +68,7 @@
 
     const threadHandlers = {
       onMessageCreated: (payload: WsMessageCreated) => {
+        console.log('ws msg');
         const mine = payload.username == profile.username;
         cacheProfilesFromMessages([payload]);
         renderMessage(thread.id, payload, mine);
@@ -78,6 +79,10 @@
 
     centrifugeClient.subToThread(thread.id, threadHandlers);
   };
+
+  onDestroy(() => {
+    centrifugeClient.unsubFromThreads();
+  });
 
   let currentThread = $derived(
     (() => {

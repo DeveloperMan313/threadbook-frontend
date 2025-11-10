@@ -3,9 +3,8 @@
   import ModalSpoolCreate from '$lib/templates/ModalSpoolCreate.svelte';
   import Navbar from '$lib/templates/Navbar.svelte';
   import SpoolCard from '$lib/templates/SpoolCard.svelte';
-  import type { LayoutProps } from './$types';
 
-  let { data }: LayoutProps = $props();
+  let { data } = $props();
 
   let isCreateModalOpen = $state(false);
 </script>
