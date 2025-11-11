@@ -2,7 +2,7 @@
   import { getContext, onDestroy } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
-  import { Room, RoomEvent } from 'livekit-client';
+  import { Room } from 'livekit-client';
   import type {
     RemoteParticipant,
     RemoteTrack,
@@ -14,7 +14,6 @@
     MicOff,
     Video,
     VideoOff,
-    Users,
     Maximize2,
     Minimize2,
     Volume2,
@@ -41,14 +40,11 @@
   let volumes: Record<string, number> = {};
   let audioElements = new SvelteMap<string, HTMLAudioElement>();
   let localVideoEl: HTMLVideoElement | null = null;
-  let pendingLocalVideoTrack: LocalTrack | null = null;
-
-  let pinnedParticipant: string | null = null;
-  let activeSpeakerId: string | null = null;
 
   let isDragging = false;
   let isResizing = false;
-  let dragStart = { x: 0, y: 0 };
+  let dragStartX = 0;
+  let dragStartY = 0;
   let initialX = 0;
   let initialY = 0;
   let initialWidth = 360;
@@ -62,6 +58,7 @@
     {};
 
   const isBrowser = typeof document !== 'undefined';
+  let pendingLocalVideoTrack: LocalTrack | null = null;
 
   function setDefaultPosition() {
     if (isBrowser) {
@@ -78,8 +75,10 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ thread_id: threadId })
     });
-    if (!res.ok)
-      throw new Error((await res.json().catch(() => ({}))).error || 'Failed to get token');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to get token');
+    }
     const { token } = await res.json();
     return token;
   }
@@ -97,7 +96,6 @@
 
   function attachVideoTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
-
     const element = track.attach() as HTMLVideoElement;
     element.autoplay = true;
     element.playsInline = true;
@@ -107,17 +105,13 @@
       const container = document.querySelector(
         `.video-container[data-participant="${participantId}"]`
       ) as HTMLElement | null;
-
       if (container) {
         container.innerHTML = '';
         container.appendChild(element);
       } else {
-        setTimeout(() => {
-          tryAttach();
-        }, 100);
+        setTimeout(tryAttach, 100);
       }
     };
-
     tryAttach();
   }
 
@@ -128,6 +122,10 @@
       audioEl.remove();
       audioElements.delete(participantId);
     }
+    const container = document.querySelector(
+      `.video-container[data-participant="${participantId}"]`
+    );
+    if (container) container.innerHTML = '';
   }
 
   function updateVolume(id: string, vol: number) {
@@ -156,11 +154,8 @@
   }
 
   function toggleOthersMute() {
-    if (!isBrowser) return;
     isOthersMuted = !isOthersMuted;
-    audioElements.forEach((el) => {
-      el.muted = isOthersMuted;
-    });
+    audioElements.forEach((el) => (el.muted = isOthersMuted));
   }
 
   async function toggleSelfVideo() {
@@ -185,24 +180,24 @@
   }
 
   function handleParticipant(participant: RemoteParticipant) {
-    participant.on(RoomEvent.TrackPublished, (pub: RemoteTrackPublication) => {
+    participant.on('trackPublished', (pub: RemoteTrackPublication) => {
       const onSubscribed = (track: RemoteTrack) => {
         if (track.kind === 'audio') {
           attachAudioTrack(track, participant.identity);
         } else if (track.kind === 'video') {
           attachVideoTrack(track, participant.identity);
         }
-        pub.off(RoomEvent.TrackSubscribed, onSubscribed);
+        pub.off('subscribed', onSubscribed);
       };
 
       if (pub.isSubscribed && pub.track) {
         onSubscribed(pub.track);
       } else {
-        pub.on(RoomEvent.TrackSubscribed, onSubscribed);
+        pub.on('subscribed', onSubscribed);
         pub.setSubscribed(true);
       }
 
-      pub.on(RoomEvent.TrackUnsubscribed, () => {
+      pub.on('unsubscribed', () => {
         detachTrack(participant.identity);
       });
     });
@@ -214,13 +209,13 @@
         } else if (track.kind === 'video') {
           attachVideoTrack(track, participant.identity);
         }
-        pub.off(RoomEvent.TrackSubscribed, onSubscribed);
+        pub.off('subscribed', onSubscribed);
       };
 
       if (pub.isSubscribed && pub.track) {
         onSubscribed(pub.track);
       } else {
-        pub.on(RoomEvent.TrackSubscribed, onSubscribed);
+        pub.on('subscribed', onSubscribed);
         pub.setSubscribed(true);
       }
     });
@@ -233,7 +228,8 @@
   function startDrag(e: MouseEvent) {
     if (isFullscreen) return;
     isDragging = true;
-    dragStart = { x: e.clientX - position.x, y: e.clientY - position.y };
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
     initialX = position.x;
     initialY = position.y;
     document.addEventListener('mousemove', handleDrag);
@@ -243,8 +239,10 @@
 
   function handleDrag(e: MouseEvent) {
     if (!isDragging) return;
-    position.x = Math.min(window.innerWidth - 100, Math.max(0, e.clientX - dragStart.x));
-    position.y = Math.min(window.innerHeight - 50, Math.max(0, e.clientY - dragStart.y));
+    const deltaX = e.clientX - dragStartX;
+    const deltaY = e.clientY - dragStartY;
+    position.x = Math.max(0, Math.min(window.innerWidth - dimensions.width, initialX + deltaX));
+    position.y = Math.max(0, Math.min(window.innerHeight - dimensions.height, initialY + deltaY));
   }
 
   function stopDrag() {
@@ -256,7 +254,8 @@
   function startResize(e: MouseEvent) {
     if (isFullscreen || isMinimized) return;
     isResizing = true;
-    dragStart = { x: e.clientX, y: e.clientY };
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
     initialWidth = dimensions.width;
     initialHeight = dimensions.height;
     document.addEventListener('mousemove', handleResize);
@@ -267,12 +266,10 @@
 
   function handleResize(e: MouseEvent) {
     if (!isResizing) return;
-    const deltaX = e.clientX - dragStart.x;
-    const deltaY = e.clientY - dragStart.y;
-
+    const deltaX = e.clientX - dragStartX;
+    const deltaY = e.clientY - dragStartY;
     dimensions.width = Math.max(280, Math.min(800, initialWidth + deltaX));
     dimensions.height = Math.max(200, Math.min(800, initialHeight + deltaY));
-
     position.x = Math.min(position.x, window.innerWidth - dimensions.width);
     position.y = Math.min(position.y, window.innerHeight - dimensions.height);
   }
@@ -289,8 +286,8 @@
       const token = await getToken(getCurrentThreadId()!);
       room = new Room();
 
-      room.on(RoomEvent.ParticipantConnected, (p) => handleParticipant(p));
-      room.on(RoomEvent.ParticipantDisconnected, (p) => {
+      room.on('participantConnected', (p) => handleParticipant(p));
+      room.on('participantDisconnected', (p) => {
         participants = participants.filter((part) => part.identity !== p.identity);
         detachTrack(p.identity);
         delete showVolumeSliderFor[p.identity];
@@ -298,15 +295,11 @@
         delete volumes[p.identity];
       });
 
-      room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
-        activeSpeakerId = speakers.length > 0 ? speakers[0].identity : null;
-      });
-
-      room.on(RoomEvent.Connected, () => {
+      room.on('connected', () => {
         room!.remoteParticipants.forEach((p) => handleParticipant(p));
       });
 
-      room.on(RoomEvent.Disconnected, leaveRoom);
+      room.on('disconnected', leaveRoom);
 
       await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
@@ -345,7 +338,6 @@
 
   function leaveRoom() {
     if (!isBrowser) return;
-
     if (room) {
       room.disconnect();
       room = null;
@@ -371,10 +363,6 @@
     volumeDisplayFor = {};
   }
 
-  function handlePin(id: string) {
-    pinnedParticipant = pinnedParticipant === id ? null : id;
-  }
-
   $: {
     if (localVideoEl && pendingLocalVideoTrack) {
       pendingLocalVideoTrack.attach(localVideoEl);
@@ -384,12 +372,19 @@
 
   onDestroy(() => {
     leaveRoom();
-    document.removeEventListener('mousemove', handleDrag);
-    document.removeEventListener('mouseup', stopDrag);
-    document.removeEventListener('mousemove', handleResize);
-    document.removeEventListener('mouseup', stopResize);
   });
 </script>
+
+<svelte:window
+  on:mousemove={(e) => {
+    if (isDragging) handleDrag(e);
+    if (isResizing) handleResize(e);
+  }}
+  on:mouseup={() => {
+    if (isDragging) stopDrag();
+    if (isResizing) stopResize();
+  }}
+/>
 
 <div
   class="fixed overflow-hidden rounded-xl border border-border bg-background text-sm shadow-xl transition-all duration-300"
@@ -422,7 +417,7 @@
       <button
         class="rounded p-1 hover:bg-accent"
         on:click|stopPropagation={toggleMinimize}
-        title={isMinimized ? 'Expand' : 'Minimize'}
+        title={isMinimized ? 'Expand' : 'Collapse'}
       >
         {#if isMinimized}
           <Maximize2 size={18} />
@@ -460,9 +455,7 @@
             {#if room && p.identity !== room.localParticipant.identity}
               <div class="flex w-24 flex-col items-center gap-1">
                 <div
-                  class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg bg-black transition-all duration-300 hover:ring-2 hover:ring-accent
-                    {activeSpeakerId === p.identity ? 'scale-[1.02] ring-2 ring-primary' : ''}"
-                  on:click={() => handlePin(p.identity)}
+                  class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg bg-black transition-colors hover:ring-2 hover:ring-accent"
                   on:contextmenu|preventDefault={(e) => toggleVolumeSlider(p.identity, e)}
                 >
                   <div class="video-container absolute inset-0" data-participant={p.identity}></div>
