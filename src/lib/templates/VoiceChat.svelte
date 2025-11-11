@@ -3,7 +3,12 @@
   import { SvelteMap } from 'svelte/reactivity';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
   import { Room, RoomEvent } from 'livekit-client';
-  import type { RemoteParticipant, RemoteTrack, LocalTrack } from 'livekit-client';
+  import type {
+    RemoteParticipant,
+    RemoteTrack,
+    RemoteTrackPublication,
+    LocalTrack
+  } from 'livekit-client';
   import {
     Mic,
     MicOff,
@@ -79,44 +84,50 @@
     return token;
   }
 
-  function attachAudioTrack(track: RemoteTrack, id: string) {
+  function attachAudioTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
-    const el = track.attach() as HTMLAudioElement;
-    el.dataset.participant = id;
-    el.muted = isOthersMuted;
-    el.volume = volumes[id] ?? 1;
-    el.style.display = 'none';
-    document.body.appendChild(el);
-    audioElements.set(id, el);
+    const element = track.attach() as HTMLAudioElement;
+    element.dataset.participant = participantId;
+    element.muted = isOthersMuted;
+    element.volume = volumes[participantId] ?? 1;
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    audioElements.set(participantId, element);
   }
 
-  function attachVideoTrack(track: RemoteTrack, id: string) {
+  function attachVideoTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
-    const el = track.attach() as HTMLVideoElement;
-    el.autoplay = true;
-    el.playsInline = true;
-    el.muted = id === room?.localParticipant.identity;
+
+    const element = track.attach() as HTMLVideoElement;
+    element.autoplay = true;
+    element.playsInline = true;
+    element.muted = true;
 
     const tryAttach = () => {
-      const container = document.querySelector(`.video-container[data-participant="${id}"]`);
+      const container = document.querySelector(
+        `.video-container[data-participant="${participantId}"]`
+      ) as HTMLElement | null;
+
       if (container) {
         container.innerHTML = '';
-        container.appendChild(el);
+        container.appendChild(element);
       } else {
-        setTimeout(tryAttach, 100);
+        setTimeout(() => {
+          tryAttach();
+        }, 100);
       }
     };
+
     tryAttach();
   }
 
-  function detachTrack(pid: string) {
-    const el = audioElements.get(pid);
-    if (el) {
-      el.remove();
-      audioElements.delete(pid);
+  function detachTrack(participantId: string) {
+    if (!isBrowser) return;
+    const audioEl = audioElements.get(participantId);
+    if (audioEl) {
+      audioEl.remove();
+      audioElements.delete(participantId);
     }
-    const container = document.querySelector(`.video-container[data-participant="${pid}"]`);
-    if (container) container.innerHTML = '';
   }
 
   function updateVolume(id: string, vol: number) {
@@ -145,8 +156,11 @@
   }
 
   function toggleOthersMute() {
+    if (!isBrowser) return;
     isOthersMuted = !isOthersMuted;
-    audioElements.forEach((el) => (el.muted = isOthersMuted));
+    audioElements.forEach((el) => {
+      el.muted = isOthersMuted;
+    });
   }
 
   async function toggleSelfVideo() {
@@ -170,109 +184,50 @@
     }
   }
 
-  function handleParticipant(p: RemoteParticipant) {
-    const subscribe = (track: RemoteTrack) => {
-      if (track.kind === 'audio') attachAudioTrack(track, p.identity);
-      else attachVideoTrack(track, p.identity);
-    };
+  function handleParticipant(participant: RemoteParticipant) {
+    participant.on(RoomEvent.TrackPublished, (pub: RemoteTrackPublication) => {
+      const onSubscribed = (track: RemoteTrack) => {
+        if (track.kind === 'audio') {
+          attachAudioTrack(track, participant.identity);
+        } else if (track.kind === 'video') {
+          attachVideoTrack(track, participant.identity);
+        }
+        pub.off(RoomEvent.TrackSubscribed, onSubscribed);
+      };
 
-    p.on(RoomEvent.TrackSubscribed, subscribe);
-    p.on(RoomEvent.TrackUnsubscribed, () => detachTrack(p.identity));
-
-    if (!participants.find((x) => x.identity === p.identity)) participants = [...participants, p];
-  }
-
-  async function joinRoom() {
-    if (isConnected) return;
-    if (!PUBLIC_LIVEKIT_ORIGIN) {
-      error = 'No LiveKit origin configured';
-      return;
-    }
-
-    try {
-      const threadId = getCurrentThreadId();
-      if (!threadId) throw new Error('No thread ID');
-      const token = await getToken(threadId);
-
-      room = new Room();
-
-      room.on(RoomEvent.ParticipantConnected, handleParticipant);
-      room.on(RoomEvent.ParticipantDisconnected, (p) => {
-        participants = participants.filter((x) => x.identity !== p.identity);
-        detachTrack(p.identity);
-        delete showVolumeSliderFor[p.identity];
-        delete volumeDisplayFor[p.identity];
-        delete volumes[p.identity];
-      });
-      room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
-        activeSpeakerId = speakers.length > 0 ? speakers[0].identity : null;
-      });
-      room.on(RoomEvent.Disconnected, leaveRoom);
-
-      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
-
-      const audioTrackPromise = room.localParticipant
-        .createTracks({
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-        })
-        .catch(() => []);
-
-      const videoTrackPromise = isSelfVideoEnabled
-        ? room.localParticipant.createTracks({ video: true }).catch(() => [])
-        : Promise.resolve([]);
-
-      const [audioTracks, videoTracks] = await Promise.all([audioTrackPromise, videoTrackPromise]);
-      const allTracks = [...audioTracks, ...videoTracks];
-      await Promise.all(allTracks.map((track) => room!.localParticipant.publishTrack(track)));
-
-      const videoTrack = videoTracks.find((t) => t.kind === 'video');
-      if (videoTrack) {
-        pendingLocalVideoTrack = videoTrack;
-        if (localVideoEl) videoTrack.attach(localVideoEl);
+      if (pub.isSubscribed && pub.track) {
+        onSubscribed(pub.track);
+      } else {
+        pub.on(RoomEvent.TrackSubscribed, onSubscribed);
+        pub.setSubscribed(true);
       }
 
-      room.remoteParticipants.forEach(handleParticipant);
-      isConnected = true;
-    } catch (e: any) {
-      error = e.message || 'Connection failed';
-      leaveRoom();
+      pub.on(RoomEvent.TrackUnsubscribed, () => {
+        detachTrack(participant.identity);
+      });
+    });
+
+    participant.trackPublications.forEach((pub) => {
+      const onSubscribed = (track: RemoteTrack) => {
+        if (track.kind === 'audio') {
+          attachAudioTrack(track, participant.identity);
+        } else if (track.kind === 'video') {
+          attachVideoTrack(track, participant.identity);
+        }
+        pub.off(RoomEvent.TrackSubscribed, onSubscribed);
+      };
+
+      if (pub.isSubscribed && pub.track) {
+        onSubscribed(pub.track);
+      } else {
+        pub.on(RoomEvent.TrackSubscribed, onSubscribed);
+        pub.setSubscribed(true);
+      }
+    });
+
+    if (!participants.some((p) => p.identity === participant.identity)) {
+      participants = [...participants, participant];
     }
-  }
-
-  function leaveRoom() {
-    if (room) {
-      room.removeAllListeners();
-      room.disconnect();
-      room = null;
-    }
-    participants = [];
-    audioElements.forEach((a) => a.remove());
-    audioElements.clear();
-    document
-      .querySelectorAll('.video-container')
-      .forEach((el) => ((el as HTMLElement).innerHTML = ''));
-    if (localVideoEl) {
-      localVideoEl.srcObject = null;
-      localVideoEl.load();
-    }
-    pendingLocalVideoTrack = null;
-
-    isConnected = false;
-    isSelfMuted = false;
-    isSelfVideoEnabled = true;
-    isOthersMuted = false;
-    volumes = {};
-    showVolumeSliderFor = {};
-    volumeDisplayFor = {};
-  }
-
-  function handlePin(id: string) {
-    pinnedParticipant = pinnedParticipant === id ? null : id;
-  }
-
-  $: if (localVideoEl && pendingLocalVideoTrack) {
-    pendingLocalVideoTrack.attach(localVideoEl);
-    pendingLocalVideoTrack = null;
   }
 
   function startDrag(e: MouseEvent) {
@@ -326,6 +281,105 @@
     isResizing = false;
     document.removeEventListener('mousemove', handleResize);
     document.removeEventListener('mouseup', stopResize);
+  }
+
+  async function joinRoom() {
+    if (!isBrowser) return;
+    try {
+      const token = await getToken(getCurrentThreadId()!);
+      room = new Room();
+
+      room.on(RoomEvent.ParticipantConnected, (p) => handleParticipant(p));
+      room.on(RoomEvent.ParticipantDisconnected, (p) => {
+        participants = participants.filter((part) => part.identity !== p.identity);
+        detachTrack(p.identity);
+        delete showVolumeSliderFor[p.identity];
+        delete volumeDisplayFor[p.identity];
+        delete volumes[p.identity];
+      });
+
+      room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
+        activeSpeakerId = speakers.length > 0 ? speakers[0].identity : null;
+      });
+
+      room.on(RoomEvent.Connected, () => {
+        room!.remoteParticipants.forEach((p) => handleParticipant(p));
+      });
+
+      room.on(RoomEvent.Disconnected, leaveRoom);
+
+      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
+
+      const tracks = await room.localParticipant.createTracks({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          googEchoCancellation: true,
+          googAutoGainControl: true,
+          googNoiseSuppression: true,
+          sampleRate: 48000,
+          channelCount: 1
+        },
+        video: isSelfVideoEnabled
+      });
+
+      await Promise.all(tracks.map((track) => room!.localParticipant.publishTrack(track)));
+
+      const videoTrack = tracks.find((track) => track.kind === 'video');
+      if (videoTrack) {
+        pendingLocalVideoTrack = videoTrack;
+        if (localVideoEl) {
+          videoTrack.attach(localVideoEl);
+        }
+      }
+
+      isConnected = true;
+      error = '';
+    } catch (err: any) {
+      error = err.message || 'Connection failed';
+      console.error('Join error:', err);
+      leaveRoom();
+    }
+  }
+
+  function leaveRoom() {
+    if (!isBrowser) return;
+
+    if (room) {
+      room.disconnect();
+      room = null;
+    }
+    participants = [];
+    audioElements.forEach((el) => el.remove());
+    audioElements.clear();
+    document.querySelectorAll('.video-container').forEach((el) => {
+      (el as HTMLElement).innerHTML = '';
+    });
+    if (localVideoEl) {
+      localVideoEl.srcObject = null;
+      localVideoEl.load();
+    }
+    pendingLocalVideoTrack = null;
+
+    isConnected = false;
+    isSelfMuted = false;
+    isOthersMuted = false;
+    isSelfVideoEnabled = true;
+    volumes = {};
+    showVolumeSliderFor = {};
+    volumeDisplayFor = {};
+  }
+
+  function handlePin(id: string) {
+    pinnedParticipant = pinnedParticipant === id ? null : id;
+  }
+
+  $: {
+    if (localVideoEl && pendingLocalVideoTrack) {
+      pendingLocalVideoTrack.attach(localVideoEl);
+      pendingLocalVideoTrack = null;
+    }
   }
 
   onDestroy(() => {
