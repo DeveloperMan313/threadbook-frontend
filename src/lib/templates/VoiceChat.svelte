@@ -3,12 +3,7 @@
   import { SvelteMap } from 'svelte/reactivity';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
   import { Room, RoomEvent } from 'livekit-client';
-  import type {
-    RemoteParticipant,
-    RemoteTrack,
-    RemoteTrackPublication,
-    LocalTrack
-  } from 'livekit-client';
+  import type { RemoteParticipant, RemoteTrack, LocalTrack } from 'livekit-client';
   import {
     Mic,
     MicOff,
@@ -127,7 +122,6 @@
     const el = audioElements.get(id);
     if (el) el.volume = vol;
 
-    // Показываем значение на 1.5 сек
     if (volumeDisplayFor[id]?.timeout) clearTimeout(volumeDisplayFor[id].timeout);
     volumeDisplayFor[id] = {
       value: `${Math.round(vol * 100)}%`,
@@ -320,7 +314,6 @@
     dimensions.width = Math.max(280, Math.min(800, initialWidth + deltaX));
     dimensions.height = Math.max(200, Math.min(800, initialHeight + deltaY));
 
-    // Пересчитываем позицию при ресайзе, чтобы окно не ушло за край
     position.x = Math.min(position.x, window.innerWidth - dimensions.width);
     position.y = Math.min(position.y, window.innerHeight - dimensions.height);
   }
@@ -346,7 +339,7 @@
     left: {position.x}px;
     top: {position.y}px;
     width: {dimensions.width}px;
-    height: {isCollapsed ? 'auto' : dimensions.height + 'px'};
+    height: {isCollapsed ? 'auto' : `${dimensions.height}px`};
     z-index: 100;
   "
 >
@@ -372,7 +365,7 @@
       <button
         class="rounded p-1 hover:bg-accent"
         on:click|stopPropagation={toggleMinimize}
-        title="Minimize"
+        title="Show participants list"
       >
         <Users size={18} />
       </button>
@@ -395,28 +388,24 @@
   {/if}
 
   {#if !isCollapsed}
-    <div class="flex h-[calc(100%-50px)] flex-col">
+    <div class="flex min-h-0 flex-1 flex-col">
       {#if isConnected}
         <div class="relative grid flex-1 grid-cols-2 gap-2 overflow-auto p-2">
           {#each participants as p (p.sid)}
             {#if room && p.identity !== room.localParticipant.identity}
               <div
-                class="relative cursor-pointer overflow-hidden rounded-lg bg-black transition-all duration-300 hover:ring-2 hover:ring-accent
+                class="relative aspect-video cursor-pointer overflow-hidden rounded-lg bg-black transition-all duration-300 hover:ring-2 hover:ring-accent
                   {activeSpeakerId === p.identity ? 'scale-[1.02] ring-2 ring-primary' : ''}"
                 on:click={() => handlePin(p.identity)}
                 on:contextmenu|preventDefault={(e) => toggleVolumeSlider(p.identity, e)}
                 data-participant={p.identity}
               >
-                <div
-                  class="video-container h-24 w-full sm:h-32 md:h-40"
-                  data-participant={p.identity}
-                ></div>
+                <div class="video-container absolute inset-0" data-participant={p.identity}></div>
 
-                <span class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
-                  >{p.identity}</span
-                >
+                <span class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white">
+                  {p.identity}
+                </span>
 
-                <!-- Volume slider (right-click to show) -->
                 {#if showVolumeSliderFor[p.identity]}
                   <div
                     class="absolute right-0 bottom-6 left-0 rounded bg-black/80 p-1"
@@ -437,8 +426,9 @@
                     {#if volumeDisplayFor[p.identity]?.value}
                       <span
                         class="absolute bottom-full left-1/2 -translate-x-1/2 rounded bg-black/90 px-2 py-1 text-xs whitespace-nowrap text-white"
-                        >{volumeDisplayFor[p.identity].value}</span
                       >
+                        {volumeDisplayFor[p.identity].value}
+                      </span>
                     {/if}
                   </div>
                 {/if}
@@ -446,14 +436,14 @@
             {/if}
           {/each}
 
-          <!-- Local video -->
-          <div class="relative overflow-hidden rounded-lg bg-black">
+          <!-- Local video — без ПКМ -->
+          <div class="relative aspect-video overflow-hidden rounded-lg bg-black">
             <video
               bind:this={localVideoEl}
               autoplay
               playsinline
               muted
-              class="h-24 w-full object-cover sm:h-32 md:h-40"
+              class="absolute inset-0 h-full w-full object-cover"
             ></video>
             <span class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
               >You</span
@@ -522,11 +512,12 @@
     </div>
   {/if}
 
-  <!-- Resize handle (bottom-right) -->
+  <!-- Resize handle -->
   {#if !isCollapsed && !isFullscreen}
     <div
       class="absolute right-0 bottom-0 h-4 w-4 cursor-se-resize"
       on:mousedown|stopPropagation={startResize}
+      title="Drag to resize"
     >
       <svg
         width="12"
@@ -544,14 +535,16 @@
 </div>
 
 <style>
-  video {
-    border-radius: 0.5rem;
+  .aspect-video {
+    aspect-ratio: 16 / 9;
   }
+
   .video-container video {
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
+
   input[type='range']::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
@@ -561,6 +554,7 @@
     background: currentColor;
     cursor: pointer;
   }
+
   input[type='range']::-moz-range-thumb {
     width: 14px;
     height: 14px;
