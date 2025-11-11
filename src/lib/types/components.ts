@@ -8,6 +8,7 @@ export interface ChatState {
   thread: ThreadProps;
   messages: Array<MessageProps>;
   messageText: string;
+  firstMessageLoaded: boolean;
 }
 
 export interface ChatProps {

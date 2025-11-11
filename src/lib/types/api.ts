@@ -76,6 +76,9 @@ export interface UpdateThreadRequest {
 
 export interface GetThreadMessagesRequest {
   thread_id: number;
+  cursor_id?: number;
+  forward?: boolean;
+  limit?: number;
 }
 
 export interface SendThreadMessagesRequest {

@@ -25,7 +25,11 @@ export const MessageApi = {
    * @returns {Promise<Array<MessageProps>>} - API response
    */
   async getThreadMessages(request: GetThreadMessagesRequest): Promise<Array<MessageProps>> {
-    return ApiClient.fetchJSON(`/thread/${request.thread_id}/messages`, {
+    const params = new URLSearchParams();
+    if (request.cursor_id !== undefined) params.append('cursor_id', request.cursor_id.toString());
+    if (request.forward !== undefined) params.append('forward', request.forward.toString());
+    if (request.limit !== undefined) params.append('limit', request.limit.toString());
+    return ApiClient.fetchJSON(`/thread/${request.thread_id}/messages?${params}`, {
       method: 'GET',
       headers: {}
     });

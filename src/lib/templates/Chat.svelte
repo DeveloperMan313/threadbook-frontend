@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getContext, onDestroy } from 'svelte';
+  import { getContext, onDestroy, tick, untrack } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import Message from './Message.svelte';
@@ -14,6 +14,7 @@
   import type { SvelteMap } from 'svelte/reactivity';
   import { MessageApi } from '$lib/api';
   import { userProfile } from '$lib/userProfile';
+  import Spinner from '$lib/components/ui/spinner/spinner.svelte';
 
   const { centrifugeClient }: ChatProps = $props();
 
@@ -31,10 +32,10 @@
   const renderMessage = (threadId: number, message: MessageProps, mine: boolean = false) => {
     lastMessageMine = mine;
 
-    const currentChat = threadChats.get(threadId) as ChatState;
+    const chat = threadChats.get(threadId) as ChatState;
     threadChats.set(threadId, {
-      ...currentChat,
-      messages: [...currentChat.messages, message]
+      ...chat,
+      messages: [...chat.messages, message]
     });
   };
 
@@ -43,6 +44,8 @@
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
   });
+
+  const messageLoadLimit = 15; // TODO derived state based on client ui size
 
   // Use captured thread instead of currentThread to avoid race condition
   const handleEmptyThreadMessages = (thread: ThreadProps) => {
@@ -53,18 +56,21 @@
     threadChats.set(thread.id, {
       thread: thread,
       messages: [],
-      messageText: ''
+      messageText: '',
+      firstMessageLoaded: false
     });
 
-    MessageApi.getThreadMessages({ thread_id: thread.id }).then((messages) => {
-      messages ||= [];
-      cacheProfilesFromMessages(messages);
-      threadChats.set(thread.id, {
-        thread: thread,
-        messages: messages,
-        messageText: ''
-      });
-    });
+    MessageApi.getThreadMessages({ thread_id: thread.id, limit: messageLoadLimit }).then(
+      (messages) => {
+        cacheProfilesFromMessages(messages);
+        threadChats.set(thread.id, {
+          thread: thread,
+          messages: messages,
+          messageText: '',
+          firstMessageLoaded: messages.length < messageLoadLimit
+        });
+      }
+    );
 
     const threadHandlers = {
       onMessageCreated: (payload: WsMessageCreated) => {
@@ -84,28 +90,22 @@
     centrifugeClient.unsubFromThreads();
   });
 
-  let currentThread = $derived(
-    (() => {
-      if (!getCurrentThreadId()) return null;
-      return getThreads().find((t) => t.id === getCurrentThreadId());
-    })()
-  );
+  let currentThread = $derived.by(() => {
+    if (!getCurrentThreadId()) return undefined;
+    return getThreads().find((t) => t.id === getCurrentThreadId());
+  });
 
-  let messages = $derived(
-    (() => {
-      if (!currentThread) return [];
-      const chat = threadChats.get(currentThread.id);
-      return chat ? chat.messages : [];
-    })()
-  );
+  let messages = $derived.by(() => {
+    if (!currentThread) return [];
+    const chat = threadChats.get(currentThread.id);
+    return chat ? chat.messages : [];
+  });
 
-  let messageText = $derived(
-    (() => {
-      if (!currentThread) return '';
-      const chat = threadChats.get(currentThread.id);
-      return chat ? chat.messageText : '';
-    })()
-  );
+  let messageText = $derived.by(() => {
+    if (!currentThread) return '';
+    const chat = threadChats.get(currentThread.id);
+    return chat ? chat.messageText : '';
+  });
 
   $effect(() => {
     if (currentThread) {
@@ -115,16 +115,50 @@
   });
 
   let messagesContainer: HTMLDivElement;
+  let isAtTop = $state(true);
   let isAtBottom = $state(true);
   let lastMessageMine = false;
 
   const handleScroll = () => {
-    if (messagesContainer) {
-      const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
-      const threshold = 10;
-      isAtBottom = scrollHeight - scrollTop - clientHeight <= threshold;
-    }
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
+    const threshold = 10;
+    isAtTop = scrollTop <= threshold;
+    isAtBottom = scrollHeight - scrollTop - clientHeight <= threshold;
   };
+
+  $effect(() => {
+    const thread = untrack(() => currentThread); // capture thread
+    if (!thread) return;
+    const chat = threadChats.get(thread.id);
+    const msgs = untrack(() => messages);
+    // track only isAtTop
+    if (isAtTop && chat && !chat.firstMessageLoaded && msgs.length > 0) {
+      MessageApi.getThreadMessages({
+        thread_id: thread.id,
+        cursor_id: msgs[0].id,
+        forward: false
+      }).then((fetchedMessages) => {
+        // save old scroll
+        const scrollTopBefore = messagesContainer.scrollTop;
+        const scrollHeightBefore = messagesContainer.scrollHeight;
+        // cache and render new messages
+        cacheProfilesFromMessages(msgs);
+        threadChats.set(thread.id, {
+          ...chat,
+          messages: [...fetchedMessages, ...chat.messages],
+          firstMessageLoaded: fetchedMessages.length < messageLoadLimit
+        });
+        untrack(() => {
+          isAtTop = false;
+        });
+        // restore scroll after DOM update
+        tick().then(() => {
+          messagesContainer.scrollTop =
+            messagesContainer.scrollHeight - scrollHeightBefore + scrollTopBefore;
+        });
+      });
+    }
+  });
 
   const profile = $derived($userProfile as UserProfileFull);
 
@@ -179,6 +213,13 @@
       </div>
     {:else}
       <div>
+        <div class="flex h-10 w-full items-center justify-center">
+          {#if currentThread && threadChats.get(currentThread.id)?.firstMessageLoaded}
+            <p class="text-lg">Thread start</p>
+          {:else}
+            <Spinner class="size-8" />
+          {/if}
+        </div>
         {#each messages as message, i (message.id)}
           <Message {...message} index={i} />
         {/each}
