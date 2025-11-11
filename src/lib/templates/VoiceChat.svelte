@@ -29,9 +29,7 @@
   let isSelfMuted = false;
   let isOthersMuted = false;
   let isSelfVideoEnabled = true;
-
   let isMinimized = false;
-  let isCollapsed = false;
   let isFullscreen = false;
 
   let participants: RemoteParticipant[] = [];
@@ -98,11 +96,17 @@
     el.autoplay = true;
     el.playsInline = true;
     el.muted = id === room?.localParticipant.identity;
-    const container = document.querySelector(`.video-container[data-participant="${id}"]`);
-    if (container) {
-      container.innerHTML = '';
-      container.appendChild(el);
-    }
+
+    const tryAttach = () => {
+      const container = document.querySelector(`.video-container[data-participant="${id}"]`);
+      if (container) {
+        container.innerHTML = '';
+        container.appendChild(el);
+      } else {
+        setTimeout(tryAttach, 100);
+      }
+    };
+    tryAttach();
   }
 
   function detachTrack(pid: string) {
@@ -149,16 +153,6 @@
     if (!room) return;
     isSelfVideoEnabled = !isSelfVideoEnabled;
     await room.localParticipant.setCameraEnabled(isSelfVideoEnabled);
-  }
-
-  function toggleCollapse() {
-    isCollapsed = !isCollapsed;
-    if (isCollapsed) {
-      dimensions.width = 360;
-      dimensions.height = 420;
-      setDefaultPosition();
-      isFullscreen = false;
-    }
   }
 
   function toggleMinimize() {
@@ -210,7 +204,6 @@
         delete volumeDisplayFor[p.identity];
         delete volumes[p.identity];
       });
-
       room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
         activeSpeakerId = speakers.length > 0 ? speakers[0].identity : null;
       });
@@ -255,6 +248,9 @@
     participants = [];
     audioElements.forEach((a) => a.remove());
     audioElements.clear();
+    document
+      .querySelectorAll('.video-container')
+      .forEach((el) => ((el as HTMLElement).innerHTML = ''));
     if (localVideoEl) {
       localVideoEl.srcObject = null;
       localVideoEl.load();
@@ -303,7 +299,7 @@
   }
 
   function startResize(e: MouseEvent) {
-    if (isFullscreen || isCollapsed) return;
+    if (isFullscreen || isMinimized) return;
     isResizing = true;
     dragStart = { x: e.clientX, y: e.clientY };
     initialWidth = dimensions.width;
@@ -341,18 +337,13 @@
   });
 </script>
 
-{#if isConnected}
-  <video bind:this={localVideoEl} autoplay playsinline muted class="hidden" style="display: none"
-  ></video>
-{/if}
-
 <div
   class="fixed overflow-hidden rounded-xl border border-border bg-background text-sm shadow-xl transition-all duration-300"
   style="
     left: {position.x}px;
     top: {position.y}px;
     width: {dimensions.width}px;
-    height: {isCollapsed ? 'auto' : `${dimensions.height}px`};
+    height: {isMinimized ? 'auto' : isFullscreen ? '100vh' : `${dimensions.height}px`};
     z-index: 100;
   "
 >
@@ -377,16 +368,9 @@
       <button
         class="rounded p-1 hover:bg-accent"
         on:click|stopPropagation={toggleMinimize}
-        title="Show participants list"
+        title={isMinimized ? 'Expand' : 'Minimize'}
       >
-        <Users size={18} />
-      </button>
-      <button
-        class="rounded p-1 hover:bg-accent"
-        on:click|stopPropagation={toggleCollapse}
-        title={isCollapsed ? 'Expand' : 'Collapse'}
-      >
-        {#if isCollapsed}
+        {#if isMinimized}
           <Maximize2 size={18} />
         {:else}
           <Minimize2 size={18} />
@@ -399,76 +383,70 @@
     <p class="p-2 text-sm text-destructive">{error}</p>
   {/if}
 
-  {#if !isCollapsed}
-    <div class="flex min-h-0 flex-1 flex-col">
+  {#if !isMinimized}
+    <div class="flex flex-col" style="height: calc(100% - 60px);">
       {#if isConnected}
-        <div
-          class="relative mb-3 flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-black"
-        >
-          {#if localVideoEl && localVideoEl.srcObject}
-            <!-- Видео рендерится через attach(), но мы не вставляем его сюда -->
-            <div class="h-full w-full bg-black"></div>
-          {:else}
-            <span class="text-sm text-gray-400">
-              {isSelfVideoEnabled ? 'Camera off' : 'You'}
-            </span>
-          {/if}
+        <div class="relative mb-3 aspect-video overflow-hidden rounded-lg bg-black">
+          <video
+            bind:this={localVideoEl}
+            autoplay
+            playsinline
+            muted
+            class="h-full w-full object-cover"
+          ></video>
           <span class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
             >You</span
           >
         </div>
-
-        <div class="mb-3 flex-1 overflow-auto">
-          <div class="flex flex-row flex-wrap justify-center gap-2">
-            {#each participants as p (p.sid)}
-              {#if room && p.identity !== room.localParticipant.identity}
-                <div class="flex w-24 flex-col items-center gap-1">
-                  <div
-                    class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg bg-black transition-all duration-300 hover:ring-2 hover:ring-accent
-                      {activeSpeakerId === p.identity ? 'scale-[1.02] ring-2 ring-primary' : ''}"
-                    on:click={() => handlePin(p.identity)}
-                    on:contextmenu|preventDefault={(e) => toggleVolumeSlider(p.identity, e)}
-                  >
-                    <div
-                      class="video-container absolute inset-0"
-                      data-participant={p.identity}
-                    ></div>
-                    <span
-                      class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
-                    >
-                      {p.identity}
-                    </span>
-                  </div>
-
-                  {#if showVolumeSliderFor[p.identity]}
-                    <div class="w-full rounded bg-black/30 p-1">
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        class="h-1.5 w-full cursor-pointer accent-primary"
-                        value={volumes[p.identity] ?? 1}
-                        on:input={(e) => {
-                          const val = parseFloat((e.target as HTMLInputElement).value);
-                          updateVolume(p.identity, val);
-                        }}
-                      />
-                      {#if volumeDisplayFor[p.identity]?.value}
-                        <span class="mt-0.5 block text-center text-[10px] text-white">
-                          {volumeDisplayFor[p.identity].value}
-                        </span>
-                      {/if}
-                    </div>
-                  {/if}
-                </div>
-              {/if}
-            {/each}
-          </div>
-        </div>
       {/if}
 
-      <div class="flex flex-wrap justify-center gap-3 border-t border-border py-2">
+      <div class="mb-3 flex-1 overflow-auto">
+        <div class="flex flex-row flex-wrap justify-center gap-2">
+          {#each participants as p (p.sid)}
+            {#if room && p.identity !== room.localParticipant.identity}
+              <div class="flex w-24 flex-col items-center gap-1">
+                <div
+                  class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg bg-black transition-all duration-300 hover:ring-2 hover:ring-accent
+                    {activeSpeakerId === p.identity ? 'scale-[1.02] ring-2 ring-primary' : ''}"
+                  on:click={() => handlePin(p.identity)}
+                  on:contextmenu|preventDefault={(e) => toggleVolumeSlider(p.identity, e)}
+                >
+                  <div class="video-container absolute inset-0" data-participant={p.identity}></div>
+                  <span
+                    class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
+                  >
+                    {p.identity}
+                  </span>
+                </div>
+
+                {#if showVolumeSliderFor[p.identity]}
+                  <div class="w-full rounded bg-black/30 p-1">
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      class="h-1.5 w-full cursor-pointer accent-primary"
+                      value={volumes[p.identity] ?? 1}
+                      on:input={(e) => {
+                        const val = parseFloat((e.target as HTMLInputElement).value);
+                        updateVolume(p.identity, val);
+                      }}
+                    />
+                    {#if volumeDisplayFor[p.identity]?.value}
+                      <span class="mt-0.5 block text-center text-[10px] text-white">
+                        {volumeDisplayFor[p.identity].value}
+                      </span>
+                    {/if}
+                  </div>
+                {/if}
+              </div>
+            {/if}
+          {/each}
+        </div>
+      </div>
+
+      <div class="mt-auto flex flex-wrap justify-center gap-3 border-t border-border py-2">
         <button
           class="rounded-full p-3 transition-colors {isSelfMuted
             ? 'bg-destructive text-white hover:bg-destructive/90'
@@ -525,9 +503,37 @@
         </button>
       </div>
     </div>
+  {:else}
+    <div class="flex justify-center gap-2 py-2">
+      <button
+        class="rounded-full p-2 transition-colors {isSelfMuted
+          ? 'bg-destructive text-white hover:bg-destructive/90'
+          : 'bg-secondary hover:bg-secondary/80'}"
+        on:click={toggleSelfMute}
+        disabled={!isConnected}
+      >
+        {#if isSelfMuted}
+          <MicOff size={16} />
+        {:else}
+          <Mic size={16} />
+        {/if}
+      </button>
+      <button
+        class="rounded-full p-2 text-white transition-colors {isConnected
+          ? 'bg-destructive hover:bg-destructive/90'
+          : 'bg-primary hover:bg-primary/90'}"
+        on:click={isConnected ? leaveRoom : joinRoom}
+      >
+        {#if isConnected}
+          <LogOut size={16} />
+        {:else}
+          <LogIn size={16} />
+        {/if}
+      </button>
+    </div>
   {/if}
 
-  {#if !isCollapsed && !isFullscreen}
+  {#if !isMinimized && !isFullscreen}
     <div
       class="absolute right-0 bottom-0 h-4 w-4 cursor-se-resize"
       on:mousedown|stopPropagation={startResize}
