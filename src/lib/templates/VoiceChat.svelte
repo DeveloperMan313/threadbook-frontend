@@ -2,14 +2,26 @@
   import { getContext, onDestroy } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
-
-  import { Room } from 'livekit-client';
+  import { Room, RoomEvent } from 'livekit-client';
   import type {
     RemoteParticipant,
     RemoteTrack,
     RemoteTrackPublication,
     LocalTrack
   } from 'livekit-client';
+  import {
+    Mic,
+    MicOff,
+    Video,
+    VideoOff,
+    Users,
+    Maximize2,
+    Minimize2,
+    Volume2,
+    VolumeX,
+    LogIn,
+    LogOut
+  } from '@lucide/svelte';
 
   const { getCurrentThreadId } = getContext('threads') as {
     getCurrentThreadId: () => number | null;
@@ -22,42 +34,47 @@
   let isSelfMuted = false;
   let isOthersMuted = false;
   let isSelfVideoEnabled = true;
+
   let isMinimized = false;
+  let isCollapsed = false;
+  let isFullscreen = false;
 
   let participants: RemoteParticipant[] = [];
   let volumes: Record<string, number> = {};
   let audioElements = new SvelteMap<string, HTMLAudioElement>();
   let localVideoEl: HTMLVideoElement | null = null;
-
-  // UI drag & resize state
-  let isDragging = false;
-  let isResizing = false;
-  let dragStartX = 0;
-  let dragStartY = 0;
-  let initialX = 0;
-  let initialY = 0;
-  let initialWidth = 320;
-  let initialHeight = 400;
-
-  // Позиция по умолчанию - справа с отступом
-  let position = { x: 0, y: 0 };
-  let dimensions = { width: 320, height: 400 };
-
-  const isBrowser = typeof document !== 'undefined';
   let pendingLocalVideoTrack: LocalTrack | null = null;
 
-  // Вычисляем позицию справа при монтировании
+  let pinnedParticipant: string | null = null;
+  let activeSpeakerId: string | null = null;
+
+  // --- UI drag & resize state ---
+  let isDragging = false;
+  let isResizing = false;
+  let dragStart = { x: 0, y: 0 };
+  let initialX = 0;
+  let initialY = 0;
+  let initialWidth = 360;
+  let initialHeight = 420;
+
+  let position = { x: 0, y: 0 };
+  let dimensions = { width: 360, height: 420 };
+
+  // --- Volume UI state ---
+  let showVolumeSliderFor: Record<string, boolean> = {};
+  let volumeDisplayFor: Record<string, { value: string; timeout?: ReturnType<typeof setTimeout> }> =
+    {};
+
+  const isBrowser = typeof document !== 'undefined';
+
   function setDefaultPosition() {
     if (isBrowser) {
-      position.x = window.innerWidth - dimensions.width - 16; // 16px отступ от правого края
-      position.y = 80; // 80px от верхнего края (под навбаром)
+      position.x = window.innerWidth - dimensions.width - 16;
+      position.y = 80;
     }
   }
 
-  // Вызываем при инициализации
-  if (isBrowser) {
-    setDefaultPosition();
-  }
+  if (isBrowser) setDefaultPosition();
 
   async function getToken(threadId: number) {
     const res = await fetch('/api/thread/sfu/token', {
@@ -65,69 +82,64 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ thread_id: threadId })
     });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Failed to get token');
-    }
-
+    if (!res.ok)
+      throw new Error((await res.json().catch(() => ({}))).error || 'Failed to get token');
     const { token } = await res.json();
     return token;
   }
 
-  function attachAudioTrack(track: RemoteTrack, participantId: string) {
+  function attachAudioTrack(track: RemoteTrack, id: string) {
     if (!isBrowser) return;
-    const element = track.attach() as HTMLAudioElement;
-    element.dataset.participant = participantId;
-    element.muted = isOthersMuted;
-    element.volume = volumes[participantId] ?? 1;
-    element.style.display = 'none';
-    document.body.appendChild(element);
-    audioElements.set(participantId, element);
+    const el = track.attach() as HTMLAudioElement;
+    el.dataset.participant = id;
+    el.muted = isOthersMuted;
+    el.volume = volumes[id] ?? 1;
+    el.style.display = 'none';
+    document.body.appendChild(el);
+    audioElements.set(id, el);
   }
 
-  function attachVideoTrack(track: RemoteTrack, participantId: string) {
+  function attachVideoTrack(track: RemoteTrack, id: string) {
     if (!isBrowser) return;
-
-    const element = track.attach() as HTMLVideoElement;
-    element.autoplay = true;
-    element.playsInline = true;
-    element.muted = true;
-
-    const tryAttach = () => {
-      const container = document.querySelector(
-        `.video-container[data-participant="${participantId}"]`
-      ) as HTMLElement | null;
-
-      if (container) {
-        container.innerHTML = '';
-        container.appendChild(element);
-      } else {
-        setTimeout(() => {
-          tryAttach();
-        }, 100);
-      }
-    };
-
-    tryAttach();
-  }
-
-  function detachTrack(participantId: string) {
-    if (!isBrowser) return;
-    const audioEl = audioElements.get(participantId);
-    if (audioEl) {
-      audioEl.remove();
-      audioElements.delete(participantId);
+    const el = track.attach() as HTMLVideoElement;
+    el.autoplay = true;
+    el.playsInline = true;
+    el.muted = id === room?.localParticipant.identity;
+    const container = document.querySelector(`.video-container[data-participant="${id}"]`);
+    if (container) {
+      container.innerHTML = '';
+      container.appendChild(el);
     }
   }
 
-  function updateVolume(participantId: string, volume: number) {
-    volumes = { ...volumes, [participantId]: volume };
-    if (!isBrowser) return;
-    const el = audioElements.get(participantId);
+  function detachTrack(pid: string) {
+    const el = audioElements.get(pid);
     if (el) {
-      el.volume = volume;
+      el.remove();
+      audioElements.delete(pid);
     }
+    const container = document.querySelector(`.video-container[data-participant="${pid}"]`);
+    if (container) container.innerHTML = '';
+  }
+
+  function updateVolume(id: string, vol: number) {
+    volumes = { ...volumes, [id]: vol };
+    const el = audioElements.get(id);
+    if (el) el.volume = vol;
+
+    // Показываем значение на 1.5 сек
+    if (volumeDisplayFor[id]?.timeout) clearTimeout(volumeDisplayFor[id].timeout);
+    volumeDisplayFor[id] = {
+      value: `${Math.round(vol * 100)}%`,
+      timeout: setTimeout(() => {
+        volumeDisplayFor = { ...volumeDisplayFor, [id]: { value: '', timeout: undefined } };
+      }, 1500)
+    };
+  }
+
+  function toggleVolumeSlider(id: string, e: MouseEvent) {
+    e.preventDefault();
+    showVolumeSliderFor = { ...showVolumeSliderFor, [id]: !showVolumeSliderFor[id] };
   }
 
   async function toggleSelfMute() {
@@ -137,11 +149,8 @@
   }
 
   function toggleOthersMute() {
-    if (!isBrowser) return;
     isOthersMuted = !isOthersMuted;
-    audioElements.forEach((el) => {
-      el.muted = isOthersMuted;
-    });
+    audioElements.forEach((el) => (el.muted = isOthersMuted));
   }
 
   async function toggleSelfVideo() {
@@ -150,66 +159,129 @@
     await room.localParticipant.setCameraEnabled(isSelfVideoEnabled);
   }
 
+  function toggleCollapse() {
+    isCollapsed = !isCollapsed;
+  }
+
   function toggleMinimize() {
     isMinimized = !isMinimized;
   }
 
-  function handleParticipant(participant: RemoteParticipant) {
-    // Для будущих треков (новые публикации от этого участника)
-    participant.on('trackPublished', (pub: RemoteTrackPublication) => {
-      const onSubscribed = (track: RemoteTrack) => {
-        if (track.kind === 'audio') {
-          attachAudioTrack(track, participant.identity);
-        } else if (track.kind === 'video') {
-          attachVideoTrack(track, participant.identity);
-        }
-        pub.off('subscribed', onSubscribed);
-      };
-
-      if (pub.isSubscribed && pub.track) {
-        onSubscribed(pub.track);
-      } else {
-        pub.on('subscribed', onSubscribed);
-        pub.setSubscribed(true);
-      }
-
-      pub.on('unsubscribed', () => {
-        detachTrack(participant.identity);
-      });
-    });
-
-    // Для уже существующих треков (на момент подключения)
-    participant.trackPublications.forEach((pub) => {
-      const onSubscribed = (track: RemoteTrack) => {
-        if (track.kind === 'audio') {
-          attachAudioTrack(track, participant.identity);
-        } else if (track.kind === 'video') {
-          attachVideoTrack(track, participant.identity);
-        }
-        pub.off('subscribed', onSubscribed);
-      };
-
-      if (pub.isSubscribed && pub.track) {
-        onSubscribed(pub.track);
-      } else {
-        pub.on('subscribed', onSubscribed);
-        pub.setSubscribed(true);
-      }
-    });
-
-    if (!participants.some((p) => p.identity === participant.identity)) {
-      participants = [...participants, participant];
+  function toggleFullscreen() {
+    isFullscreen = !isFullscreen;
+    if (isFullscreen) {
+      position = { x: 0, y: 0 };
+      dimensions = { width: window.innerWidth, height: window.innerHeight };
+    } else {
+      dimensions = { width: 360, height: 420 };
+      setDefaultPosition();
     }
   }
 
-  // Drag handlers
+  function handleParticipant(p: RemoteParticipant) {
+    const subscribe = (track: RemoteTrack) => {
+      if (track.kind === 'audio') attachAudioTrack(track, p.identity);
+      else attachVideoTrack(track, p.identity);
+    };
+
+    p.on(RoomEvent.TrackSubscribed, subscribe);
+    p.on(RoomEvent.TrackUnsubscribed, () => detachTrack(p.identity));
+
+    if (!participants.find((x) => x.identity === p.identity)) participants = [...participants, p];
+  }
+
+  async function joinRoom() {
+    if (isConnected) return;
+    if (!PUBLIC_LIVEKIT_ORIGIN) {
+      error = 'No LiveKit origin configured';
+      return;
+    }
+
+    try {
+      const threadId = getCurrentThreadId();
+      if (!threadId) throw new Error('No thread ID');
+      const token = await getToken(threadId);
+
+      room = new Room();
+
+      room.on(RoomEvent.ParticipantConnected, handleParticipant);
+      room.on(RoomEvent.ParticipantDisconnected, (p) => {
+        participants = participants.filter((x) => x.identity !== p.identity);
+        detachTrack(p.identity);
+        delete showVolumeSliderFor[p.identity];
+        delete volumeDisplayFor[p.identity];
+        delete volumes[p.identity];
+      });
+
+      room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
+        activeSpeakerId = speakers.length > 0 ? speakers[0].identity : null;
+      });
+
+      room.on(RoomEvent.Disconnected, leaveRoom);
+
+      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
+
+      const tracks = await room.localParticipant.createTracks({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: isSelfVideoEnabled
+      });
+
+      await Promise.all(tracks.map((t) => room!.localParticipant.publishTrack(t)));
+
+      const v = tracks.find((t) => t.kind === 'video');
+      if (v) {
+        pendingLocalVideoTrack = v;
+        if (localVideoEl) v.attach(localVideoEl);
+      }
+
+      room.remoteParticipants.forEach(handleParticipant);
+      isConnected = true;
+    } catch (e: any) {
+      error = e.message || 'Connection failed';
+      leaveRoom();
+    }
+  }
+
+  function leaveRoom() {
+    if (room) {
+      room.removeAllListeners();
+      room.disconnect();
+      room = null;
+    }
+    participants = [];
+    audioElements.forEach((a) => a.remove());
+    audioElements.clear();
+    if (localVideoEl) {
+      localVideoEl.srcObject = null;
+      localVideoEl.load();
+    }
+    pendingLocalVideoTrack = null;
+
+    isConnected = false;
+    isSelfMuted = false;
+    isSelfVideoEnabled = true;
+    isOthersMuted = false;
+    volumes = {};
+    showVolumeSliderFor = {};
+    volumeDisplayFor = {};
+  }
+
+  function handlePin(id: string) {
+    pinnedParticipant = pinnedParticipant === id ? null : id;
+  }
+
+  $: if (localVideoEl && pendingLocalVideoTrack) {
+    pendingLocalVideoTrack.attach(localVideoEl);
+    pendingLocalVideoTrack = null;
+  }
+
+  // === Drag handlers ===
   function startDrag(e: MouseEvent) {
+    if (isFullscreen) return;
     isDragging = true;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
+    dragStart = { x: e.clientX - position.x, y: e.clientY - position.y };
     initialX = position.x;
     initialY = position.y;
-
     document.addEventListener('mousemove', handleDrag);
     document.addEventListener('mouseup', stopDrag);
     e.preventDefault();
@@ -217,12 +289,8 @@
 
   function handleDrag(e: MouseEvent) {
     if (!isDragging) return;
-
-    const deltaX = e.clientX - dragStartX;
-    const deltaY = e.clientY - dragStartY;
-
-    position.x = Math.max(0, Math.min(window.innerWidth - dimensions.width, initialX + deltaX));
-    position.y = Math.max(0, Math.min(window.innerHeight - dimensions.height, initialY + deltaY));
+    position.x = Math.min(window.innerWidth - 100, Math.max(0, e.clientX - dragStart.x));
+    position.y = Math.min(window.innerHeight - 50, Math.max(0, e.clientY - dragStart.y));
   }
 
   function stopDrag() {
@@ -231,14 +299,13 @@
     document.removeEventListener('mouseup', stopDrag);
   }
 
-  // Resize handlers
+  // === Resize handlers ===
   function startResize(e: MouseEvent) {
+    if (isFullscreen) return;
     isResizing = true;
-    dragStartX = e.clientX;
-    dragStartY = e.clientY;
+    dragStart = { x: e.clientX, y: e.clientY };
     initialWidth = dimensions.width;
     initialHeight = dimensions.height;
-
     document.addEventListener('mousemove', handleResize);
     document.addEventListener('mouseup', stopResize);
     e.preventDefault();
@@ -247,12 +314,15 @@
 
   function handleResize(e: MouseEvent) {
     if (!isResizing) return;
+    const deltaX = e.clientX - dragStart.x;
+    const deltaY = e.clientY - dragStart.y;
 
-    const deltaX = e.clientX - dragStartX;
-    const deltaY = e.clientY - dragStartY;
-
-    dimensions.width = Math.max(280, Math.min(600, initialWidth + deltaX));
+    dimensions.width = Math.max(280, Math.min(800, initialWidth + deltaX));
     dimensions.height = Math.max(200, Math.min(800, initialHeight + deltaY));
+
+    // Пересчитываем позицию при ресайзе, чтобы окно не ушло за край
+    position.x = Math.min(position.x, window.innerWidth - dimensions.width);
+    position.y = Math.min(position.y, window.innerHeight - dimensions.height);
   }
 
   function stopResize() {
@@ -261,348 +331,202 @@
     document.removeEventListener('mouseup', stopResize);
   }
 
-  async function joinRoom() {
-    if (!isBrowser) return;
-    try {
-      const token = await getToken(getCurrentThreadId()!);
-      room = new Room();
-
-      room.on('participantConnected', (p) => handleParticipant(p));
-      room.on('participantDisconnected', (p) => {
-        participants = participants.filter((part) => part.identity !== p.identity);
-        detachTrack(p.identity);
-      });
-
-      room.on('connected', () => {
-        room!.remoteParticipants.forEach((p) => handleParticipant(p));
-      });
-
-      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
-
-      // Создаем треки с правильными настройками для подавления эха
-      const tracks = await room.localParticipant.createTracks({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          googEchoCancellation: true,
-          googAutoGainControl: true,
-          googNoiseSuppression: true,
-          sampleRate: 48000,
-          channelCount: 1
-        },
-        video: isSelfVideoEnabled
-      });
-
-      // Публикуем треки
-      await Promise.all(tracks.map((track) => room!.localParticipant.publishTrack(track)));
-
-      // Находим видео трек для локального превью
-      const videoTrack = tracks.find((track) => track.kind === 'video');
-      if (videoTrack) {
-        pendingLocalVideoTrack = videoTrack;
-        if (localVideoEl) {
-          videoTrack.attach(localVideoEl);
-        }
-      }
-
-      isConnected = true;
-      error = '';
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      error = err.message || 'Connection failed';
-      console.error('Join error:', err);
-      leaveRoom();
-    }
-  }
-
-  function leaveRoom() {
-    if (!isBrowser) return;
-
-    if (room) {
-      room.disconnect();
-      room = null;
-    }
-    participants = [];
-    audioElements.forEach((el) => el.remove());
-    audioElements.clear();
-    document.querySelectorAll('.video-container').forEach((el) => {
-      (el as HTMLElement).innerHTML = '';
-    });
-    if (localVideoEl) {
-      localVideoEl.srcObject = null;
-      localVideoEl.load();
-    }
-    isConnected = false;
-    isSelfMuted = false;
-    isOthersMuted = false;
-    isSelfVideoEnabled = true;
-    volumes = {};
-  }
-
-  $: {
-    if (localVideoEl && pendingLocalVideoTrack) {
-      pendingLocalVideoTrack.attach(localVideoEl);
-      pendingLocalVideoTrack = null;
-    }
-  }
-
   onDestroy(() => {
     leaveRoom();
+    document.removeEventListener('mousemove', handleDrag);
+    document.removeEventListener('mouseup', stopDrag);
+    document.removeEventListener('mousemove', handleResize);
+    document.removeEventListener('mouseup', stopResize);
   });
 </script>
 
-<svelte:window
-  on:mousemove={(e) => {
-    if (isDragging) handleDrag(e);
-    if (isResizing) handleResize(e);
-  }}
-  on:mouseup={() => {
-    if (isDragging) stopDrag();
-    if (isResizing) stopResize();
-  }}
-/>
-
 <div
-  class="fixed rounded-lg border-2 border-border bg-background text-sm shadow-lg"
-  style="left: {position.x}px; top: {position.y}px; width: {dimensions.width}px; height: {isMinimized
-    ? 'auto'
-    : dimensions.height + 'px'}; z-index: 50;"
+  class="fixed overflow-hidden rounded-xl border border-border bg-background text-sm shadow-xl transition-all duration-300"
+  style="
+    left: {position.x}px;
+    top: {position.y}px;
+    width: {dimensions.width}px;
+    height: {isCollapsed ? 'auto' : dimensions.height + 'px'};
+    z-index: 100;
+  "
 >
-  <!-- Header with drag handle and minimize button -->
+  <!-- Header -->
   <div
-    role="application"
-    aria-label="Voice chat window controls"
-    class="-m-3 mb-3 flex cursor-move items-center justify-between border-b border-border p-3"
+    role="toolbar"
+    class="flex cursor-move items-center justify-between border-b border-border px-3 py-2 select-none"
     on:mousedown={startDrag}
   >
-    <h3 class="text-xl font-medium">Голосовой чат</h3>
-    <button
-      class="cursor-pointer rounded p-1 transition-colors duration-200 hover:bg-accent"
-      on:click={toggleMinimize}
-      aria-label={isMinimized ? 'Развернуть окно' : 'Свернуть окно'}
-    >
-      {#if isMinimized}
-        <!-- Expand icon -->
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path
-            d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"
-          />
-        </svg>
-      {:else}
-        <!-- Minimize icon -->
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path
-            d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"
-          />
-        </svg>
-      {/if}
-    </button>
+    <h3 class="text-lg font-semibold">Voice Chat</h3>
+    <div class="flex items-center gap-1">
+      <button
+        class="rounded p-1 hover:bg-accent"
+        on:click|stopPropagation={toggleFullscreen}
+        title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+      >
+        {#if isFullscreen}
+          <Minimize2 size={18} />
+        {:else}
+          <Maximize2 size={18} />
+        {/if}
+      </button>
+      <button
+        class="rounded p-1 hover:bg-accent"
+        on:click|stopPropagation={toggleMinimize}
+        title="Minimize"
+      >
+        <Users size={18} />
+      </button>
+      <button
+        class="rounded p-1 hover:bg-accent"
+        on:click|stopPropagation={toggleCollapse}
+        title={isCollapsed ? 'Expand' : 'Collapse'}
+      >
+        {#if isCollapsed}
+          <Maximize2 size={18} />
+        {:else}
+          <Minimize2 size={18} />
+        {/if}
+      </button>
+    </div>
   </div>
 
   {#if error}
-    <p class="mb-2 text-sm text-destructive">{error}</p>
+    <p class="p-2 text-sm text-destructive">{error}</p>
   {/if}
 
-  {#if !isMinimized}
-    <!-- Main content -->
-    <div class="flex flex-col" style="height: calc(100% - 80px);">
+  {#if !isCollapsed}
+    <div class="flex h-[calc(100%-50px)] flex-col">
       {#if isConnected}
-        <!-- Local video preview -->
-        <div class="mb-3 overflow-hidden rounded bg-black">
-          <video
-            bind:this={localVideoEl}
-            class="block h-24 w-full object-cover"
-            autoplay
-            playsinline
-            muted
-          ></video>
-        </div>
-      {/if}
-
-      <!-- Participants grid - horizontal layout -->
-      <div class="mb-3 flex-1 overflow-auto">
-        <div class="flex flex-row flex-wrap gap-2">
+        <div class="relative grid flex-1 grid-cols-2 gap-2 overflow-auto p-2">
           {#each participants as p (p.sid)}
             {#if room && p.identity !== room.localParticipant.identity}
-              <div class="flex w-32 flex-col items-center gap-1 rounded bg-muted p-2">
+              <div
+                class="relative cursor-pointer overflow-hidden rounded-lg bg-black transition-all duration-300 hover:ring-2 hover:ring-accent
+                  {activeSpeakerId === p.identity ? 'scale-[1.02] ring-2 ring-primary' : ''}"
+                on:click={() => handlePin(p.identity)}
+                on:contextmenu|preventDefault={(e) => toggleVolumeSlider(p.identity, e)}
+                data-participant={p.identity}
+              >
                 <div
-                  class="video-container h-20 w-full overflow-hidden rounded bg-black"
+                  class="video-container h-24 w-full sm:h-32 md:h-40"
                   data-participant={p.identity}
                 ></div>
-                <div class="flex w-full flex-col items-center gap-1">
-                  <span
-                    class="w-full overflow-hidden text-center text-xs text-ellipsis whitespace-nowrap"
-                    >{p.identity}</span
+
+                <span class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
+                  >{p.identity}</span
+                >
+
+                <!-- Volume slider (right-click to show) -->
+                {#if showVolumeSliderFor[p.identity]}
+                  <div
+                    class="absolute right-0 bottom-6 left-0 rounded bg-black/80 p-1"
+                    on:click|stopPropagation
                   >
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    class="h-2 w-full"
-                    bind:value={volumes[p.identity]}
-                    on:input={(e) =>
-                      updateVolume(p.identity, parseFloat((e.target as HTMLInputElement).value))}
-                  />
-                </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      class="h-2 w-full cursor-pointer accent-primary"
+                      value={volumes[p.identity] ?? 1}
+                      on:input={(e) => {
+                        const val = parseFloat((e.target as HTMLInputElement).value);
+                        updateVolume(p.identity, val);
+                      }}
+                    />
+                    {#if volumeDisplayFor[p.identity]?.value}
+                      <span
+                        class="absolute bottom-full left-1/2 -translate-x-1/2 rounded bg-black/90 px-2 py-1 text-xs whitespace-nowrap text-white"
+                        >{volumeDisplayFor[p.identity].value}</span
+                      >
+                    {/if}
+                  </div>
+                {/if}
               </div>
             {/if}
           {/each}
-        </div>
-      </div>
 
-      <!-- Control buttons at bottom -->
-      <div class="flex justify-center gap-2 border-t border-border pt-3">
+          <!-- Local video -->
+          <div class="relative overflow-hidden rounded-lg bg-black">
+            <video
+              bind:this={localVideoEl}
+              autoplay
+              playsinline
+              muted
+              class="h-24 w-full object-cover sm:h-32 md:h-40"
+            ></video>
+            <span class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
+              >You</span
+            >
+          </div>
+        </div>
+      {/if}
+
+      <!-- Controls -->
+      <div class="flex flex-wrap justify-center gap-3 border-t border-border py-2">
         <button
-          class="flex cursor-pointer flex-col items-center gap-1 rounded p-2 transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 {isSelfMuted
-            ? 'text-destructive-foreground bg-destructive hover:bg-destructive/90'
-            : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
+          class="rounded-full p-3 transition-colors {isSelfMuted
+            ? 'bg-destructive text-white hover:bg-destructive/90'
+            : 'bg-secondary hover:bg-secondary/80'}"
           on:click={toggleSelfMute}
           disabled={!isConnected}
-          title={isSelfMuted ? 'Размутить себя' : 'Заглушить себя'}
         >
           {#if isSelfMuted}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="m12 8-6 6" /><path d="m18 8-6 6" /><path d="M2 2l20 20" />
-            </svg>
+            <MicOff size={20} />
           {:else}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path
-                d="M19 10v2a7 7 0 0 1-14 0v-2"
-              /><path d="M12 19v3" />
-            </svg>
+            <Mic size={20} />
           {/if}
-          <span class="text-xs">{isSelfMuted ? 'Вкл' : 'Выкл'}</span>
         </button>
 
         <button
-          class="flex cursor-pointer flex-col items-center gap-1 rounded p-2 transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 {isOthersMuted
-            ? 'text-destructive-foreground bg-destructive hover:bg-destructive/90'
-            : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
+          class="rounded-full p-3 transition-colors {isOthersMuted
+            ? 'bg-destructive text-white hover:bg-destructive/90'
+            : 'bg-secondary hover:bg-secondary/80'}"
           on:click={toggleOthersMute}
           disabled={!isConnected}
-          title={isOthersMuted ? 'Включить других' : 'Заглушить всех'}
         >
           {#if isOthersMuted}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M17 6h4" /><path d="M21 10v4" /><path d="M17 18h4" /><path
-                d="M21 2l-4 4"
-              /><path d="M21 22l-4-4" />
-              <path d="M12 8v8a4 4 0 0 0 4 4h1a4 4 0 0 0 4-4V8a4 4 0 0 0-4-4h-1a4 4 0 0 0-4 4Z" />
-            </svg>
+            <VolumeX size={20} />
           {:else}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path
-                d="M19 10v2a7 7 0 0 1-14 0v-2"
-              />
-              <path d="M12 19v3" />
-            </svg>
+            <Volume2 size={20} />
           {/if}
-          <span class="text-xs">Все</span>
         </button>
 
         <button
-          class="flex cursor-pointer flex-col items-center gap-1 rounded p-2 transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 {!isSelfVideoEnabled
-            ? 'text-destructive-foreground bg-destructive hover:bg-destructive/90'
-            : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
+          class="rounded-full p-3 transition-colors {!isSelfVideoEnabled
+            ? 'bg-destructive text-white hover:bg-destructive/90'
+            : 'bg-secondary hover:bg-secondary/80'}"
           on:click={toggleSelfVideo}
           disabled={!isConnected}
-          title={isSelfVideoEnabled ? 'Выключить видео' : 'Включить видео'}
         >
           {#if isSelfVideoEnabled}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="m22 8-6 4 6 4V8Z" /><rect x="2" y="6" width="14" height="12" rx="2" ry="2" />
-            </svg>
+            <Video size={20} />
           {:else}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="m2 2 20 20" /><path d="M22 8v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-2.34" />
-              <path d="m16 10 3-3-3-3v6Z" /><path d="M2 8v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
-            </svg>
+            <VideoOff size={20} />
           {/if}
-          <span class="text-xs">Видео</span>
         </button>
 
         <button
-          class="flex cursor-pointer flex-col items-center gap-1 rounded p-2 text-primary-foreground transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 {isConnected
+          class="rounded-full p-3 text-white transition-colors {isConnected
             ? 'bg-destructive hover:bg-destructive/90'
             : 'bg-primary hover:bg-primary/90'}"
           on:click={isConnected ? leaveRoom : joinRoom}
-          disabled={error !== ''}
-          title={isConnected ? 'Выйти' : 'Войти'}
         >
           {#if isConnected}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M10 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4" /><path d="m17 16 4-4-4-4" /><path
-                d="M21 12H9"
-              />
-            </svg>
+            <LogOut size={20} />
           {:else}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M22 12h-4" /><path d="M16 6l4 4-4 4" /><path d="M18 12h-8" />
-              <path d="M6 6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-4" />
-            </svg>
+            <LogIn size={20} />
           {/if}
-          <span class="text-xs">{isConnected ? 'Выйти' : 'Войти'}</span>
         </button>
       </div>
     </div>
-  {:else}
-    <!-- Minimized state - only buttons -->
-    <div class="flex justify-center gap-2">
-      <button
-        class="flex cursor-pointer flex-col items-center gap-1 rounded p-2 transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 {isSelfMuted
-          ? 'text-destructive-foreground bg-destructive hover:bg-destructive/90'
-          : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}"
-        on:click={toggleSelfMute}
-        disabled={!isConnected}
-        title={isSelfMuted ? 'Размутить себя' : 'Заглушить себя'}
-      >
-        {#if isSelfMuted}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="m12 8-6 6" /><path d="m18 8-6 6" /><path d="M2 2l20 20" />
-          </svg>
-        {:else}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path
-              d="M19 10v2a7 7 0 0 1-14 0v-2"
-            />
-            <path d="M12 19v3" />
-          </svg>
-        {/if}
-      </button>
-
-      <button
-        class="flex cursor-pointer flex-col items-center gap-1 rounded p-2 text-primary-foreground transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-50 {isConnected
-          ? 'bg-destructive hover:bg-destructive/90'
-          : 'bg-primary hover:bg-primary/90'}"
-        on:click={isConnected ? leaveRoom : joinRoom}
-        disabled={error !== ''}
-        title={isConnected ? 'Выйти' : 'Войти'}
-      >
-        {#if isConnected}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M10 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4" /><path d="m17 16 4-4-4-4" /><path
-              d="M21 12H9"
-            />
-          </svg>
-        {:else}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M22 12h-4" /><path d="M16 6l4 4-4 4" /><path d="M18 12h-8" />
-            <path d="M6 6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-4" />
-          </svg>
-        {/if}
-      </button>
-    </div>
   {/if}
 
-  <!-- Resize handle -->
-  {#if !isMinimized}
+  <!-- Resize handle (bottom-right) -->
+  {#if !isCollapsed && !isFullscreen}
     <div
-      role="slider"
-      aria-label="Resize voice chat window"
-      class="absolute right-0 bottom-0 h-3 w-3 cursor-se-resize"
-      on:mousedown={startResize}
+      class="absolute right-0 bottom-0 h-4 w-4 cursor-se-resize"
+      on:mousedown|stopPropagation={startResize}
     >
       <svg
         width="12"
@@ -610,22 +534,39 @@
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        class="absolute right-0 bottom-0 text-muted-foreground"
+        class="text-muted-foreground"
       >
-        <path d="m21 11-8-8-8 8" /><path d="M21 21h-8a8 8 0 0 1-8-8v0" />
+        <path d="m21 11-8-8-8 8" />
+        <path d="M21 21h-8a8 8 0 0 1-8-8v0" />
       </svg>
     </div>
   {/if}
 </div>
 
 <style>
-  /* Hide scrollbar for participants container */
-  .flex-1.overflow-auto::-webkit-scrollbar {
-    display: none;
+  video {
+    border-radius: 0.5rem;
   }
-
-  .flex-1.overflow-auto {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  .video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: currentColor;
+    cursor: pointer;
+  }
+  input[type='range']::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: currentColor;
+    cursor: pointer;
+    border: none;
   }
 </style>
