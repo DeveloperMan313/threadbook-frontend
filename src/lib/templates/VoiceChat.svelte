@@ -43,7 +43,6 @@
   let pinnedParticipant: string | null = null;
   let activeSpeakerId: string | null = null;
 
-  // --- UI drag & resize state ---
   let isDragging = false;
   let isResizing = false;
   let dragStart = { x: 0, y: 0 };
@@ -55,7 +54,6 @@
   let position = { x: 0, y: 0 };
   let dimensions = { width: 360, height: 420 };
 
-  // --- Volume UI state ---
   let showVolumeSliderFor: Record<string, boolean> = {};
   let volumeDisplayFor: Record<string, { value: string; timeout?: ReturnType<typeof setTimeout> }> =
     {};
@@ -155,6 +153,12 @@
 
   function toggleCollapse() {
     isCollapsed = !isCollapsed;
+    if (isCollapsed) {
+      dimensions.width = 360;
+      dimensions.height = 420;
+      setDefaultPosition();
+      isFullscreen = false;
+    }
   }
 
   function toggleMinimize() {
@@ -210,22 +214,28 @@
       room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
         activeSpeakerId = speakers.length > 0 ? speakers[0].identity : null;
       });
-
       room.on(RoomEvent.Disconnected, leaveRoom);
 
       await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
-      const tracks = await room.localParticipant.createTracks({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: isSelfVideoEnabled
-      });
+      const audioTrackPromise = room.localParticipant
+        .createTracks({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        })
+        .catch(() => []);
 
-      await Promise.all(tracks.map((t) => room!.localParticipant.publishTrack(t)));
+      const videoTrackPromise = isSelfVideoEnabled
+        ? room.localParticipant.createTracks({ video: true }).catch(() => [])
+        : Promise.resolve([]);
 
-      const v = tracks.find((t) => t.kind === 'video');
-      if (v) {
-        pendingLocalVideoTrack = v;
-        if (localVideoEl) v.attach(localVideoEl);
+      const [audioTracks, videoTracks] = await Promise.all([audioTrackPromise, videoTrackPromise]);
+      const allTracks = [...audioTracks, ...videoTracks];
+      await Promise.all(allTracks.map((track) => room!.localParticipant.publishTrack(track)));
+
+      const videoTrack = videoTracks.find((t) => t.kind === 'video');
+      if (videoTrack) {
+        pendingLocalVideoTrack = videoTrack;
+        if (localVideoEl) videoTrack.attach(localVideoEl);
       }
 
       room.remoteParticipants.forEach(handleParticipant);
@@ -269,7 +279,6 @@
     pendingLocalVideoTrack = null;
   }
 
-  // === Drag handlers ===
   function startDrag(e: MouseEvent) {
     if (isFullscreen) return;
     isDragging = true;
@@ -293,9 +302,8 @@
     document.removeEventListener('mouseup', stopDrag);
   }
 
-  // === Resize handlers ===
   function startResize(e: MouseEvent) {
-    if (isFullscreen) return;
+    if (isFullscreen || isCollapsed) return;
     isResizing = true;
     dragStart = { x: e.clientX, y: e.clientY };
     initialWidth = dimensions.width;
@@ -333,6 +341,11 @@
   });
 </script>
 
+{#if isConnected}
+  <video bind:this={localVideoEl} autoplay playsinline muted class="hidden" style="display: none"
+  ></video>
+{/if}
+
 <div
   class="fixed overflow-hidden rounded-xl border border-border bg-background text-sm shadow-xl transition-all duration-300"
   style="
@@ -343,7 +356,6 @@
     z-index: 100;
   "
 >
-  <!-- Header -->
   <div
     role="toolbar"
     class="flex cursor-move items-center justify-between border-b border-border px-3 py-2 select-none"
@@ -390,69 +402,72 @@
   {#if !isCollapsed}
     <div class="flex min-h-0 flex-1 flex-col">
       {#if isConnected}
-        <div class="relative grid flex-1 grid-cols-2 gap-2 overflow-auto p-2">
-          {#each participants as p (p.sid)}
-            {#if room && p.identity !== room.localParticipant.identity}
-              <div
-                class="relative aspect-video cursor-pointer overflow-hidden rounded-lg bg-black transition-all duration-300 hover:ring-2 hover:ring-accent
-                  {activeSpeakerId === p.identity ? 'scale-[1.02] ring-2 ring-primary' : ''}"
-                on:click={() => handlePin(p.identity)}
-                on:contextmenu|preventDefault={(e) => toggleVolumeSlider(p.identity, e)}
-                data-participant={p.identity}
-              >
-                <div class="video-container absolute inset-0" data-participant={p.identity}></div>
+        <div
+          class="relative mb-3 flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-black"
+        >
+          {#if localVideoEl && localVideoEl.srcObject}
+            <!-- Видео рендерится через attach(), но мы не вставляем его сюда -->
+            <div class="h-full w-full bg-black"></div>
+          {:else}
+            <span class="text-sm text-gray-400">
+              {isSelfVideoEnabled ? 'Camera off' : 'You'}
+            </span>
+          {/if}
+          <span class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
+            >You</span
+          >
+        </div>
 
-                <span class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white">
-                  {p.identity}
-                </span>
-
-                {#if showVolumeSliderFor[p.identity]}
+        <div class="mb-3 flex-1 overflow-auto">
+          <div class="flex flex-row flex-wrap justify-center gap-2">
+            {#each participants as p (p.sid)}
+              {#if room && p.identity !== room.localParticipant.identity}
+                <div class="flex w-24 flex-col items-center gap-1">
                   <div
-                    class="absolute right-0 bottom-6 left-0 rounded bg-black/80 p-1"
-                    on:click|stopPropagation
+                    class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg bg-black transition-all duration-300 hover:ring-2 hover:ring-accent
+                      {activeSpeakerId === p.identity ? 'scale-[1.02] ring-2 ring-primary' : ''}"
+                    on:click={() => handlePin(p.identity)}
+                    on:contextmenu|preventDefault={(e) => toggleVolumeSlider(p.identity, e)}
                   >
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      class="h-2 w-full cursor-pointer accent-primary"
-                      value={volumes[p.identity] ?? 1}
-                      on:input={(e) => {
-                        const val = parseFloat((e.target as HTMLInputElement).value);
-                        updateVolume(p.identity, val);
-                      }}
-                    />
-                    {#if volumeDisplayFor[p.identity]?.value}
-                      <span
-                        class="absolute bottom-full left-1/2 -translate-x-1/2 rounded bg-black/90 px-2 py-1 text-xs whitespace-nowrap text-white"
-                      >
-                        {volumeDisplayFor[p.identity].value}
-                      </span>
-                    {/if}
+                    <div
+                      class="video-container absolute inset-0"
+                      data-participant={p.identity}
+                    ></div>
+                    <span
+                      class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
+                    >
+                      {p.identity}
+                    </span>
                   </div>
-                {/if}
-              </div>
-            {/if}
-          {/each}
 
-          <!-- Local video — без ПКМ -->
-          <div class="relative aspect-video overflow-hidden rounded-lg bg-black">
-            <video
-              bind:this={localVideoEl}
-              autoplay
-              playsinline
-              muted
-              class="absolute inset-0 h-full w-full object-cover"
-            ></video>
-            <span class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
-              >You</span
-            >
+                  {#if showVolumeSliderFor[p.identity]}
+                    <div class="w-full rounded bg-black/30 p-1">
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        class="h-1.5 w-full cursor-pointer accent-primary"
+                        value={volumes[p.identity] ?? 1}
+                        on:input={(e) => {
+                          const val = parseFloat((e.target as HTMLInputElement).value);
+                          updateVolume(p.identity, val);
+                        }}
+                      />
+                      {#if volumeDisplayFor[p.identity]?.value}
+                        <span class="mt-0.5 block text-center text-[10px] text-white">
+                          {volumeDisplayFor[p.identity].value}
+                        </span>
+                      {/if}
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+            {/each}
           </div>
         </div>
       {/if}
 
-      <!-- Controls -->
       <div class="flex flex-wrap justify-center gap-3 border-t border-border py-2">
         <button
           class="rounded-full p-3 transition-colors {isSelfMuted
@@ -512,7 +527,6 @@
     </div>
   {/if}
 
-  <!-- Resize handle -->
   {#if !isCollapsed && !isFullscreen}
     <div
       class="absolute right-0 bottom-0 h-4 w-4 cursor-se-resize"
@@ -539,25 +553,19 @@
     aspect-ratio: 16 / 9;
   }
 
-  .video-container video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
   input[type='range']::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: currentColor;
     cursor: pointer;
   }
 
   input[type='range']::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: currentColor;
     cursor: pointer;
