@@ -17,7 +17,7 @@
     const usernameList = usernames.split(' ');
     isLoading = true;
     try {
-      // ThreadApi.inviteUsersToThread({ invitee_usernames: usernameList, thread_id: threadId });
+      ThreadApi.inviteUsersToThread({ invitee_usernames: usernameList, thread_id: threadId });
     } catch (error) {
       console.error('Failed to invite users to spool:', error);
     } finally {
