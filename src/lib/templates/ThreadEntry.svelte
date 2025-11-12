@@ -5,8 +5,10 @@
   import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
   import { getContext } from 'svelte';
   import Button from '$lib/components/ui/button/button.svelte';
+  import { UserPlus } from '@lucide/svelte';
+  import ModalInviteUsersToThread from './ModalInviteUsersToThread.svelte';
 
-  let { id, title, unreadCnt, mentionCnt }: ThreadProps = $props();
+  let { id, title, type, unreadCnt, mentionCnt }: ThreadProps = $props();
 
   const { setCurrentThreadId } = getContext('threads') as {
     setCurrentThreadId: { (id: number): void };
@@ -14,6 +16,7 @@
 
   let isThreadRenameModalOpen = $state(false);
   let isThreadCloseModalOpen = $state(false);
+  let isInviteUsersToThreadModalOpen = $state(false);
 
   const contextMenuEntries: Array<ContextMenuEntry> = [
     {
@@ -35,13 +38,18 @@
 
 <ContextMenu.Root>
   <ContextMenu.Trigger>
-    <Button
-      variant="outline"
-      class="flex h-6 w-full cursor-pointer items-center justify-between rounded border-none"
-      onclick={() => setCurrentThreadId(id)}
+    <div
+      class="group relative flex h-8 w-full cursor-pointer items-center justify-end overflow-visible rounded border-none p-0"
     >
-      <p class="truncate text-base">{title}</p>
-      <div class="flex items-center gap-2">
+      <Button
+        variant="outline"
+        class="absolute h-full w-full cursor-pointer p-0"
+        onclick={() => setCurrentThreadId(id)}
+        ><p class="w-full ps-3 text-start text-base">
+          {title}
+        </p></Button
+      >
+      <div class="flex h-full items-center gap-2">
         {#if mentionCnt > 0}
           <p
             class="flex h-4 w-4 items-center justify-center rounded bg-emerald-400 text-xs text-white"
@@ -52,8 +60,19 @@
         {#if unreadCnt > 0}
           <p class="text-sm text-gray-600">{unreadCnt}</p>
         {/if}
+        {#if type == 'private'}
+          <Button
+            variant="ghost"
+            class="z-10 aspect-square h-full cursor-pointer opacity-0 group-hover:opacity-100"
+            onclick={() => {
+              isInviteUsersToThreadModalOpen = true;
+            }}
+          >
+            <UserPlus />
+          </Button>
+        {/if}
       </div>
-    </Button>
+    </div>
   </ContextMenu.Trigger>
   <ContextMenu.Content class="min-w-[10rem]">
     {#each contextMenuEntries as entry (entry.label)}
@@ -68,3 +87,8 @@
 </ContextMenu.Root>
 <ModalThreadRename threadId={id} threadTitle={title} bind:isOpen={isThreadRenameModalOpen} />
 <ModalThreadClose threadId={id} threadTitle={title} bind:isOpen={isThreadCloseModalOpen} />
+<ModalInviteUsersToThread
+  threadId={id}
+  threadTitle={title}
+  bind:isOpen={isInviteUsersToThreadModalOpen}
+/>

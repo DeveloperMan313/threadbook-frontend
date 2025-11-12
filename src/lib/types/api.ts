@@ -58,6 +58,11 @@ export interface InviteUsersToSpoolRequest {
   member_usernames: Array<string>;
 }
 
+export interface InviteUsersToThreadRequest {
+  thread_id: number;
+  invitee_usernames: Array<string>;
+}
+
 export interface CloseThreadRequest {
   id: number;
 }

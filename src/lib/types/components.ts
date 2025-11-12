@@ -55,6 +55,12 @@ export interface ModalInviteUsersToSpool {
   isOpen: boolean; // bindable
 }
 
+export interface ModalInviteUsersToThread {
+  threadId: number;
+  threadTitle: string;
+  isOpen: boolean; // bindable
+}
+
 export interface ModalSpoolLeaveProps {
   spoolId: number;
   spoolName: string;

@@ -6,7 +6,8 @@ import type {
   UpdateThreadRequest,
   ThreadProps,
   GetCentrifugeTokensResponse,
-  GetCentrifugeTokensRequest
+  GetCentrifugeTokensRequest,
+  InviteUsersToThreadRequest
 } from '$lib/types';
 
 const MockGetSpoolThreads: Array<ThreadProps> = [
@@ -129,5 +130,16 @@ export const ThreadApi = {
         headers: {}
       }
     );
+  },
+
+  /**
+   * Invite users to thread
+   * @param {InviteUsersToThreadRequest} request - request object with thread_id and username list
+   */
+  async inviteUsersToThread(request: InviteUsersToThreadRequest) {
+    return ApiClient.fetch('/thread/invite', {
+      method: 'POST',
+      body: JSON.stringify(request)
+    });
   }
 };
