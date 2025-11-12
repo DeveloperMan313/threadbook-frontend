@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { SpoolProps } from '$lib/types';
+  import logo from '$lib/assets/icons/logo.svg';
   import usersIcon from '$lib/assets/icons/users.svg';
   import threadsIcon from '$lib/assets/icons/threads.svg';
   import { resolve } from '$app/paths';
@@ -9,7 +10,11 @@
 </script>
 
 <a class="h-[26rem] w-64 overflow-hidden rounded-2xl no-underline" href={resolve(`/spools/${id}`)}>
-  <img class="h-64 w-64" src={ImageApi.getSpoolBannerURL(banner_link)} alt={name} />
+  {#if banner_link}
+    <img class="h-64 w-64" src={ImageApi.getSpoolBannerURL(banner_link)} alt={name} />
+  {:else}
+    <img class="h-64 w-64" src={logo} alt="logo" />
+  {/if}
   <div class="flex h-40 w-full flex-col gap-3 bg-background p-3">
     <p class="text-xl font-medium">{name}</p>
     <div class="flex items-center gap-3">

@@ -75,12 +75,14 @@ export const SpoolApi = {
 
   /**
    * Create a new spool
-   * @param {CreateSpoolRequest} request - request object with name and banner file
+   * @param {CreateSpoolRequest} request - request object with name and optional banner file
    */
   async createSpool(request: CreateSpoolRequest) {
     const formData = new FormData();
     formData.append('name', request.name);
-    formData.append('banner', request.banner);
+    if (request.banner) {
+      formData.append('banner', request.banner);
+    }
 
     return ApiClient.fetchJSON('/spool', {
       method: 'POST',

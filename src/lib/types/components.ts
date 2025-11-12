@@ -95,7 +95,7 @@ export interface SpoolProps {
   id: number;
   name: string;
   is_creator: boolean;
-  banner_link: string;
+  banner_link?: string;
   description: string; // unimplemented
   members: number; // unimplemented
   threads: number; // unimplemented

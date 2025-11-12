@@ -12,12 +12,12 @@
   let { isOpen = $bindable(false) }: ModalSpoolCreateProps = $props();
 
   let spoolName = $state('');
-  let bannerFile = $state<File | null>(null);
+  let bannerFile = $state<File | undefined>(undefined);
   let nameIsValid = $state(false);
   let isLoading = $state(false);
 
   const onCreateClick = async () => {
-    if (!nameIsValid || !bannerFile) return;
+    if (!nameIsValid) return;
 
     isLoading = true;
     try {
@@ -30,7 +30,7 @@
       isOpen = false;
 
       spoolName = '';
-      bannerFile = null;
+      bannerFile = undefined;
       nameIsValid = false;
 
       invalidate('/api/spool/user');
@@ -55,7 +55,7 @@
   $effect(() => {
     if (isOpen) {
       spoolName = '';
-      bannerFile = null;
+      bannerFile = undefined;
       nameIsValid = false;
       isLoading = false;
     }
@@ -90,11 +90,7 @@
       <Button variant="outline" class="cursor-pointer" onclick={onCancel} disabled={isLoading}>
         Cancel
       </Button>
-      <Button
-        class="cursor-pointer"
-        onclick={onCreateClick}
-        disabled={!nameIsValid || !bannerFile || isLoading}
-      >
+      <Button class="cursor-pointer" onclick={onCreateClick} disabled={!nameIsValid || isLoading}>
         {#if isLoading}
           Creating...
         {:else}

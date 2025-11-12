@@ -102,7 +102,7 @@ export interface GetCentrifugeTokensResponse {
 
 export interface CreateSpoolRequest {
   name: string;
-  banner: File;
+  banner?: File;
 }
 
 export interface GetProfilesRequest {
