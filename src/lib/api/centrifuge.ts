@@ -97,7 +97,12 @@ export class CentrifugeClient {
   }
 
   public async getSpoolTokens(spool_id: number): Promise<void> {
-    this.tokens = await ThreadApi.getCentrifugeTokens({ spool_id });
+    const fetchedTokens = await ThreadApi.getCentrifugeTokens({ spool_id });
+    if (!this.tokens) {
+      this.tokens = fetchedTokens;
+      return;
+    }
+    this.tokens.ChannelTokens = { ...this.tokens.ChannelTokens, ...fetchedTokens.ChannelTokens };
   }
 
   public addToken(channel: string, token: string): void {
