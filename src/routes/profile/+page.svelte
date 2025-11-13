@@ -1,12 +1,12 @@
 <script lang="ts">
   import { ImageApi, ProfileApi } from '$lib/api';
-  import * as Avatar from '$lib/components/ui/avatar/index.js';
   import Button from '$lib/components/ui/button/button.svelte';
   import Input from '$lib/components/ui/input/input.svelte';
   import Label from '$lib/components/ui/label/label.svelte';
   import InputField from '$lib/templates/InputField.svelte';
   import ModalLogOut from '$lib/templates/ModalLogOut.svelte';
   import Navbar from '$lib/templates/Navbar.svelte';
+  import UserAvatar from '$lib/templates/UserAvatar.svelte';
   import type { UserProfileFull } from '$lib/types';
   import { userProfile } from '$lib/userProfile';
   import { nicknameGetError } from '$lib/validation';
@@ -58,16 +58,14 @@
 <div class="flex w-full flex-col items-center pt-32 pb-8">
   <div class="flex w-96 flex-col items-start gap-8 rounded-2xl bg-background p-8">
     <h2 class="w-full scroll-m-20 border-b pb-2 text-3xl font-semibold">Profile settings</h2>
-    <Avatar.Root class="size-40 self-center">
-      <Label class="contents cursor-pointer" for="avatar">
-        <Avatar.Image
-          id="avatar-preview"
-          src={avatarLocal || ImageApi.getUserAvatarURL(profile.avatar_link)}
-          alt={profile.nickname}
-        />
-        <Avatar.Fallback>{profile.nickname.slice(0, 2).toUpperCase()}</Avatar.Fallback>
-      </Label>
-    </Avatar.Root>
+    <Label class="contents cursor-pointer" for="avatar">
+      <UserAvatar
+        username={profile.username}
+        {nickname}
+        avatarSrc={avatarLocal || ImageApi.getUserAvatarURL(profile.avatar_link)}
+        class="size-48 self-center text-8xl"
+      />
+    </Label>
     <div class="flex w-full max-w-sm flex-col gap-1.5">
       <Label for="avatar">Profile picture</Label>
       <Input

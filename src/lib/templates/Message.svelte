@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { ChatState, MessageProps, UserProfilePublic } from '$lib/types';
-  import * as Avatar from '$lib/components/ui/avatar/index.js';
   import { getContext } from 'svelte';
   import { ImageApi } from '$lib/api';
   import type { SvelteMap } from 'svelte/reactivity';
+  import UserAvatar from './UserAvatar.svelte';
 
   const { username, content, created_at, index, thread_id }: MessageProps = $props();
 
@@ -37,12 +37,7 @@
 <div class="flex w-full" class:mt-4={shouldRenderProfileInfo}>
   <div class="w-[5rem] flex-none">
     {#if shouldRenderProfileInfo}
-      <Avatar.Root class="size-[3rem]">
-        <Avatar.Image src={avatarSrc} alt="@{username}" />
-        {#if !avatarSrc}
-          <Avatar.Fallback>{username.slice(0, 2).toUpperCase()}</Avatar.Fallback>
-        {/if}
-      </Avatar.Root>
+      <UserAvatar {username} {nickname} {avatarSrc} class="size-12" />
     {/if}
   </div>
   <div class="flex-1">

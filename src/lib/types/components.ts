@@ -122,6 +122,13 @@ export interface ThreadListSectionProps {
   expanded: boolean;
 }
 
+export interface UserAvatarProps {
+  username: string;
+  nickname?: string;
+  avatarSrc?: string;
+  class?: string;
+}
+
 export interface VoiceChatProps {
   thread_id: number;
 }

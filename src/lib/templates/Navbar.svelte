@@ -2,10 +2,10 @@
   import { resolve } from '$app/paths';
   import { ImageApi } from '$lib/api';
   import logo from '$lib/assets/icons/logo.svg';
-  import * as Avatar from '$lib/components/ui/avatar/index.js';
   import Button from '$lib/components/ui/button/button.svelte';
   import type { UserProfileFull } from '$lib/types';
   import { userProfile } from '$lib/userProfile';
+  import UserAvatar from './UserAvatar.svelte';
 
   const profile = $derived($userProfile as UserProfileFull);
 </script>
@@ -19,10 +19,12 @@
   </a>
   {#if profile}
     <a class="flex items-center gap-2 text-inherit no-underline" href={resolve('/profile')}>
-      <Avatar.Root class="size-[3rem]">
-        <Avatar.Image src={ImageApi.getUserAvatarURL(profile.avatar_link)} alt={profile.nickname} />
-        <Avatar.Fallback>{profile.nickname.slice(0, 2).toUpperCase()}</Avatar.Fallback>
-      </Avatar.Root>
+      <UserAvatar
+        username={profile.username}
+        nickname={profile.nickname}
+        avatarSrc={ImageApi.getUserAvatarURL(profile.avatar_link)}
+        class="size-12"
+      />
       <div class="text-left" title="profile">
         <p class="text-lg leading-none font-normal">{profile.nickname}</p>
         <p class="text-sm text-gray-600">@{profile.username}</p>
