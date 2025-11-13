@@ -109,9 +109,13 @@ export type ThreadType = 'private' | 'public';
 
 export interface ThreadProps {
   id: number;
+  spool_id: number;
   title: string;
   type: ThreadType;
   is_closed: boolean;
+  is_creator: boolean;
+  created_at: string;
+  updated_at: string;
   unreadCnt: number;
   mentionCnt: number;
 }

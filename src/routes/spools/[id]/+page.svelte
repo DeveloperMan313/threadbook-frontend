@@ -3,7 +3,7 @@
   import Navbar from '$lib/templates/Navbar.svelte';
   import SpoolDock from '$lib/templates/SpoolDock.svelte';
   import ThreadListSection from '$lib/templates/ThreadListSection.svelte';
-  import { onDestroy, setContext } from 'svelte';
+  import { onDestroy, setContext, untrack } from 'svelte';
   import { ProfileApi, ThreadApi } from '$lib/api';
   import type {
     ChatState,
@@ -38,6 +38,7 @@
   $effect(() => {
     threadsAreLoading = true;
     data.threads.then((resolvedThreads) => {
+      if (resolvedThreads?.length > 0 && resolvedThreads[0].spool_id != data.spoolId) return; // HOTFIX, need to cache
       threads = resolvedThreads || [];
       threadsAreLoading = false;
     });
