@@ -3,13 +3,15 @@
   import Button from '$lib/components/ui/button/button.svelte';
   import Input from '$lib/components/ui/input/input.svelte';
   import Label from '$lib/components/ui/label/label.svelte';
+  import * as Dialog from '$lib/components/ui/dialog/index.js';
   import InputField from '$lib/templates/InputField.svelte';
   import ModalLogOut from '$lib/templates/ModalLogOut.svelte';
-  import Navbar from '$lib/templates/Navbar.svelte';
   import UserAvatar from '$lib/templates/UserAvatar.svelte';
-  import type { UserProfileFull } from '$lib/types';
+  import type { ModalProfileSettingsProps, UserProfileFull } from '$lib/types';
   import { userProfile } from '$lib/writables';
   import { nicknameGetError } from '$lib/validation';
+
+  let { isOpen = $bindable() }: ModalProfileSettingsProps = $props();
 
   const profile = $derived($userProfile as UserProfileFull);
   // svelte-ignore state_referenced_locally
@@ -54,16 +56,17 @@
   let isLogOutModalOpen = $state(false);
 </script>
 
-<Navbar />
-<div class="flex w-full flex-col items-center pt-32 pb-8">
-  <div class="flex w-96 flex-col items-start gap-8 rounded-2xl bg-background p-8">
-    <h2 class="w-full scroll-m-20 border-b pb-2 text-3xl font-semibold">Profile settings</h2>
+<Dialog.Root bind:open={isOpen}>
+  <Dialog.Content class="sm:max-w-[425px]">
+    <Dialog.Header>
+      <Dialog.Title>Profile settings</Dialog.Title>
+    </Dialog.Header>
     <Label class="contents cursor-pointer" for="avatar">
       <UserAvatar
         username={profile.username}
         {nickname}
         avatarSrc={avatarLocal || ImageApi.getUserAvatarURL(profile.avatar_link)}
-        class="size-48 self-center text-8xl"
+        class="mx-auto size-48 text-8xl"
       />
     </Label>
     <div class="flex w-full max-w-sm flex-col gap-1.5">
@@ -99,26 +102,29 @@
       label="Email"
       disabled={true}
     />
-    <Button
-      class="cursor-pointer"
-      onclick={updateProfile}
-      disabled={(nickname == profile.nickname && !avatar) || isLoading}
-    >
-      {#if isLoading}
-        Updating...
-      {:else}
-        Update profile
-      {/if}
-    </Button>
-    <Button
-      variant="destructive"
-      class="cursor-pointer"
-      onclick={() => {
-        isLogOutModalOpen = true;
-      }}
-    >
-      Log out
-    </Button>
-  </div>
-</div>
+    <Dialog.Footer>
+      <Button
+        variant="destructive"
+        class="cursor-pointer"
+        onclick={() => {
+          isLogOutModalOpen = true;
+        }}
+      >
+        Log out
+      </Button>
+      <Button
+        class="cursor-pointer"
+        onclick={updateProfile}
+        disabled={(nickname == profile.nickname && !avatar) || isLoading}
+      >
+        {#if isLoading}
+          Updating...
+        {:else}
+          Update profile
+        {/if}
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
+
 <ModalLogOut bind:isOpen={isLogOutModalOpen} />

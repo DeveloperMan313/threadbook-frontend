@@ -5,9 +5,12 @@
   import Button from '$lib/components/ui/button/button.svelte';
   import type { UserProfileFull } from '$lib/types';
   import { userProfile } from '$lib/writables';
+  import ModalProfileSettings from './ModalProfileSettings.svelte';
   import UserAvatar from './UserAvatar.svelte';
 
   const profile = $derived($userProfile as UserProfileFull);
+
+  let isProfileSettingsModalOpen = $state(false);
 </script>
 
 <div
@@ -18,7 +21,12 @@
     <h1 class="text-4xl font-normal">ThreadBook</h1>
   </a>
   {#if profile}
-    <a class="flex items-center gap-2 text-inherit no-underline" href={resolve('/profile')}>
+    <button
+      class="flex cursor-pointer items-center gap-2"
+      onclick={() => {
+        isProfileSettingsModalOpen = true;
+      }}
+    >
       <UserAvatar
         username={profile.username}
         nickname={profile.nickname}
@@ -29,8 +37,10 @@
         <p class="text-lg leading-none font-normal">{profile.nickname}</p>
         <p class="text-sm text-gray-600">@{profile.username}</p>
       </div>
-    </a>
+    </button>
   {:else}
     <Button class="cursor-pointer" href={resolve('/signin')}>Sign in</Button>
   {/if}
 </div>
+
+<ModalProfileSettings bind:isOpen={isProfileSettingsModalOpen} />

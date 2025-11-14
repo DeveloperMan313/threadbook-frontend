@@ -86,6 +86,10 @@ export interface ModalLogOutProps {
   isOpen: boolean; // bindable
 }
 
+export interface ModalProfileSettingsProps {
+  isOpen: boolean; // bindable
+}
+
 export interface ModalThreadRenameProps {
   threadId: number;
   threadTitle: string;
