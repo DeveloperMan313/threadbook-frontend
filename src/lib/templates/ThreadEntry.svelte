@@ -64,7 +64,7 @@
         {#if type == 'private'}
           <Button
             variant="ghost"
-            class="z-10 aspect-square h-full cursor-pointer opacity-0 group-hover:opacity-100"
+            class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 group-hover:opacity-100"
             onclick={() => {
               isInviteUsersToThreadModalOpen = true;
             }}
@@ -74,7 +74,7 @@
         {/if}
         <Button
           variant="ghost"
-          class="z-10 aspect-square h-full cursor-pointer opacity-0 group-hover:opacity-100"
+          class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 group-hover:opacity-100"
           onclick={() => {
             $voiceThreadId = id;
           }}

@@ -56,7 +56,8 @@
   <div class="w-72 overflow-hidden rounded-2xl bg-background py-5">
     <div class="relative select-none">
       <Button
-        class="absolute left-5 cursor-pointer rounded-full transition-opacity disabled:opacity-0"
+        class="absolute left-5 cursor-pointer rounded-full text-muted-foreground transition-opacity disabled:opacity-0"
+        size="icon"
         variant="ghost"
         onclick={returnStage}
         disabled={registrationStage == 0}
