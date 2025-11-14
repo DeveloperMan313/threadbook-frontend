@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from '$lib/components/ui/button/index.js';
+  import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
   import Navbar from '$lib/templates/Navbar.svelte';
   import SpoolDock from '$lib/templates/SpoolDock.svelte';
   import ThreadList from '$lib/templates/ThreadList.svelte';
@@ -22,6 +23,7 @@
   import Chat from '$lib/templates/Chat.svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import ModalInviteUsersToSpool from '$lib/templates/ModalInviteUsersToSpool.svelte';
+  import { EllipsisVertical } from '@lucide/svelte';
 
   let { data } = $props();
 
@@ -150,16 +152,29 @@
 <div class="fixed inset-0 top-16 flex flex-row">
   <SpoolDock spools={data.spools} />
   <div class="flex w-72 flex-shrink-0 flex-col gap-6 p-4 pt-3 pr-3">
-    <h2 class="w-full scroll-m-20 border-b pb-2 text-3xl">{spoolName}</h2>
-    <Button
-      variant="outline"
-      class="cursor-pointer"
-      onclick={() => {
-        isInviteUsersToSpoolModalOpen = true;
-      }}
-    >
-      Invite users
-    </Button>
+    <div class="flex items-start justify-between">
+      <h2 class="w-full scroll-m-20 border-b pb-2 text-3xl">{spoolName}</h2>
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="mt-1 cursor-pointer rounded-full text-muted-foreground"
+          >
+            <EllipsisVertical />
+          </Button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Content class="w-56" align="start">
+          <DropdownMenu.Item
+            onclick={() => {
+              isInviteUsersToSpoolModalOpen = true;
+            }}
+          >
+            Invite users</DropdownMenu.Item
+          >
+        </DropdownMenu.Content>
+      </DropdownMenu.Root>
+    </div>
     {#if threadsAreLoading}
       <p class="text-gray-600">Loading threads...</p>
     {:else if threads.length == 0}
