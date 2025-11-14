@@ -75,6 +75,7 @@ export interface ModalThreadCloseProps {
 
 export interface ModalThreadCreateProps {
   isOpen: boolean; // bindable
+  threadType: ThreadType;
 }
 
 export interface ModalSpoolCreateProps {

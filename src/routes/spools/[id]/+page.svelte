@@ -19,7 +19,6 @@
     WsThreadInvited,
     WsThreadUpdated
   } from '$lib/types';
-  import ModalThreadCreate from '$lib/templates/ModalThreadCreate.svelte';
   import Chat from '$lib/templates/Chat.svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import ModalInviteUsersToSpool from '$lib/templates/ModalInviteUsersToSpool.svelte';
@@ -144,7 +143,6 @@
     data.centrifugeClient.unsubFromUser();
   });
 
-  let isThreadCreateModalOpen = $state(false);
   let isInviteUsersToSpoolModalOpen = $state(false);
 </script>
 
@@ -162,15 +160,6 @@
     >
       Invite users
     </Button>
-    <Button
-      variant="outline"
-      class="cursor-pointer"
-      onclick={() => {
-        isThreadCreateModalOpen = true;
-      }}
-    >
-      New thread
-    </Button>
     {#if threadsAreLoading}
       <p class="text-gray-600">Loading threads...</p>
     {:else if threads.length == 0}
@@ -178,7 +167,6 @@
     {:else}
       <ThreadList {threads} />
     {/if}
-    <ModalThreadCreate bind:isOpen={isThreadCreateModalOpen} />
     <ModalInviteUsersToSpool
       spoolId={data.spoolId}
       {spoolName}

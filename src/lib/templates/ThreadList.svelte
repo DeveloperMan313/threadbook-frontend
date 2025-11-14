@@ -1,34 +1,51 @@
 <script lang="ts">
   import ThreadEntry from './ThreadEntry.svelte';
-  import type { ThreadListProps } from '$lib/types';
+  import type { ThreadType, ThreadListProps } from '$lib/types';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { ChevronLeft } from '@lucide/svelte';
+  import { ChevronLeft, Plus } from '@lucide/svelte';
+  import ModalThreadCreate from './ModalThreadCreate.svelte';
 
   let { threads }: ThreadListProps = $props();
 
   let privateExpanded = $state(true);
   let publicExpanded = $state(true);
   let closedExpanded = $state(false);
+
+  let isCreateThreadModalOpen = $state(false);
+  let createThreadType = $state<ThreadType>('private');
 </script>
 
 <div class="space-y-2">
   <div>
     <div class="mb-2 flex items-center justify-between">
       <p class="text-sm font-medium text-muted-foreground">Private</p>
-      <Button
-        class="size-6 cursor-pointer rounded-full"
-        size="icon"
-        variant="ghost"
-        onclick={() => {
-          privateExpanded = !privateExpanded;
-        }}
-      >
-        <ChevronLeft
-          class="text-muted-foreground transition-transform {privateExpanded
-            ? '-rotate-90'
-            : 'rotate-0'}"
-        />
-      </Button>
+      <div class="flex items-center gap-1">
+        <Button
+          class="size-6 cursor-pointer rounded-full"
+          size="icon"
+          variant="ghost"
+          onclick={() => {
+            createThreadType = 'private';
+            isCreateThreadModalOpen = true;
+          }}
+        >
+          <Plus class="text-muted-foreground" />
+        </Button>
+        <Button
+          class="size-6 cursor-pointer rounded-full"
+          size="icon"
+          variant="ghost"
+          onclick={() => {
+            privateExpanded = !privateExpanded;
+          }}
+        >
+          <ChevronLeft
+            class="text-muted-foreground transition-transform {privateExpanded
+              ? '-rotate-90'
+              : 'rotate-0'}"
+          />
+        </Button>
+      </div>
     </div>
     <div class="flex flex-col" class:hidden={!privateExpanded}>
       {#each threads.filter((t) => !t.is_closed && t.type == 'private') as thread (thread.id)}
@@ -40,20 +57,33 @@
   <div>
     <div class="mb-2 flex items-center justify-between">
       <p class="text-sm font-medium text-muted-foreground">Public</p>
-      <Button
-        class="size-6 cursor-pointer rounded-full"
-        size="icon"
-        variant="ghost"
-        onclick={() => {
-          publicExpanded = !publicExpanded;
-        }}
-      >
-        <ChevronLeft
-          class="text-muted-foreground transition-transform {publicExpanded
-            ? '-rotate-90'
-            : 'rotate-0'}"
-        />
-      </Button>
+      <div class="flex items-center gap-1">
+        <Button
+          class="size-6 cursor-pointer rounded-full"
+          size="icon"
+          variant="ghost"
+          onclick={() => {
+            createThreadType = 'public';
+            isCreateThreadModalOpen = true;
+          }}
+        >
+          <Plus class="text-muted-foreground" />
+        </Button>
+        <Button
+          class="size-6 cursor-pointer rounded-full"
+          size="icon"
+          variant="ghost"
+          onclick={() => {
+            publicExpanded = !publicExpanded;
+          }}
+        >
+          <ChevronLeft
+            class="text-muted-foreground transition-transform {publicExpanded
+              ? '-rotate-90'
+              : 'rotate-0'}"
+          />
+        </Button>
+      </div>
     </div>
     <div class="flex flex-col" class:hidden={!publicExpanded}>
       {#each threads.filter((t) => !t.is_closed && t.type == 'public') as thread (thread.id)}
@@ -87,3 +117,5 @@
     </div>
   </div>
 </div>
+
+<ModalThreadCreate bind:isOpen={isCreateThreadModalOpen} threadType={createThreadType} />
