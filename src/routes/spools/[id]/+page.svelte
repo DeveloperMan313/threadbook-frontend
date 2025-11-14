@@ -24,6 +24,7 @@
   import { SvelteMap } from 'svelte/reactivity';
   import ModalInviteUsersToSpool from '$lib/templates/ModalInviteUsersToSpool.svelte';
   import { EllipsisVertical } from '@lucide/svelte';
+  import Spinner from '$lib/components/ui/spinner/spinner.svelte';
 
   let { data } = $props();
 
@@ -176,9 +177,10 @@
       </DropdownMenu.Root>
     </div>
     {#if threadsAreLoading}
-      <p class="text-gray-600">Loading threads...</p>
-    {:else if threads.length == 0}
-      <p class="text-gray-600">No threads. Create one</p>
+      <div class="flex items-center justify-center gap-2">
+        <Spinner class="size-6 text-muted-foreground" />
+        <p class="text-center text-sm text-muted-foreground">Loading threads...</p>
+      </div>
     {:else}
       <ThreadList {threads} />
     {/if}

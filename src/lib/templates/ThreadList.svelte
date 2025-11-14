@@ -50,6 +50,8 @@
     <div class="flex flex-col" class:hidden={!privateExpanded}>
       {#each threads.filter((t) => !t.is_closed && t.type == 'private') as thread (thread.id)}
         <ThreadEntry {...thread} />
+      {:else}
+        <p class="text-sm text-muted-foreground/70 ms-3">No threads</p>
       {/each}
     </div>
   </div>
@@ -88,6 +90,8 @@
     <div class="flex flex-col" class:hidden={!publicExpanded}>
       {#each threads.filter((t) => !t.is_closed && t.type == 'public') as thread (thread.id)}
         <ThreadEntry {...thread} />
+      {:else}
+        <p class="text-sm text-muted-foreground/70 ms-3">No threads</p>
       {/each}
     </div>
   </div>
@@ -113,6 +117,8 @@
     <div class="flex flex-col" class:hidden={!closedExpanded}>
       {#each threads.filter((t) => t.is_closed) as thread (thread.id)}
         <ThreadEntry {...thread} />
+      {:else}
+        <p class="text-sm text-muted-foreground/70 ms-3">No threads</p>
       {/each}
     </div>
   </div>
