@@ -1,4 +1,5 @@
 <script lang="ts">
+  import VoiceChat from '$lib/templates/VoiceChat.svelte';
   import { onDestroy } from 'svelte';
 
   let { data, children } = $props();
@@ -8,4 +9,5 @@
   });
 </script>
 
+<VoiceChat />
 {@render children?.()}

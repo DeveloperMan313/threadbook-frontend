@@ -3,7 +3,7 @@
   import Navbar from '$lib/templates/Navbar.svelte';
   import SpoolDock from '$lib/templates/SpoolDock.svelte';
   import ThreadListSection from '$lib/templates/ThreadListSection.svelte';
-  import { onDestroy, setContext, untrack } from 'svelte';
+  import { onDestroy, setContext } from 'svelte';
   import { ProfileApi, ThreadApi } from '$lib/api';
   import type {
     ChatState,
@@ -23,7 +23,6 @@
   import Chat from '$lib/templates/Chat.svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import ModalInviteUsersToSpool from '$lib/templates/ModalInviteUsersToSpool.svelte';
-  import VoiceChat from '$lib/templates/VoiceChat.svelte';
 
   let { data } = $props();
 
@@ -150,7 +149,6 @@
 </script>
 
 <Navbar />
-<VoiceChat />
 <div class="fixed inset-0 top-16 flex flex-row">
   <SpoolDock spools={data.spools} />
   <div class="flex w-72 flex-shrink-0 flex-col gap-6 p-4 pt-3 pr-3">

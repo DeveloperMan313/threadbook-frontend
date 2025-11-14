@@ -1,10 +1,7 @@
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
-import type { UserProfileFull } from '$lib/types';
-import { writable } from 'svelte/store';
 import { AuthApi } from './api';
-
-export const userProfile = writable<UserProfileFull | null>(null);
+import { userProfile } from './writables';
 
 /**
  * Tries to get user profile data from API and if not authorized redirects to /signin
@@ -22,4 +19,4 @@ export const tryGetUserProfile = async (): Promise<boolean> => {
   }
   userProfile.set(null);
   return false;
-}
+};

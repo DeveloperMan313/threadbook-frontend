@@ -8,7 +8,7 @@
   import Navbar from '$lib/templates/Navbar.svelte';
   import UserAvatar from '$lib/templates/UserAvatar.svelte';
   import type { UserProfileFull } from '$lib/types';
-  import { userProfile } from '$lib/userProfile';
+  import { userProfile } from '$lib/writables';
   import { nicknameGetError } from '$lib/validation';
 
   const profile = $derived($userProfile as UserProfileFull);

@@ -132,7 +132,3 @@ export interface UserAvatarProps {
   avatarSrc?: string;
   class?: string;
 }
-
-export interface VoiceChatProps {
-  thread_id: number;
-}

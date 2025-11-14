@@ -3,7 +3,7 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import { AuthApi } from '$lib/api';
-  import { userProfile } from '$lib/userProfile';
+  import { userProfile } from '$lib/writables';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
 

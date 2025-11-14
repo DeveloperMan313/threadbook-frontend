@@ -4,7 +4,7 @@
   import logo from '$lib/assets/icons/logo.svg';
   import Button from '$lib/components/ui/button/button.svelte';
   import type { UserProfileFull } from '$lib/types';
-  import { userProfile } from '$lib/userProfile';
+  import { userProfile } from '$lib/writables';
   import UserAvatar from './UserAvatar.svelte';
 
   const profile = $derived($userProfile as UserProfileFull);

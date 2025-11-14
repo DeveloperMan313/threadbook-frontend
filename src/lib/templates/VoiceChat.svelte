@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getContext, onDestroy } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
   import { Room } from 'livekit-client';
@@ -21,25 +21,31 @@
     LogIn,
     LogOut
   } from '@lucide/svelte';
+  import { voiceThreadId } from '$lib/writables';
 
-  const { getCurrentThreadId } = getContext('threads') as {
-    getCurrentThreadId: () => number | null;
-  };
+  $effect(() => {
+    untrack(() => {
+      if (isConnected) leaveRoom();
+    });
+    if ($voiceThreadId) {
+      joinRoom($voiceThreadId);
+    }
+  });
 
-  let isConnected = false;
-  let error = '';
-  let room: Room | null = null;
+  let isConnected = $state(false);
+  let error = $state('');
+  let room = $state<Room | null>(null);
 
-  let isSelfMuted = false;
-  let isOthersMuted = false;
-  let isSelfVideoEnabled = true;
-  let isMinimized = false;
-  let isFullscreen = false;
+  let isSelfMuted = $state(false);
+  let isOthersMuted = $state(false);
+  let isSelfVideoEnabled = $state(true);
+  let isMinimized = $state(false);
+  let isFullscreen = $state(false);
 
-  let participants: RemoteParticipant[] = [];
-  let volumes: Record<string, number> = {};
+  let participants = $state<RemoteParticipant[]>([]);
+  let volumes = $state<Record<string, number>>({});
   let audioElements = new SvelteMap<string, HTMLAudioElement>();
-  let localVideoEl: HTMLVideoElement | null = null;
+  let localVideoEl = $state<HTMLVideoElement | null>(null);
 
   let isDragging = false;
   let isResizing = false;
@@ -50,12 +56,13 @@
   let initialWidth = 360;
   let initialHeight = 420;
 
-  let position = { x: 0, y: 0 };
-  let dimensions = { width: 360, height: 420 };
+  let position = $state({ x: 0, y: 0 });
+  let dimensions = $state({ width: 360, height: 420 });
 
-  let showVolumeSliderFor: Record<string, boolean> = {};
-  let volumeDisplayFor: Record<string, { value: string; timeout?: ReturnType<typeof setTimeout> }> =
-    {};
+  let showVolumeSliderFor = $state<Record<string, boolean>>({});
+  let volumeDisplayFor = $state<
+    Record<string, { value: string; timeout?: ReturnType<typeof setTimeout> }>
+  >({});
 
   const isBrowser = typeof document !== 'undefined';
   let pendingLocalVideoTrack: LocalTrack | null = null;
@@ -280,10 +287,10 @@
     document.removeEventListener('mouseup', stopResize);
   }
 
-  async function joinRoom() {
+  async function joinRoom(roomThreadId: number) {
     if (!isBrowser) return;
     try {
-      const token = await getToken(getCurrentThreadId()!);
+      const token = await getToken(roomThreadId);
       room = new Room();
 
       room.on('participantConnected', (p) => handleParticipant(p));
@@ -308,9 +315,6 @@
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          googEchoCancellation: true,
-          googAutoGainControl: true,
-          googNoiseSuppression: true,
           sampleRate: 48000,
           channelCount: 1
         },
@@ -329,8 +333,8 @@
 
       isConnected = true;
       error = '';
-    } catch (err: any) {
-      error = err.message || 'Connection failed';
+    } catch (err) {
+      error = (err as Error).message || 'Connection failed';
       console.error('Join error:', err);
       leaveRoom();
     }
@@ -361,14 +365,16 @@
     volumes = {};
     showVolumeSliderFor = {};
     volumeDisplayFor = {};
+
+    $voiceThreadId = null;
   }
 
-  $: {
+  $effect(() => {
     if (localVideoEl && pendingLocalVideoTrack) {
       pendingLocalVideoTrack.attach(localVideoEl);
       pendingLocalVideoTrack = null;
     }
-  }
+  });
 
   onDestroy(() => {
     leaveRoom();
@@ -395,17 +401,21 @@
     height: {isMinimized ? 'auto' : isFullscreen ? '100vh' : `${dimensions.height}px`};
     z-index: 100;
   "
+  class:invisible={$voiceThreadId === null}
 >
   <div
     role="toolbar"
     class="flex cursor-move items-center justify-between border-b border-border px-3 py-2 select-none"
-    on:mousedown={startDrag}
+    onmousedown={startDrag}
   >
     <h3 class="text-lg font-semibold">Voice Chat</h3>
     <div class="flex items-center gap-1">
       <button
         class="rounded p-1 hover:bg-accent"
-        on:click|stopPropagation={toggleFullscreen}
+        onclick={(e) => {
+          e.stopPropagation();
+          toggleFullscreen();
+        }}
         title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
       >
         {#if isFullscreen}
@@ -416,7 +426,10 @@
       </button>
       <button
         class="rounded p-1 hover:bg-accent"
-        on:click|stopPropagation={toggleMinimize}
+        onclick={(e) => {
+          e.stopPropagation();
+          toggleMinimize();
+        }}
         title={isMinimized ? 'Expand' : 'Collapse'}
       >
         {#if isMinimized}
@@ -456,7 +469,10 @@
               <div class="flex w-24 flex-col items-center gap-1">
                 <div
                   class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg bg-black transition-colors hover:ring-2 hover:ring-accent"
-                  on:contextmenu|preventDefault={(e) => toggleVolumeSlider(p.identity, e)}
+                  oncontextmenu={(e) => {
+                    e.preventDefault();
+                    toggleVolumeSlider(p.identity, e);
+                  }}
                 >
                   <div class="video-container absolute inset-0" data-participant={p.identity}></div>
                   <span
@@ -475,7 +491,7 @@
                       step="0.01"
                       class="h-1.5 w-full cursor-pointer accent-primary"
                       value={volumes[p.identity] ?? 1}
-                      on:input={(e) => {
+                      oninput={(e) => {
                         const val = parseFloat((e.target as HTMLInputElement).value);
                         updateVolume(p.identity, val);
                       }}
@@ -498,7 +514,7 @@
           class="rounded-full p-3 transition-colors {isSelfMuted
             ? 'bg-destructive text-white hover:bg-destructive/90'
             : 'bg-secondary hover:bg-secondary/80'}"
-          on:click={toggleSelfMute}
+          onclick={toggleSelfMute}
           disabled={!isConnected}
         >
           {#if isSelfMuted}
@@ -512,7 +528,7 @@
           class="rounded-full p-3 transition-colors {isOthersMuted
             ? 'bg-destructive text-white hover:bg-destructive/90'
             : 'bg-secondary hover:bg-secondary/80'}"
-          on:click={toggleOthersMute}
+          onclick={toggleOthersMute}
           disabled={!isConnected}
         >
           {#if isOthersMuted}
@@ -526,7 +542,7 @@
           class="rounded-full p-3 transition-colors {!isSelfVideoEnabled
             ? 'bg-destructive text-white hover:bg-destructive/90'
             : 'bg-secondary hover:bg-secondary/80'}"
-          on:click={toggleSelfVideo}
+          onclick={toggleSelfVideo}
           disabled={!isConnected}
         >
           {#if isSelfVideoEnabled}
@@ -537,10 +553,8 @@
         </button>
 
         <button
-          class="rounded-full p-3 text-white transition-colors {isConnected
-            ? 'bg-destructive hover:bg-destructive/90'
-            : 'bg-primary hover:bg-primary/90'}"
-          on:click={isConnected ? leaveRoom : joinRoom}
+          class="rounded-full bg-destructive p-3 text-white transition-colors hover:bg-destructive/90"
+          onclick={leaveRoom}
         >
           {#if isConnected}
             <LogOut size={20} />
@@ -556,7 +570,7 @@
         class="rounded-full p-2 transition-colors {isSelfMuted
           ? 'bg-destructive text-white hover:bg-destructive/90'
           : 'bg-secondary hover:bg-secondary/80'}"
-        on:click={toggleSelfMute}
+        onclick={toggleSelfMute}
         disabled={!isConnected}
       >
         {#if isSelfMuted}
@@ -566,10 +580,8 @@
         {/if}
       </button>
       <button
-        class="rounded-full p-2 text-white transition-colors {isConnected
-          ? 'bg-destructive hover:bg-destructive/90'
-          : 'bg-primary hover:bg-primary/90'}"
-        on:click={isConnected ? leaveRoom : joinRoom}
+        class="rounded-full bg-destructive p-3 text-white transition-colors hover:bg-destructive/90"
+        onclick={leaveRoom}
       >
         {#if isConnected}
           <LogOut size={16} />
@@ -583,7 +595,10 @@
   {#if !isMinimized && !isFullscreen}
     <div
       class="absolute right-0 bottom-0 h-4 w-4 cursor-se-resize"
-      on:mousedown|stopPropagation={startResize}
+      onmousedown={(e) => {
+        e.stopPropagation();
+        startResize(e);
+      }}
       title="Drag to resize"
     >
       <svg

@@ -5,8 +5,9 @@
   import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
   import { getContext } from 'svelte';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { UserPlus } from '@lucide/svelte';
+  import { Phone, UserPlus } from '@lucide/svelte';
   import ModalInviteUsersToThread from './ModalInviteUsersToThread.svelte';
+  import { voiceThreadId } from '$lib/writables';
 
   let { id, title, type, unreadCnt, mentionCnt }: ThreadProps = $props();
 
@@ -49,7 +50,7 @@
           {title}
         </p></Button
       >
-      <div class="flex h-full items-center gap-2">
+      <div class="flex h-full items-center justify-end">
         {#if mentionCnt > 0}
           <p
             class="flex h-4 w-4 items-center justify-center rounded bg-emerald-400 text-xs text-white"
@@ -71,6 +72,15 @@
             <UserPlus />
           </Button>
         {/if}
+        <Button
+          variant="ghost"
+          class="z-10 aspect-square h-full cursor-pointer opacity-0 group-hover:opacity-100"
+          onclick={() => {
+            $voiceThreadId = id;
+          }}
+        >
+          <Phone />
+        </Button>
       </div>
     </div>
   </ContextMenu.Trigger>

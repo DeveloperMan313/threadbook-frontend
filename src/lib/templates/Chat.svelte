@@ -13,7 +13,7 @@
   } from '$lib/types';
   import type { SvelteMap } from 'svelte/reactivity';
   import { MessageApi } from '$lib/api';
-  import { userProfile } from '$lib/userProfile';
+  import { userProfile } from '$lib/writables';
   import Spinner from '$lib/components/ui/spinner/spinner.svelte';
 
   const { centrifugeClient }: ChatProps = $props();
