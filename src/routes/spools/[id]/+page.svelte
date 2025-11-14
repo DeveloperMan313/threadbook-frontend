@@ -2,7 +2,7 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import Navbar from '$lib/templates/Navbar.svelte';
   import SpoolDock from '$lib/templates/SpoolDock.svelte';
-  import ThreadListSection from '$lib/templates/ThreadListSection.svelte';
+  import ThreadList from '$lib/templates/ThreadList.svelte';
   import { onDestroy, setContext } from 'svelte';
   import { ProfileApi, ThreadApi } from '$lib/api';
   import type {
@@ -176,21 +176,7 @@
     {:else if threads.length == 0}
       <p class="text-gray-600">No threads. Create one</p>
     {:else}
-      <ThreadListSection
-        title="Private"
-        entries={threads.filter((t) => !t.is_closed && t.type == 'private')}
-        expanded={true}
-      />
-      <ThreadListSection
-        title="Public"
-        entries={threads.filter((t) => !t.is_closed && t.type == 'public')}
-        expanded={true}
-      />
-      <ThreadListSection
-        title="Closed"
-        entries={threads.filter((t) => t.is_closed)}
-        expanded={false}
-      />
+      <ThreadList {threads} />
     {/if}
     <ModalThreadCreate bind:isOpen={isThreadCreateModalOpen} />
     <ModalInviteUsersToSpool

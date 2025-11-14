@@ -120,10 +120,8 @@ export interface ThreadProps {
   mentionCnt: number;
 }
 
-export interface ThreadListSectionProps {
-  title: string;
-  entries: Array<ThreadProps>;
-  expanded: boolean;
+export interface ThreadListProps {
+  threads: Array<ThreadProps>;
 }
 
 export interface UserAvatarProps {
