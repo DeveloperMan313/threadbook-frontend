@@ -6,6 +6,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { ChevronLeft } from '@lucide/svelte';
+  import { untrack } from 'svelte';
 
   let emailValue = $state('');
   let emailIsValid = $state(false);
@@ -16,6 +17,13 @@
   let registrationStage = $state(0);
 
   let errorMsg = $state('');
+
+  // if inputs are changed, clear errorMsg
+  $effect(() => {
+    if (emailValue && passwordValue) {
+      untrack(() => (errorMsg = ''));
+    }
+  });
 
   const advanceStage = () => {
     registrationStage += 1;
@@ -45,16 +53,18 @@
 </script>
 
 <div class="flex h-full w-full items-center justify-center">
-  <div class="relative w-72 overflow-hidden rounded-2xl bg-background py-5">
-    <Button
-      class="absolute left-5 rounded-full transition-opacity disabled:opacity-0"
-      variant="ghost"
-      onclick={returnStage}
-      disabled={registrationStage == 0}
-    >
-      <ChevronLeft />
-    </Button>
-    <h2 class="w-full text-center text-3xl">Sign in</h2>
+  <div class="w-72 overflow-hidden rounded-2xl bg-background py-5">
+    <div class="relative select-none">
+      <Button
+        class="absolute left-5 cursor-pointer rounded-full transition-opacity disabled:opacity-0"
+        variant="ghost"
+        onclick={returnStage}
+        disabled={registrationStage == 0}
+      >
+        <ChevronLeft />
+      </Button>
+      <h2 class="m-auto w-fit text-center text-3xl select-text">Sign in</h2>
+    </div>
     <div class="flex w-full flex-row">
       <div
         class="flex w-full flex-shrink-0 flex-col gap-4 p-6 transition-all duration-500"
