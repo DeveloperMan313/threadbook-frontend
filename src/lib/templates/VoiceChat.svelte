@@ -24,12 +24,19 @@
   import { voiceThreadId } from '$lib/writables';
 
   $effect(() => {
-    untrack(() => {
-      if (isConnected) leaveRoom();
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    $voiceThreadId;
+    untrack(async () => {
+      if (isConnected) {
+        const voiceThreadIdCopy = $voiceThreadId; // HACK, cuz leaveRoom() sets it to null
+        await leaveRoom();
+        $voiceThreadId = voiceThreadIdCopy;
+      }
+    }).then(() => {
+      if ($voiceThreadId) {
+        joinRoom($voiceThreadId);
+      }
     });
-    if ($voiceThreadId) {
-      joinRoom($voiceThreadId);
-    }
   });
 
   let isConnected = $state(false);
@@ -340,10 +347,10 @@
     }
   }
 
-  function leaveRoom() {
+  async function leaveRoom() {
     if (!isBrowser) return;
     if (room) {
-      room.disconnect();
+      await room.disconnect();
       room = null;
     }
     participants = [];
