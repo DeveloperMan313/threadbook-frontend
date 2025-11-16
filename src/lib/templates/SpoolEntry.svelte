@@ -5,8 +5,10 @@
   import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
   import * as Avatar from '$lib/components/ui/avatar/index.js';
   import { ImageApi } from '$lib/api';
+  import { page } from '$app/state';
 
   const { id, name, banner_link }: SpoolProps = $props();
+  const currentSpoolId = $derived<number>(page.data.spoolId);
 
   let isSpoolLeaveModalOpen = $state(false);
 
@@ -24,7 +26,9 @@
 <ContextMenu.Root>
   <ContextMenu.Trigger>
     <a href={resolve(`/spools/${id}`)}>
-      <Avatar.Root class="size-12 rounded-2xl">
+      <Avatar.Root
+        class={`size-12 rounded-2xl ring-muted-foreground transition-shadow ${id === currentSpoolId ? 'ring-4' : 'hover:ring-2'}`}
+      >
         {#if banner_link}
           <Avatar.Image src={ImageApi.getSpoolBannerURL(banner_link)} alt={name} />
         {/if}

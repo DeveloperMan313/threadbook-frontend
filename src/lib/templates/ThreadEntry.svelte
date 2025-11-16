@@ -11,8 +11,9 @@
 
   let { id, title, type, unreadCnt, mentionCnt }: ThreadProps = $props();
 
-  const { setCurrentThreadId } = getContext('threads') as {
+  const { setCurrentThreadId, getCurrentThreadId } = getContext('threads') as {
     setCurrentThreadId: { (id: number): void };
+    getCurrentThreadId: () => number | null;
   };
 
   let isThreadRenameModalOpen = $state(false);
@@ -44,7 +45,7 @@
     >
       <Button
         variant="outline"
-        class="absolute h-full w-full cursor-pointer p-0"
+        class={`absolute h-full w-full cursor-pointer p-0 ${id === getCurrentThreadId() ? 'bg-accent' : ''}`}
         onclick={() => setCurrentThreadId(id)}
         ><p class="w-full ps-3 text-start text-base">
           {title}
