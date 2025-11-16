@@ -79,10 +79,6 @@ export class CentrifugeClient {
       token: this.tokens.ConnectToken
     });
 
-    this.centrifuge.on('connected', (ctx) => console.log(`Centrifuge Connected: ${ctx.client}`));
-    this.centrifuge.on('disconnected', (ctx) =>
-      console.log(`Centrifuge Disconnected: ${ctx.reason}`)
-    );
     this.centrifuge.on('error', (err) => console.log(`Centrifuge Error: ${JSON.stringify(err)}`));
 
     this.centrifuge.connect();

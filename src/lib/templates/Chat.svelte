@@ -74,7 +74,6 @@
 
     const threadHandlers = {
       onMessageCreated: (payload: WsMessageCreated) => {
-        console.log('ws msg');
         const mine = payload.username == profile.username;
         cacheProfilesFromMessages([payload]);
         renderMessage(thread.id, payload, mine);
