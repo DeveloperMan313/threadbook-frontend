@@ -115,7 +115,7 @@
   });
 
   let messagesContainer: HTMLDivElement;
-  let isAtTop = $state(true);
+  let isAtTop = $state(false);
   let isAtBottom = $state(true);
   let lastMessageMine = false;
 
@@ -126,6 +126,7 @@
     isAtBottom = scrollHeight - scrollTop - clientHeight <= threshold;
   };
 
+  // load older messages chunk on scroll
   $effect(() => {
     const thread = untrack(() => currentThread); // capture thread
     if (!thread) return;
@@ -215,9 +216,11 @@
       <div>
         <div class="flex h-10 w-full items-center justify-center">
           {#if currentThread && threadChats.get(currentThread.id)?.firstMessageLoaded}
-            <p class="text-lg">Thread start</p>
+            <p class="text-lg text-muted-foreground">Thread start</p>
           {:else}
-            <Spinner class="size-8" />
+            <Spinner
+              class={`size-8 text-muted-foreground transition-opacity ${isAtTop ? '' : 'opacity-0'}`}
+            />
           {/if}
         </div>
         {#each messages as message, i (message.id)}
