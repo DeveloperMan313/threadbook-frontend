@@ -3,6 +3,7 @@
   import type { ContextMenuEntry, SpoolProps } from '$lib/types';
   import ModalSpoolLeave from './ModalSpoolLeave.svelte';
   import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
+  import * as Avatar from '$lib/components/ui/avatar/index.js';
   import { ImageApi } from '$lib/api';
 
   const { id, name, banner_link }: SpoolProps = $props();
@@ -22,12 +23,13 @@
 
 <ContextMenu.Root>
   <ContextMenu.Trigger>
-    <a class="flex h-12 w-12 items-center no-underline" href={resolve(`/spools/${id}`)}>
-      <img
-        class="h-12 w-12 flex-shrink-0 rounded-2xl"
-        src={ImageApi.getSpoolBannerURL(banner_link)}
-        alt={name}
-      />
+    <a href={resolve(`/spools/${id}`)}>
+      <Avatar.Root class="size-12 rounded-2xl">
+        {#if banner_link}
+          <Avatar.Image src={ImageApi.getSpoolBannerURL(banner_link)} alt={name} />
+        {/if}
+        <Avatar.Fallback class="rounded-2xl">{name[0].toUpperCase()}</Avatar.Fallback>
+      </Avatar.Root>
     </a>
   </ContextMenu.Trigger>
   <ContextMenu.Content class="min-w-[10rem]">
