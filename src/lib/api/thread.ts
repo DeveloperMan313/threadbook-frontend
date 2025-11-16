@@ -83,7 +83,7 @@ export const ThreadApi = {
   async closeThread(request: CloseThreadRequest) {
     // await new Promise((r) => setTimeout(r, 750)); // emulate API delay
     // return {};
-    return ApiClient.fetchJSON(`/thread/close?id=${request.id}`, {
+    return ApiClient.fetchJSON(`/thread/${request.id}/close`, {
       method: 'PUT',
       headers: {}
     });
@@ -96,7 +96,7 @@ export const ThreadApi = {
   async createThread(request: CreateThreadRequest) {
     // await new Promise((r) => setTimeout(r, 750)); // emulate API delay
     // return {};
-    return ApiClient.fetchJSON('/thread/create', {
+    return ApiClient.fetchJSON('/thread/', {
       method: 'POST',
       body: JSON.stringify(request)
     });
@@ -109,9 +109,10 @@ export const ThreadApi = {
   async updateThread(request: UpdateThreadRequest) {
     // await new Promise((r) => setTimeout(r, 500)); // emulate API delay
     // return {};
-    return ApiClient.fetchJSON(`/thread/update`, {
+    const requestNoId = { title: request.title, type: request.type };
+    return ApiClient.fetchJSON(`/thread/${request.id}/update`, {
       method: 'PUT',
-      body: JSON.stringify(request)
+      body: JSON.stringify(requestNoId)
     });
   },
 
@@ -137,9 +138,10 @@ export const ThreadApi = {
    * @param {InviteUsersToThreadRequest} request - request object with thread_id and username list
    */
   async inviteUsersToThread(request: InviteUsersToThreadRequest) {
-    return ApiClient.fetch('/thread/invite', {
+    const requestNoId = { invitee_usernames: request.invitee_usernames };
+    return ApiClient.fetch(`/thread/${request.thread_id}/invite`, {
       method: 'POST',
-      body: JSON.stringify(request)
+      body: JSON.stringify(requestNoId)
     });
   }
 };

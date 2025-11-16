@@ -76,7 +76,7 @@ export interface CreateThreadRequest {
 export interface UpdateThreadRequest {
   id: number;
   title: string;
-  type: string;
+  type: ThreadType;
 }
 
 export interface GetThreadMessagesRequest {
