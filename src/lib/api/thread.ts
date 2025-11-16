@@ -7,7 +7,9 @@ import type {
   ThreadProps,
   GetCentrifugeTokensResponse,
   GetCentrifugeTokensRequest,
-  InviteUsersToThreadRequest
+  InviteUsersToThreadRequest,
+  GetSFUTokenRequest,
+  GetSFUTokenResponse
 } from '$lib/types';
 
 const MockGetSpoolThreads: Array<ThreadProps> = [
@@ -131,6 +133,18 @@ export const ThreadApi = {
         headers: {}
       }
     );
+  },
+
+  /**
+   * Get token to connect to call
+   * @param {GetCentrifugeTokensRequest} request - request object
+   * @returns {Promise<GetCentrifugeTokensResponse>} - API response
+   */
+  async getSFUToken(request: GetSFUTokenRequest): Promise<GetSFUTokenResponse> {
+    return ApiClient.fetchJSON(`/thread/${request.thread_id}/sfu/token`, {
+      method: 'GET',
+      headers: {}
+    });
   },
 
   /**

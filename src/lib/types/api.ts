@@ -100,6 +100,14 @@ export interface GetCentrifugeTokensResponse {
   ChannelTokens: Record<string, string>;
 }
 
+export interface GetSFUTokenRequest {
+  thread_id: number;
+}
+
+export interface GetSFUTokenResponse {
+  token: string;
+}
+
 export interface CreateSpoolRequest {
   name: string;
   banner?: File;

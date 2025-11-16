@@ -22,6 +22,7 @@
     LogOut
   } from '@lucide/svelte';
   import { voiceThreadId } from '$lib/writables';
+  import { ThreadApi } from '$lib/api';
 
   $effect(() => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
@@ -82,20 +83,6 @@
   }
 
   if (isBrowser) setDefaultPosition();
-
-  async function getToken(threadId: number) {
-    const res = await fetch('/api/thread/sfu/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ thread_id: threadId })
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Failed to get token');
-    }
-    const { token } = await res.json();
-    return token;
-  }
 
   function attachAudioTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
@@ -297,7 +284,7 @@
   async function joinRoom(roomThreadId: number) {
     if (!isBrowser) return;
     try {
-      const token = await getToken(roomThreadId);
+      const token = (await ThreadApi.getSFUToken({ thread_id: roomThreadId })).token;
       room = new Room();
 
       room.on('participantConnected', (p) => handleParticipant(p));
