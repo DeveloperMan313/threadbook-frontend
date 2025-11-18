@@ -2,12 +2,13 @@
   import { onDestroy, untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
-  import { Room } from 'livekit-client';
+  import { Room, Track, ConnectionQuality } from 'livekit-client';
   import type {
     RemoteParticipant,
     RemoteTrack,
     RemoteTrackPublication,
-    LocalTrack
+    LocalTrack,
+    Participant
   } from 'livekit-client';
   import {
     Mic,
@@ -19,17 +20,18 @@
     Volume2,
     VolumeX,
     LogIn,
-    LogOut
+    LogOut,
+    AlertTriangle,
+    Users,
+    Signal
   } from '@lucide/svelte';
   import { voiceThreadId } from '$lib/writables';
   import { ThreadApi } from '$lib/api';
 
   $effect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    $voiceThreadId;
     untrack(async () => {
       if (isConnected) {
-        const voiceThreadIdCopy = $voiceThreadId; // HACK, cuz leaveRoom() sets it to null
+        const voiceThreadIdCopy = $voiceThreadId;
         await leaveRoom();
         $voiceThreadId = voiceThreadIdCopy;
       }
@@ -41,6 +43,7 @@
   });
 
   let isConnected = $state(false);
+  let connectionQuality = $state<ConnectionQuality>(ConnectionQuality.Good);
   let error = $state('');
   let room = $state<Room | null>(null);
 
@@ -73,16 +76,47 @@
   >({});
 
   const isBrowser = typeof document !== 'undefined';
-  let pendingLocalVideoTrack: LocalTrack | null = null;
+  let cleanupTimeout: ReturnType<typeof setTimeout> | null = null;
+  let hasInitializedMedia = false;
+
+  // Event handlers that need to be stored for proper cleanup
+  let participantConnectedHandler: (participant: Participant) => void;
+  let participantDisconnectedHandler: (participant: Participant) => void;
+  let disconnectedHandler: () => void;
+  let reconnectingHandler: () => void;
+  let reconnectedHandler: () => void;
+  let connectionQualityChangedHandler: (
+    quality: ConnectionQuality,
+    participant: Participant
+  ) => void;
 
   function setDefaultPosition() {
     if (isBrowser) {
-      position.x = window.innerWidth - dimensions.width - 16;
+      position.x = Math.max(0, window.innerWidth - dimensions.width - 16);
       position.y = 80;
     }
   }
 
   if (isBrowser) setDefaultPosition();
+
+  if (isBrowser) {
+    const updatePositionOnResize = () => {
+      if (isFullscreen) {
+        dimensions = { width: window.innerWidth, height: window.innerHeight };
+        position = { x: 0, y: 0 };
+      } else {
+        position.x = Math.min(position.x, window.innerWidth - dimensions.width);
+        position.y = Math.min(position.y, window.innerHeight - dimensions.height);
+        position.x = Math.max(0, position.x);
+        position.y = Math.max(0, position.y);
+      }
+    };
+    window.addEventListener('resize', updatePositionOnResize);
+    onDestroy(() => {
+      window.removeEventListener('resize', updatePositionOnResize);
+      if (cleanupTimeout) clearTimeout(cleanupTimeout);
+    });
+  }
 
   function attachAudioTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
@@ -106,6 +140,7 @@
       const container = document.querySelector(
         `.video-container[data-participant="${participantId}"]`
       ) as HTMLElement | null;
+
       if (container) {
         container.innerHTML = '';
         container.appendChild(element);
@@ -113,20 +148,43 @@
         setTimeout(tryAttach, 100);
       }
     };
+
     tryAttach();
   }
 
   function detachTrack(participantId: string) {
     if (!isBrowser) return;
+
     const audioEl = audioElements.get(participantId);
     if (audioEl) {
-      audioEl.remove();
+      try {
+        audioEl.pause();
+        const stream = audioEl.srcObject as MediaStream | null;
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
+        audioEl.srcObject = null;
+        audioEl.remove();
+      } catch (e) {
+        console.warn(`Error cleaning up audio for ${participantId}:`, e);
+      }
       audioElements.delete(participantId);
     }
+
     const container = document.querySelector(
       `.video-container[data-participant="${participantId}"]`
-    );
-    if (container) container.innerHTML = '';
+    ) as HTMLElement | null;
+
+    if (container) {
+      container.querySelectorAll('video').forEach((video) => {
+        const stream = video.srcObject as MediaStream | null;
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
+        video.srcObject = null;
+      });
+      container.innerHTML = '';
+    }
   }
 
   function updateVolume(id: string, vol: number) {
@@ -145,24 +203,41 @@
 
   function toggleVolumeSlider(id: string, e: MouseEvent) {
     e.preventDefault();
+    e.stopPropagation();
     showVolumeSliderFor = { ...showVolumeSliderFor, [id]: !showVolumeSliderFor[id] };
   }
 
   async function toggleSelfMute() {
-    if (!room) return;
+    if (!room?.localParticipant) return;
+
     isSelfMuted = !isSelfMuted;
-    await room.localParticipant.setMicrophoneEnabled(!isSelfMuted);
+    try {
+      await room.localParticipant.setMicrophoneEnabled(!isSelfMuted);
+    } catch (err) {
+      console.error('Failed to toggle mic:', err);
+      isSelfMuted = !isSelfMuted;
+      error = 'Failed to toggle microphone. Please check permissions.';
+    }
   }
 
   function toggleOthersMute() {
     isOthersMuted = !isOthersMuted;
-    audioElements.forEach((el) => (el.muted = isOthersMuted));
+    audioElements.forEach((el) => {
+      if (el) el.muted = isOthersMuted;
+    });
   }
 
   async function toggleSelfVideo() {
-    if (!room) return;
+    if (!room?.localParticipant) return;
+
     isSelfVideoEnabled = !isSelfVideoEnabled;
-    await room.localParticipant.setCameraEnabled(isSelfVideoEnabled);
+    try {
+      await room.localParticipant.setCameraEnabled(isSelfVideoEnabled);
+    } catch (err) {
+      console.error('Failed to toggle video:', err);
+      isSelfVideoEnabled = !isSelfVideoEnabled;
+      error = 'Failed to toggle camera. Please check permissions.';
+    }
   }
 
   function toggleMinimize() {
@@ -188,6 +263,23 @@
         } else if (track.kind === 'video') {
           attachVideoTrack(track, participant.identity);
         }
+        track.on('muted', () => {
+          if (track.kind === 'audio') {
+            const el = audioElements.get(participant.identity);
+            if (el && !isOthersMuted) {
+              el.volume = 0;
+            }
+          }
+        });
+
+        track.on('unmuted', () => {
+          if (track.kind === 'audio') {
+            const el = audioElements.get(participant.identity);
+            if (el && !isOthersMuted) {
+              el.volume = volumes[participant.identity] ?? 1;
+            }
+          }
+        });
         pub.off('subscribed', onSubscribed);
       };
 
@@ -210,6 +302,23 @@
         } else if (track.kind === 'video') {
           attachVideoTrack(track, participant.identity);
         }
+        track.on('muted', () => {
+          if (track.kind === 'audio') {
+            const el = audioElements.get(participant.identity);
+            if (el && !isOthersMuted) {
+              el.volume = 0;
+            }
+          }
+        });
+
+        track.on('unmuted', () => {
+          if (track.kind === 'audio') {
+            const el = audioElements.get(participant.identity);
+            if (el && !isOthersMuted) {
+              el.volume = volumes[participant.identity] ?? 1;
+            }
+          }
+        });
         pub.off('subscribed', onSubscribed);
       };
 
@@ -221,13 +330,44 @@
       }
     });
 
-    if (!participants.some((p) => p.identity === participant.identity)) {
+    if (!participants.some((p) => p.sid === participant.sid)) {
       participants = [...participants, participant];
     }
   }
 
+  function handleParticipantDisconnected(participant: RemoteParticipant) {
+    participants = participants.filter((part) => part.sid !== participant.sid);
+    detachTrack(participant.identity);
+    delete showVolumeSliderFor[participant.identity];
+    delete volumeDisplayFor[participant.identity];
+    delete volumes[participant.identity];
+  }
+
+  function handleRoomDisconnected() {
+    leaveRoom();
+  }
+
+  function handleRoomReconnecting() {
+    error = 'Reconnecting to voice chat...';
+    connectionQuality = ConnectionQuality.Poor;
+  }
+
+  function handleRoomReconnected() {
+    error = '';
+    connectionQuality = ConnectionQuality.Good;
+  }
+
+  function handleConnectionQualityChanged(quality: ConnectionQuality, participant: Participant) {
+    if (participant.isLocal) {
+      connectionQuality = quality;
+      if (quality === ConnectionQuality.Poor) {
+        console.warn('Poor connection quality detected');
+      }
+    }
+  }
+
   function startDrag(e: MouseEvent) {
-    if (isFullscreen) return;
+    if (isFullscreen || isMinimized) return;
     isDragging = true;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
@@ -282,46 +422,94 @@
   }
 
   async function joinRoom(roomThreadId: number) {
-    if (!isBrowser) return;
+    if (!isBrowser) {
+      error = 'Voice chat is only available in browser environments.';
+      return;
+    }
+
     try {
       const token = (await ThreadApi.getSFUToken({ thread_id: roomThreadId })).token;
-      room = new Room();
-
-      room.on('participantConnected', (p) => handleParticipant(p));
-      room.on('participantDisconnected', (p) => {
-        participants = participants.filter((part) => part.identity !== p.identity);
-        detachTrack(p.identity);
-        delete showVolumeSliderFor[p.identity];
-        delete volumeDisplayFor[p.identity];
-        delete volumes[p.identity];
+      room = new Room({
+        adaptiveStream: true,
+        dynacast: true,
+        stopLocalTrackOnUnpublish: true
       });
 
-      room.on('connected', () => {
-        room!.remoteParticipants.forEach((p) => handleParticipant(p));
-      });
+      // Create named handler functions for proper cleanup
+      participantConnectedHandler = (participant: Participant) =>
+        handleParticipant(participant as RemoteParticipant);
+      participantDisconnectedHandler = (participant: Participant) =>
+        handleParticipantDisconnected(participant as RemoteParticipant);
+      disconnectedHandler = handleRoomDisconnected;
+      reconnectingHandler = handleRoomReconnecting;
+      reconnectedHandler = handleRoomReconnected;
+      connectionQualityChangedHandler = handleConnectionQualityChanged;
 
-      room.on('disconnected', leaveRoom);
+      // Set up event listeners with named handlers
+      room.on('participantConnected', participantConnectedHandler);
+      room.on('participantDisconnected', participantDisconnectedHandler);
+      room.on('disconnected', disconnectedHandler);
+      room.on('reconnecting', reconnectingHandler);
+      room.on('reconnected', reconnectedHandler);
+      room.on('connectionQualityChanged', connectionQualityChangedHandler);
 
       await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
-      const tracks = await room.localParticipant.createTracks({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000,
-          channelCount: 1
-        },
-        video: isSelfVideoEnabled
-      });
+      // Subscribe to existing participants
+      room.remoteParticipants.forEach((p) => handleParticipant(p));
 
-      await Promise.all(tracks.map((track) => room!.localParticipant.publishTrack(track)));
+      // Get local tracks - handle permissions properly
+      const tracks: LocalTrack[] = [];
 
-      const videoTrack = tracks.find((track) => track.kind === 'video');
-      if (videoTrack) {
-        pendingLocalVideoTrack = videoTrack;
-        if (localVideoEl) {
+      try {
+        // Try to get audio track
+        const audioTracks = await room.localParticipant.createTracks({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
+          video: false
+        });
+        tracks.push(...audioTracks);
+        isSelfMuted = audioTracks.length === 0;
+      } catch (err) {
+        console.warn('Audio track creation failed — proceeding without mic', err);
+        isSelfMuted = true;
+      }
+
+      // Only try to get video track if it's enabled
+      if (isSelfVideoEnabled) {
+        try {
+          const videoTracks = await room.localParticipant.createTracks({
+            audio: false,
+            video: true
+          });
+          tracks.push(...videoTracks);
+          isSelfVideoEnabled = videoTracks.length > 0;
+        } catch (err) {
+          console.warn('Video track creation failed — proceeding without camera', err);
+          isSelfVideoEnabled = false;
+        }
+      }
+
+      // Publish tracks
+      for (const track of tracks) {
+        try {
+          await room.localParticipant.publishTrack(track);
+        } catch (err) {
+          console.error('Failed to publish track:', err, track);
+          track.stop();
+        }
+      }
+
+      // Attach local video if available
+      const videoTrack = tracks.find((t) => t.kind === 'video');
+      if (videoTrack && localVideoEl) {
+        try {
           videoTrack.attach(localVideoEl);
+        } catch (err) {
+          console.error('Failed to attach local video:', err);
         }
       }
 
@@ -330,43 +518,159 @@
     } catch (err) {
       error = (err as Error).message || 'Connection failed';
       console.error('Join error:', err);
-      leaveRoom();
+
+      // Fallback: try to connect as listener only
+      if (!hasInitializedMedia) {
+        hasInitializedMedia = true;
+        console.log('Retrying connection as listener only');
+        try {
+          await fallbackListenerOnlyConnection(roomThreadId);
+        } catch (fallbackErr) {
+          console.error('Listener-only connection also failed:', fallbackErr);
+          error = error + ' (Listener mode also failed)';
+          await leaveRoom();
+        }
+      } else {
+        await leaveRoom();
+      }
     }
+  }
+
+  async function fallbackListenerOnlyConnection(roomThreadId: number) {
+    const token = (await ThreadApi.getSFUToken({ thread_id: roomThreadId })).token;
+    room = new Room({
+      adaptiveStream: true,
+      dynacast: true
+    });
+
+    // Create named handler functions for proper cleanup
+    participantConnectedHandler = (participant: Participant) =>
+      handleParticipant(participant as RemoteParticipant);
+    participantDisconnectedHandler = (participant: Participant) =>
+      handleParticipantDisconnected(participant as RemoteParticipant);
+    disconnectedHandler = handleRoomDisconnected;
+    reconnectingHandler = handleRoomReconnecting;
+    reconnectedHandler = handleRoomReconnected;
+    connectionQualityChangedHandler = handleConnectionQualityChanged;
+
+    // Set up event listeners with named handlers
+    room.on('participantConnected', participantConnectedHandler);
+    room.on('participantDisconnected', participantDisconnectedHandler);
+    room.on('disconnected', disconnectedHandler);
+    room.on('reconnecting', reconnectingHandler);
+    room.on('reconnected', reconnectedHandler);
+    room.on('connectionQualityChanged', connectionQualityChangedHandler);
+
+    await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
+
+    // Subscribe to existing participants
+    room.remoteParticipants.forEach((p) => handleParticipant(p));
+
+    isConnected = true;
+    error = 'Connected as listener only (no microphone/camera access)';
   }
 
   async function leaveRoom() {
     if (!isBrowser) return;
-    if (room) {
-      await room.disconnect();
+
+    try {
+      if (room) {
+        // Clean up event listeners properly with named handlers
+        room.off('participantConnected', participantConnectedHandler);
+        room.off('participantDisconnected', participantDisconnectedHandler);
+        room.off('disconnected', disconnectedHandler);
+        room.off('reconnecting', reconnectingHandler);
+        room.off('reconnected', reconnectedHandler);
+        room.off('connectionQualityChanged', connectionQualityChangedHandler);
+
+        // Disconnect from room
+        await room.disconnect();
+        room = null;
+      }
+
+      // Clean up audio elements
+      audioElements.forEach((el, id) => {
+        try {
+          el.pause();
+          const stream = el.srcObject as MediaStream | null;
+          if (stream) {
+            stream.getTracks().forEach((track) => track.stop());
+          }
+          el.srcObject = null;
+          el.remove();
+        } catch (e) {
+          console.warn(`Error cleaning up audio element for ${id}:`, e);
+        }
+      });
+      audioElements.clear();
+
+      // Clean up video containers
+      document.querySelectorAll('.video-container').forEach((container) => {
+        try {
+          const videos = container.querySelectorAll('video');
+          videos.forEach((video) => {
+            const stream = video.srcObject as MediaStream | null;
+            if (stream) {
+              stream.getTracks().forEach((track) => track.stop());
+            }
+            video.srcObject = null;
+          });
+          (container as HTMLElement).innerHTML = '';
+        } catch (e) {
+          console.warn('Error cleaning up video container:', e);
+        }
+      });
+
+      // Clean up local video
+      if (localVideoEl) {
+        try {
+          const stream = localVideoEl.srcObject as MediaStream | null;
+          if (stream) {
+            stream.getTracks().forEach((track) => track.stop());
+          }
+          localVideoEl.srcObject = null;
+          localVideoEl.load();
+        } catch (e) {
+          console.warn('Error cleaning up local video element:', e);
+        }
+      }
+
+      // Reset state
+      participants = [];
+      volumes = {};
+      showVolumeSliderFor = {};
+      volumeDisplayFor = {};
+
+      isConnected = false;
+      isSelfMuted = false;
+      isOthersMuted = false;
+      isSelfVideoEnabled = true;
+      connectionQuality = ConnectionQuality.Good;
+
+      $voiceThreadId = null;
+    } catch (err) {
+      console.error('Error during leaveRoom:', err);
+      // Force cleanup even on error
       room = null;
+      isConnected = false;
+      $voiceThreadId = null;
     }
-    participants = [];
-    audioElements.forEach((el) => el.remove());
-    audioElements.clear();
-    document.querySelectorAll('.video-container').forEach((el) => {
-      (el as HTMLElement).innerHTML = '';
-    });
-    if (localVideoEl) {
-      localVideoEl.srcObject = null;
-      localVideoEl.load();
-    }
-    pendingLocalVideoTrack = null;
-
-    isConnected = false;
-    isSelfMuted = false;
-    isOthersMuted = false;
-    isSelfVideoEnabled = true;
-    volumes = {};
-    showVolumeSliderFor = {};
-    volumeDisplayFor = {};
-
-    $voiceThreadId = null;
   }
 
   $effect(() => {
-    if (localVideoEl && pendingLocalVideoTrack) {
-      pendingLocalVideoTrack.attach(localVideoEl);
-      pendingLocalVideoTrack = null;
+    if (localVideoEl && room) {
+      const videoPub = room.localParticipant.getTrackPublication(Track.Source.Camera);
+      if (videoPub?.track) {
+        try {
+          if (localVideoEl.srcObject) {
+            const stream = localVideoEl.srcObject as MediaStream;
+            stream.getTracks().forEach((track) => track.stop());
+          }
+          videoPub.track.attach(localVideoEl);
+        } catch (err) {
+          console.error('Failed to attach local video:', err);
+        }
+      }
     }
   });
 
@@ -376,7 +680,7 @@
 </script>
 
 <svelte:window
-  on:mousemove={(e) => {
+  on:mousemove={(e: MouseEvent) => {
     if (isDragging) handleDrag(e);
     if (isResizing) handleResize(e);
   }}
@@ -387,13 +691,12 @@
 />
 
 <div
-  class="fixed overflow-hidden rounded-xl border border-border bg-background text-sm shadow-xl transition-all duration-300"
+  class="fixed z-[100] overflow-hidden rounded-xl border border-border bg-background text-sm shadow-xl transition-all duration-300"
   style="
     left: {position.x}px;
     top: {position.y}px;
     width: {dimensions.width}px;
     height: {isMinimized ? 'auto' : isFullscreen ? '100vh' : `${dimensions.height}px`};
-    z-index: 100;
   "
   class:invisible={$voiceThreadId === null}
 >
@@ -402,11 +705,27 @@
     class="flex cursor-move items-center justify-between border-b border-border px-3 py-2 select-none"
     onmousedown={startDrag}
   >
-    <h3 class="text-lg font-semibold">Voice Chat</h3>
+    <div class="flex items-center gap-2">
+      {#if error}
+        <div class="flex items-center gap-1 text-yellow-500">
+          <AlertTriangle size={16} />
+          <span class="text-xs">{error}</span>
+        </div>
+      {:else if connectionQuality === ConnectionQuality.Poor}
+        <div class="flex items-center gap-1 text-yellow-500">
+          <Signal size={16} />
+          <span class="text-xs">Poor connection</span>
+        </div>
+      {/if}
+      <h3 class="flex items-center gap-2 text-lg font-semibold">
+        <Users size={18} class="text-secondary" />
+        Voice Chat ({participants.length + 1})
+      </h3>
+    </div>
     <div class="flex items-center gap-1">
       <button
         class="rounded p-1 hover:bg-accent"
-        onclick={(e) => {
+        onclick={(e: MouseEvent) => {
           e.stopPropagation();
           toggleFullscreen();
         }}
@@ -420,7 +739,7 @@
       </button>
       <button
         class="rounded p-1 hover:bg-accent"
-        onclick={(e) => {
+        onclick={(e: MouseEvent) => {
           e.stopPropagation();
           toggleMinimize();
         }}
@@ -435,10 +754,6 @@
     </div>
   </div>
 
-  {#if error}
-    <p class="p-2 text-sm text-destructive">{error}</p>
-  {/if}
-
   {#if !isMinimized}
     <div class="flex flex-col" style="height: calc(100% - 60px);">
       {#if isConnected}
@@ -450,111 +765,200 @@
             muted
             class="h-full w-full object-cover"
           ></video>
-          <span class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
-            >You</span
+          <span
+            class="absolute bottom-1 left-1 flex items-center gap-1 rounded bg-black/60 px-1 text-xs text-white"
           >
+            <span>You</span>
+            {#if connectionQuality === ConnectionQuality.Poor}
+              <span class="text-yellow-500">
+                <Signal size={12} />
+              </span>
+            {/if}
+          </span>
         </div>
       {/if}
 
       <div class="mb-3 flex-1 overflow-auto">
-        <div class="flex flex-row flex-wrap justify-center gap-2">
-          {#each participants as p (p.sid)}
-            {#if room && p.identity !== room.localParticipant.identity}
-              <div class="flex w-24 flex-col items-center gap-1">
-                <div
-                  class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg bg-black transition-colors hover:ring-2 hover:ring-accent"
-                  oncontextmenu={(e) => {
-                    e.preventDefault();
-                    toggleVolumeSlider(p.identity, e);
-                  }}
-                >
-                  <div class="video-container absolute inset-0" data-participant={p.identity}></div>
-                  <span
-                    class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
+        {#if isFullscreen}
+          <div class="flex min-h-0 flex-row gap-4 overflow-x-auto p-2 pb-4">
+            {#each participants as p (p.sid)}
+              {#if room && p.sid !== room.localParticipant.sid}
+                <div class="flex w-80 flex-shrink-0 flex-col items-center">
+                  <div
+                    class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg bg-black transition-colors hover:ring-2 hover:ring-accent"
+                    oncontextmenu={(e: MouseEvent) => {
+                      e.preventDefault();
+                      toggleVolumeSlider(p.identity, e);
+                    }}
                   >
-                    {p.identity}
-                  </span>
-                </div>
-
-                {#if showVolumeSliderFor[p.identity]}
-                  <div class="w-full rounded bg-black/30 p-1">
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      class="h-1.5 w-full cursor-pointer accent-primary"
-                      value={volumes[p.identity] ?? 1}
-                      oninput={(e) => {
-                        const val = parseFloat((e.target as HTMLInputElement).value);
-                        updateVolume(p.identity, val);
-                      }}
-                    />
-                    {#if volumeDisplayFor[p.identity]?.value}
-                      <span class="mt-0.5 block text-center text-[10px] text-white">
-                        {volumeDisplayFor[p.identity].value}
-                      </span>
-                    {/if}
+                    <div
+                      class="video-container absolute inset-0"
+                      data-participant={p.identity}
+                    ></div>
+                    <span
+                      class="absolute bottom-1 left-1 flex items-center gap-1 rounded bg-black/60 px-1 text-xs text-white"
+                    >
+                      {p.identity}
+                      {#if p.connectionQuality === ConnectionQuality.Poor}
+                        <span class="text-yellow-500">
+                          <Signal size={12} />
+                        </span>
+                      {/if}
+                    </span>
                   </div>
-                {/if}
+
+                  {#if showVolumeSliderFor[p.identity]}
+                    <div class="mt-1 w-full rounded bg-black/30 p-1">
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        class="h-1.5 w-full cursor-pointer accent-primary"
+                        value={volumes[p.identity] ?? 1}
+                        oninput={(e: Event) => {
+                          e.stopPropagation();
+                          const val = parseFloat((e.target as HTMLInputElement).value);
+                          updateVolume(p.identity, val);
+                        }}
+                      />
+                      {#if volumeDisplayFor[p.identity]?.value}
+                        <span class="mt-0.5 block text-center text-[10px] text-white">
+                          {volumeDisplayFor[p.identity].value}
+                        </span>
+                      {/if}
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+            {/each}
+            {#if participants.length === 0}
+              <div
+                class="flex w-full items-center justify-center py-8 text-center text-muted-foreground"
+              >
+                No other participants in the voice chat
               </div>
             {/if}
-          {/each}
-        </div>
+          </div>
+        {:else}
+          <div class="flex min-h-0 flex-row flex-wrap justify-center gap-2 p-2">
+            {#each participants as p (p.sid)}
+              {#if room && p.sid !== room.localParticipant.sid}
+                <div class="flex w-24 flex-col items-center gap-1">
+                  <div
+                    class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg bg-black transition-colors hover:ring-2 hover:ring-accent"
+                    oncontextmenu={(e: MouseEvent) => {
+                      e.preventDefault();
+                      toggleVolumeSlider(p.identity, e);
+                    }}
+                  >
+                    <div
+                      class="video-container absolute inset-0"
+                      data-participant={p.identity}
+                    ></div>
+                    <span
+                      class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
+                    >
+                      {p.identity}
+                    </span>
+                  </div>
+
+                  {#if showVolumeSliderFor[p.identity]}
+                    <div class="w-full rounded bg-black/30 p-1">
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        class="h-1.5 w-full cursor-pointer accent-primary"
+                        value={volumes[p.identity] ?? 1}
+                        oninput={(e: Event) => {
+                          e.stopPropagation();
+                          const val = parseFloat((e.target as HTMLInputElement).value);
+                          updateVolume(p.identity, val);
+                        }}
+                      />
+                      {#if volumeDisplayFor[p.identity]?.value}
+                        <span class="mt-0.5 block text-center text-[10px] text-white">
+                          {volumeDisplayFor[p.identity].value}
+                        </span>
+                      {/if}
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+            {/each}
+            {#if participants.length === 0}
+              <div
+                class="flex w-full items-center justify-center py-4 text-center text-muted-foreground"
+              >
+                No other participants in the voice chat
+              </div>
+            {/if}
+          </div>
+        {/if}
       </div>
 
-      <div class="mt-auto flex flex-wrap justify-center gap-3 border-t border-border py-2">
+      <div class="mt-auto flex flex-wrap justify-center gap-2 border-t border-border px-2 py-2">
         <button
-          class="rounded-full p-3 transition-colors {isSelfMuted
+          class="flex h-12 w-12 flex-col items-center justify-center rounded-full transition-colors {isSelfMuted
             ? 'bg-destructive text-white hover:bg-destructive/90'
             : 'bg-secondary hover:bg-secondary/80'}"
           onclick={toggleSelfMute}
+          title={isSelfMuted ? 'Unmute microphone' : 'Mute microphone'}
           disabled={!isConnected}
         >
           {#if isSelfMuted}
-            <MicOff size={20} />
+            <MicOff size={24} />
           {:else}
-            <Mic size={20} />
+            <Mic size={24} />
           {/if}
+          <span class="mt-1 text-[10px]">Mic</span>
         </button>
 
         <button
-          class="rounded-full p-3 transition-colors {isOthersMuted
+          class="flex h-12 w-12 flex-col items-center justify-center rounded-full transition-colors {isOthersMuted
             ? 'bg-destructive text-white hover:bg-destructive/90'
             : 'bg-secondary hover:bg-secondary/80'}"
           onclick={toggleOthersMute}
+          title={isOthersMuted ? 'Unmute others' : 'Mute others'}
           disabled={!isConnected}
         >
           {#if isOthersMuted}
-            <VolumeX size={20} />
+            <VolumeX size={24} />
           {:else}
-            <Volume2 size={20} />
+            <Volume2 size={24} />
           {/if}
+          <span class="mt-1 text-[10px]">Volume</span>
         </button>
 
         <button
-          class="rounded-full p-3 transition-colors {!isSelfVideoEnabled
+          class="flex h-12 w-12 flex-col items-center justify-center rounded-full transition-colors {!isSelfVideoEnabled
             ? 'bg-destructive text-white hover:bg-destructive/90'
             : 'bg-secondary hover:bg-secondary/80'}"
           onclick={toggleSelfVideo}
+          title={isSelfVideoEnabled ? 'Disable camera' : 'Enable camera'}
           disabled={!isConnected}
         >
           {#if isSelfVideoEnabled}
-            <Video size={20} />
+            <Video size={24} />
           {:else}
-            <VideoOff size={20} />
+            <VideoOff size={24} />
           {/if}
+          <span class="mt-1 text-[10px]">Camera</span>
         </button>
 
         <button
-          class="rounded-full bg-destructive p-3 text-white transition-colors hover:bg-destructive/90"
+          class="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-destructive text-white transition-colors hover:bg-destructive/90"
           onclick={leaveRoom}
+          title={isConnected ? 'Leave voice chat' : 'Join voice chat'}
         >
           {#if isConnected}
-            <LogOut size={20} />
+            <LogOut size={24} />
           {:else}
-            <LogIn size={20} />
+            <LogIn size={24} />
           {/if}
+          <span class="mt-1 text-[10px]">{isConnected ? 'Leave' : 'Join'}</span>
         </button>
       </div>
     </div>
@@ -589,7 +993,7 @@
   {#if !isMinimized && !isFullscreen}
     <div
       class="absolute right-0 bottom-0 h-4 w-4 cursor-se-resize"
-      onmousedown={(e) => {
+      onmousedown={(e: MouseEvent) => {
         e.stopPropagation();
         startResize(e);
       }}
@@ -632,5 +1036,34 @@
     background: currentColor;
     cursor: pointer;
     border: none;
+  }
+
+  /* Scrollbar for fullscreen carousel */
+  .overflow-x-auto::-webkit-scrollbar {
+    height: 6px;
+  }
+  .overflow-x-auto::-webkit-scrollbar-thumb {
+    background: rgba(128, 128, 128, 0.3);
+    border-radius: 3px;
+  }
+  .overflow-x-auto::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Ensure video containers properly handle child elements */
+  .video-container {
+    width: 100%;
+    height: 100%;
+  }
+
+  .video-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Smooth transitions for connection quality indicators */
+  .connection-quality {
+    transition: all 0.3s ease;
   }
 </style>
