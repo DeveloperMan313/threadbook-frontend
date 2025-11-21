@@ -67,12 +67,16 @@ const routeUserPublication = (ctx: PublicationContext, handlers: UserHandlers) =
   handlers[handlerKey](ctx.data.payload);
 };
 
-export class CentrifugeClient {
-  private centrifuge: Centrifuge | null = null;
-  private tokens: GetCentrifugeTokensResponse | null = null;
-  private userChannel: string | null = null;
+class CentrifugeClient {
+  private centrifuge: Centrifuge | undefined = undefined;
+  private tokens: GetCentrifugeTokensResponse | undefined = undefined;
+  private userChannel: string | undefined = undefined;
 
   public async connect(): Promise<void> {
+    if (this.centrifuge) {
+      return;
+    }
+
     this.tokens = await ThreadApi.getCentrifugeTokens({});
 
     this.centrifuge = new Centrifuge(PUBLIC_CENTRIFUGE_ORIGIN, {
@@ -90,6 +94,8 @@ export class CentrifugeClient {
     }
 
     this.centrifuge.disconnect();
+
+    delete this.centrifuge;
   }
 
   public async getSpoolTokens(spool_id: number): Promise<void> {
@@ -201,3 +207,5 @@ export class CentrifugeClient {
     this.centrifuge.removeSubscription(sub);
   }
 }
+
+export const centrifugeClient = new CentrifugeClient();
