@@ -9,6 +9,7 @@ export interface ChatState {
   messages: Array<MessageProps>;
   messageText: string;
   firstMessageLoaded: boolean;
+  initialLoading: boolean;
 }
 
 export interface ChatProps {

@@ -57,7 +57,8 @@
       thread: thread,
       messages: [],
       messageText: '',
-      firstMessageLoaded: false
+      firstMessageLoaded: false,
+      initialLoading: true
     });
 
     MessageApi.getThreadMessages({ thread_id: thread.id, limit: messageLoadLimit }).then(
@@ -67,7 +68,8 @@
           thread: thread,
           messages: messages,
           messageText: '',
-          firstMessageLoaded: messages.length < messageLoadLimit
+          firstMessageLoaded: messages.length < messageLoadLimit,
+          initialLoading: false
         });
         await tick();
         handleScroll(); // might be at top after initial load
@@ -131,11 +133,11 @@
 
   // load older messages chunk on scroll
   $effect(() => {
-    const thread = untrack(() => currentThread); // capture thread
+    const thread = currentThread; // capture thread
     if (!thread) return;
     const chat = threadChats.get(thread.id);
     const msgs = untrack(() => messages);
-    // track only isAtTop
+    // track only currentThread and isAtTop
     if (isAtTop && chat && !chat.firstMessageLoaded && msgs.length > 0) {
       MessageApi.getThreadMessages({
         thread_id: thread.id,
@@ -208,7 +210,12 @@
 
 <div class="flex h-full flex-col">
   <div class="flex-1 overflow-y-auto p-4" bind:this={messagesContainer} onscroll={handleScroll}>
-    {#if messages.length === 0}
+    {#if currentThread && threadChats.get(currentThread.id)?.initialLoading}
+      <div class="flex h-full flex-col items-center justify-center gap-2">
+        <Spinner class="size-10 text-muted-foreground" />
+        <p class="text-center text-sm text-muted-foreground">Loading messages...</p>
+      </div>
+    {:else if messages.length === 0}
       <div class="flex h-full items-center justify-center text-gray-500">
         <div class="text-center">
           <p class="text-lg">No messages yet</p>
