@@ -80,6 +80,7 @@
       onMessageCreated: (payload: WsMessageCreated) => {
         const mine = payload.username == profile.username;
         cacheProfilesFromMessages([payload]);
+        payload.created_at *= 1000; // convert s to ms
         renderMessage(thread.id, payload, mine);
       },
       onMessageUpdated: () => {}, // TODO
