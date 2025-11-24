@@ -109,7 +109,7 @@
       const thread = {
         id: payload.id,
         title: payload.title,
-        type: 'public',
+        type: payload.type,
         is_closed: false,
         unreadCnt: 0,
         mentionCnt: 0
