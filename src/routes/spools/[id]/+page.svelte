@@ -28,6 +28,10 @@
 
   let { data } = $props();
 
+  if (!data.isAuthorized) {
+    throw new Error('unauthorized');
+  }
+
   let threadChats = new SvelteMap<number, ChatState>();
 
   let threads: Array<ThreadProps> = $state([]);

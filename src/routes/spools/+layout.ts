@@ -6,14 +6,15 @@ import { ApiClient } from '$lib/api/client';
 export const load: LayoutLoad = async ({ fetch }) => {
   ApiClient.setFetch(fetch);
 
-  if (!(await tryGetUserProfile())) return;
-
   const spools = await SpoolApi.getUserSpoolList();
 
   await centrifugeClient.connect();
 
+  const isAuthorized = await tryGetUserProfile();
+
   return {
     spools,
-    centrifugeClient
+    centrifugeClient,
+    isAuthorized
   };
 };

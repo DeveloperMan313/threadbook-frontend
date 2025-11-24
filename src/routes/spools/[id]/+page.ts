@@ -6,16 +6,17 @@ import { tryGetUserProfile } from '$lib/userProfile';
 export const load: PageLoad = async ({ params, fetch }) => {
   ApiClient.setFetch(fetch);
 
-  if (!(await tryGetUserProfile())) return;
-
   const spool_id = Number(params.id);
 
   await centrifugeClient.getTokens(spool_id);
 
   const threadsPromise = ThreadApi.getSpoolThreads({ spool_id });
 
+  const isAuthorized = await tryGetUserProfile();
+
   return {
     spoolId: spool_id,
-    threads: threadsPromise
+    threads: threadsPromise,
+    isAuthorized
   };
 };

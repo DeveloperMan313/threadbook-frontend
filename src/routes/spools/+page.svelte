@@ -6,6 +6,10 @@
 
   let { data } = $props();
 
+  if (!data.isAuthorized) {
+    throw new Error('unauthorized');
+  }
+
   let isCreateModalOpen = $state(false);
 </script>
 
