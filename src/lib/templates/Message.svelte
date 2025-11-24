@@ -49,6 +49,6 @@
         </p>
       </div>
     {/if}
-    <p class="w-full">{content}</p>
+    <p class="w-full overflow-hidden">{content}</p>
   </div>
 </div>
