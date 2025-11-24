@@ -10,7 +10,7 @@ export const load: PageLoad = async ({ params, fetch }) => {
 
   const spool_id = Number(params.id);
 
-  await centrifugeClient.getSpoolTokens(spool_id);
+  await centrifugeClient.getTokens(spool_id);
 
   const threadsPromise = ThreadApi.getSpoolThreads({ spool_id });
 

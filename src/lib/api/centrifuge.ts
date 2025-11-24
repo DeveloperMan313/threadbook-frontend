@@ -77,10 +77,10 @@ class CentrifugeClient {
       return;
     }
 
-    this.tokens = await ThreadApi.getCentrifugeTokens({});
+    await this.getTokens();
 
     this.centrifuge = new Centrifuge(PUBLIC_CENTRIFUGE_ORIGIN, {
-      token: this.tokens.ConnectToken
+      token: this.tokens!.ConnectToken
     });
 
     this.centrifuge.on('error', (err) => console.log(`Centrifuge Error: ${JSON.stringify(err)}`));
@@ -98,7 +98,7 @@ class CentrifugeClient {
     delete this.centrifuge;
   }
 
-  public async getSpoolTokens(spool_id: number): Promise<void> {
+  public async getTokens(spool_id?: number): Promise<void> {
     const fetchedTokens = await ThreadApi.getCentrifugeTokens({ spool_id });
     if (!this.tokens) {
       this.tokens = fetchedTokens;
