@@ -61,7 +61,7 @@
     });
 
     MessageApi.getThreadMessages({ thread_id: thread.id, limit: messageLoadLimit }).then(
-      (messages) => {
+      async (messages) => {
         cacheProfilesFromMessages(messages);
         threadChats.set(thread.id, {
           thread: thread,
@@ -69,6 +69,8 @@
           messageText: '',
           firstMessageLoaded: messages.length < messageLoadLimit
         });
+        await tick();
+        handleScroll(); // might be at top after initial load
       }
     );
 
@@ -106,10 +108,12 @@
     return chat ? chat.messageText : '';
   });
 
+  // thread switch
   $effect(() => {
     if (currentThread) {
       let thread = currentThread;
       handleEmptyThreadMessages(thread);
+      handleScroll(); // might be at top after thread switch
     }
   });
 
