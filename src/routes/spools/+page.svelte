@@ -14,8 +14,8 @@
 </script>
 
 <Navbar />
-<h1 class="ms-20 mt-28 text-4xl">My spools</h1>
-<div class="mt-10 flex h-full w-full flex-row flex-wrap content-start justify-start gap-4 px-20">
+<h1 class="ps-20 pt-28 text-4xl">My spools</h1>
+<div class="mt-10 flex w-full flex-row flex-wrap content-start justify-start gap-4 px-20 pb-5">
   {#each data.spools as spool (spool.id)}
     <SpoolCard {...spool} />
   {/each}

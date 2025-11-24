@@ -154,20 +154,23 @@
 </script>
 
 <Navbar />
-<div class="fixed inset-0 top-16 flex flex-row">
+<div class="fixed inset-0 top-16 flex flex-row overflow-x-scroll">
   <SpoolDock spools={data.spools} />
   <div class="flex w-72 flex-shrink-0 flex-col gap-6 p-4 pt-3 pr-3">
     <div class="flex items-start justify-between">
-      <h2 class="w-full scroll-m-20 border-b pb-2 text-3xl">{spoolName}</h2>
+      <h2 class="w-full scroll-m-20 truncate border-b pb-2 text-3xl">{spoolName}</h2>
       <DropdownMenu.Root>
         <DropdownMenu.Trigger>
-          <Button
-            variant="ghost"
-            size="icon"
-            class="mt-1 cursor-pointer rounded-full text-muted-foreground"
-          >
-            <EllipsisVertical />
-          </Button>
+          {#snippet child({ props })}
+            <Button
+              {...props}
+              variant="ghost"
+              size="icon"
+              class="mt-1 cursor-pointer rounded-full text-muted-foreground"
+            >
+              <EllipsisVertical />
+            </Button>
+          {/snippet}
         </DropdownMenu.Trigger>
         <DropdownMenu.Content class="w-56" align="start">
           <DropdownMenu.Item
@@ -194,7 +197,7 @@
       bind:isOpen={isInviteUsersToSpoolModalOpen}
     />
   </div>
-  <div class="flex w-full flex-col bg-white">
+  <div class="flex w-full min-w-96 flex-col overflow-hidden bg-white">
     {#if currentThreadId}
       <Chat centrifugeClient={data.centrifugeClient} />
     {:else}

@@ -34,13 +34,13 @@
   });
 </script>
 
-<div class="flex w-full" class:mt-4={shouldRenderProfileInfo}>
+<div class="flex w-full pe-16" class:mt-4={shouldRenderProfileInfo}>
   <div class="w-[5rem] flex-none">
     {#if shouldRenderProfileInfo}
       <UserAvatar {username} {nickname} {avatarSrc} class="size-12" />
     {/if}
   </div>
-  <div class="flex-1">
+  <div class="w-full flex-1 overflow-hidden">
     {#if shouldRenderProfileInfo}
       <div class="flex w-full flex-row items-end gap-1">
         <p class="font-semibold">{nickname || username}</p>
@@ -49,6 +49,6 @@
         </p>
       </div>
     {/if}
-    <p class="w-full overflow-hidden">{content}</p>
+    <p class="w-full overflow-hidden wrap-break-word">{content}</p>
   </div>
 </div>

@@ -47,7 +47,9 @@
         variant="outline"
         class={`absolute h-full w-full cursor-pointer p-0 ${id === getCurrentThreadId() ? 'bg-accent' : ''}`}
         onclick={() => setCurrentThreadId(id)}
-        ><p class="w-full ps-3 text-start text-base">
+        ><p
+          class={`w-full truncate ps-3 text-start text-base ${type === 'private' ? 'group-hover:pe-16' : 'group-hover:pe-8'}`}
+        >
           {title}
         </p></Button
       >
@@ -62,10 +64,10 @@
         {#if unreadCnt > 0}
           <p class="text-sm text-gray-600">{unreadCnt}</p>
         {/if}
-        {#if type == 'private'}
+        {#if type === 'private'}
           <Button
             variant="ghost"
-            class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 group-hover:opacity-100"
+            class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200"
             onclick={() => {
               isInviteUsersToThreadModalOpen = true;
             }}
@@ -75,7 +77,7 @@
         {/if}
         <Button
           variant="ghost"
-          class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 group-hover:opacity-100"
+          class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200"
           onclick={() => {
             $voiceThreadId = id;
           }}

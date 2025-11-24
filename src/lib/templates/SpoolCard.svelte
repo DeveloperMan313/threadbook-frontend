@@ -21,7 +21,7 @@
     </div>
   {/if}
   <div class="flex h-40 w-full flex-col gap-3 p-3 transition-colors">
-    <p class="text-xl font-medium">{name}</p>
+    <p class="line-clamp-2 text-xl leading-none font-medium">{name}</p>
     <!-- <div class="flex items-center gap-3">
       <div class="flex items-center gap-2">
         <img class="size-5" src={usersIcon} alt="users:" />
