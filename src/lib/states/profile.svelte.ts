@@ -1,7 +1,9 @@
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
-import { AuthApi } from './api';
-import { userProfile } from './writables';
+import { AuthApi } from '$lib/api';
+import type { UserProfileFull } from '$lib/types';
+
+export const stateProfile = $state<{ profile: UserProfileFull | null }>({ profile: null });
 
 /**
  * Tries to get user profile data from API and if not authorized redirects to /signin
@@ -9,14 +11,13 @@ import { userProfile } from './writables';
  */
 export const tryGetUserProfile = async (): Promise<boolean> => {
   try {
-    const profile = await AuthApi.getAuth();
-    userProfile.set(profile);
+    stateProfile.profile = await AuthApi.getAuth();
     return true;
   } catch (error) {
     if (error instanceof Error && error.message == 'unouthorized') {
       goto(resolve('/signin'));
     }
   }
-  userProfile.set(null);
+  stateProfile.profile = null;
   return false;
 };

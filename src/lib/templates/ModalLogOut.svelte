@@ -1,15 +1,13 @@
 <script lang="ts">
-  import type { ModalLogOutProps, UserProfileFull } from '$lib/types';
+  import type { ModalLogOutProps } from '$lib/types';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import { AuthApi } from '$lib/api';
-  import { userProfile } from '$lib/writables';
+  import { stateProfile } from '$lib/states';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
 
   let { isOpen = $bindable() }: ModalLogOutProps = $props();
-
-  const profile = $derived($userProfile as UserProfileFull);
 
   const onLeaveClick = () => {
     isOpen = false;
@@ -31,7 +29,7 @@
     <Dialog.Header>
       <Dialog.Title>Log out</Dialog.Title>
       <Dialog.Description>
-        Are you sure you want to log out of your account "{profile.email}"?
+        Are you sure you want to log out of your account "{stateProfile.profile!.email}"?
       </Dialog.Description>
     </Dialog.Header>
     <Dialog.Footer>

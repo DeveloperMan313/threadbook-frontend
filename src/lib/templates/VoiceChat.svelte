@@ -21,21 +21,20 @@
     LogIn,
     LogOut
   } from '@lucide/svelte';
-  import { voiceThreadId } from '$lib/writables';
+  import { stateVoiceThreadId } from '$lib/states';
   import { ThreadApi } from '$lib/api';
 
   $effect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-    $voiceThreadId;
+    const vtId = stateVoiceThreadId.id;
     untrack(async () => {
       if (isConnected) {
-        const voiceThreadIdCopy = $voiceThreadId; // HACK, cuz leaveRoom() sets it to null
+        const voiceThreadIdCopy = vtId; // HACK, cuz leaveRoom() sets it to null
         await leaveRoom();
-        $voiceThreadId = voiceThreadIdCopy;
+        stateVoiceThreadId.id = voiceThreadIdCopy;
       }
     }).then(() => {
-      if ($voiceThreadId) {
-        joinRoom($voiceThreadId);
+      if (vtId) {
+        joinRoom(vtId);
       }
     });
   });
@@ -360,7 +359,7 @@
     showVolumeSliderFor = {};
     volumeDisplayFor = {};
 
-    $voiceThreadId = null;
+    stateVoiceThreadId.id = null;
   }
 
   $effect(() => {
@@ -395,7 +394,7 @@
     height: {isMinimized ? 'auto' : isFullscreen ? '100vh' : `${dimensions.height}px`};
     z-index: 100;
   "
-  class:invisible={$voiceThreadId === null}
+  class:invisible={stateVoiceThreadId.id === null}
 >
   <div
     role="toolbar"

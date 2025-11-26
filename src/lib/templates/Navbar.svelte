@@ -4,11 +4,11 @@
   import logo from '$lib/assets/icons/logo.svg';
   import Button from '$lib/components/ui/button/button.svelte';
   import type { UserProfileFull } from '$lib/types';
-  import { userProfile } from '$lib/writables';
+  import { stateProfile } from '$lib/states';
   import ModalProfileSettings from './ModalProfileSettings.svelte';
   import UserAvatar from './UserAvatar.svelte';
 
-  const profile = $derived($userProfile as UserProfileFull);
+  const profile = $derived(stateProfile.profile as UserProfileFull);
 
   let isProfileSettingsModalOpen = $state(false);
 </script>

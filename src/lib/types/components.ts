@@ -101,10 +101,6 @@ export interface SpoolProps {
   threads: number; // unimplemented
 }
 
-export interface SpoolDockProps {
-  spools: Array<SpoolProps>;
-}
-
 export type ThreadType = 'private' | 'public';
 
 export interface ThreadProps {

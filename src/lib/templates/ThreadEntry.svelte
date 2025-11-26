@@ -7,7 +7,7 @@
   import Button from '$lib/components/ui/button/button.svelte';
   import { Phone, UserPlus } from '@lucide/svelte';
   import ModalInviteUsersToThread from './ModalInviteUsersToThread.svelte';
-  import { voiceThreadId } from '$lib/writables';
+  import { stateVoiceThreadId } from '$lib/states';
 
   let { id, title, type, unreadCnt, mentionCnt }: ThreadProps = $props();
 
@@ -79,7 +79,7 @@
           variant="ghost"
           class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200"
           onclick={() => {
-            $voiceThreadId = id;
+            stateVoiceThreadId.id = id;
           }}
         >
           <Phone />

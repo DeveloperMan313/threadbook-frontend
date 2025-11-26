@@ -1,7 +1,7 @@
 import type { PageLoad } from './$types';
 import { centrifugeClient, ThreadApi } from '$lib/api';
 import { ApiClient } from '$lib/api/client';
-import { tryGetUserProfile } from '$lib/userProfile';
+import { tryGetUserProfile } from '$lib/states';
 
 export const load: PageLoad = async ({ params, fetch }) => {
   ApiClient.setFetch(fetch);

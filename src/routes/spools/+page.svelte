@@ -3,6 +3,7 @@
   import ModalSpoolCreate from '$lib/templates/ModalSpoolCreate.svelte';
   import Navbar from '$lib/templates/Navbar.svelte';
   import SpoolCard from '$lib/templates/SpoolCard.svelte';
+  import { stateSpools } from '$lib/states';
 
   let { data } = $props();
 
@@ -16,7 +17,7 @@
 <Navbar />
 <h1 class="ps-20 pt-28 text-4xl">My spools</h1>
 <div class="mt-10 flex w-full flex-row flex-wrap content-start justify-start gap-4 px-20 pb-5">
-  {#each data.spools as spool (spool.id)}
+  {#each stateSpools.spools as spool (spool.id)}
     <SpoolCard {...spool} />
   {/each}
   <button

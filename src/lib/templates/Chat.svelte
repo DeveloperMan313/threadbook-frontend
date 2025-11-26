@@ -3,16 +3,10 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import Message from './Message.svelte';
-  import type {
-    ChatState,
-    MessageProps,
-    ThreadProps,
-    WsMessageCreated,
-    UserProfileFull
-  } from '$lib/types';
+  import type { ChatState, MessageProps, ThreadProps, WsMessageCreated } from '$lib/types';
   import type { SvelteMap } from 'svelte/reactivity';
   import { centrifugeClient, MessageApi } from '$lib/api';
-  import { userProfile } from '$lib/writables';
+  import { stateProfile } from '$lib/states';
   import Spinner from '$lib/components/ui/spinner/spinner.svelte';
 
   const { threadChats, getCurrentThreadId, getThreads } = getContext('threads') as {
@@ -76,7 +70,7 @@
     centrifugeClient.subToThread(thread.id);
 
     centrifugeClient.onThread(thread.id, 'message.created', (payload: WsMessageCreated) => {
-      const mine = payload.username == profile.username;
+      const mine = payload.username == stateProfile.profile!.username;
       cacheProfilesFromMessages([payload]);
       payload.created_at *= 1000; // convert s to ms
       renderMessage(thread.id, payload, mine);
@@ -164,8 +158,6 @@
     }
   });
 
-  const profile = $derived($userProfile as UserProfileFull);
-
   let isSendingMessage = $state(false);
 
   const sendMessage = async () => {
@@ -175,7 +167,7 @@
 
     const message: MessageProps = {
       id: 0,
-      username: profile.username,
+      username: stateProfile.profile!.username,
       content: messageText,
       created_at: new Date().getTime(),
       updated_at: new Date().getTime(),

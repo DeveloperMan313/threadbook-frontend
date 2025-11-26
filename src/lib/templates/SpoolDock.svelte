@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { SpoolDockProps } from '$lib/types';
   import SpoolEntry from './SpoolEntry.svelte';
   import ModalSpoolCreate from './ModalSpoolCreate.svelte';
   import { Button } from '$lib/components/ui/button/index.js';
@@ -8,15 +7,14 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { resolve } from '$app/paths';
-
-  let { spools }: SpoolDockProps = $props();
+  import { stateSpools } from '$lib/states';
 
   setContext('spools', {
     leave: async (spool_id: number) => {
-      const spoolToRemove = spools.find((spool) => spool.id == spool_id);
+      const spoolToRemove = stateSpools.spools.find((spool) => spool.id == spool_id);
       if (!spoolToRemove) return;
 
-      spools = spools.filter((spool) => spool.id !== spool_id);
+      stateSpools.spools = stateSpools.spools.filter((spool) => spool.id !== spool_id);
 
       const currentPath = page.url.pathname;
       if (currentPath.startsWith('/spools/')) {
@@ -29,7 +27,7 @@
       try {
         await SpoolApi.leaveFromSpool({ spool_id });
       } catch (error) {
-        spools = [...spools, spoolToRemove];
+        stateSpools.spools = [...stateSpools.spools, spoolToRemove];
         console.error('Failed to leave spool:', error);
       }
     }
@@ -39,7 +37,7 @@
 </script>
 
 <div class="flex h-full w-16 flex-shrink-0 flex-col items-center gap-3 bg-background py-3">
-  {#each spools as spool (spool.id)}
+  {#each stateSpools.spools as spool (spool.id)}
     <SpoolEntry {...spool} />
   {/each}
   <Button

@@ -22,6 +22,7 @@
   import ModalInviteUsersToSpool from '$lib/templates/ModalInviteUsersToSpool.svelte';
   import { EllipsisVertical } from '@lucide/svelte';
   import Spinner from '$lib/components/ui/spinner/spinner.svelte';
+  import { stateSpools } from '$lib/states';
 
   let { data } = $props();
 
@@ -35,7 +36,9 @@
   let currentThreadId = $state<number | null>(null);
   let threadsAreLoading = $state(true);
 
-  const spoolName = $derived(data.spools.find((spool) => spool.id == data.spoolId)?.name as string);
+  const spoolName = $derived(
+    stateSpools.spools.find((spool) => spool.id == data.spoolId)?.name as string
+  );
 
   $effect(() => {
     threadsAreLoading = true;
@@ -113,7 +116,7 @@
       mentionCnt: 0
     } as ThreadProps;
     threads = [...threads, thread];
-    data.centrifugeClient.addToken(payload.channel, payload.token);
+    centrifugeClient.addToken(payload.channel, payload.token);
   });
 
   centrifugeClient.onUser('thread.updated', (payload: WsThreadUpdated) => {
@@ -154,7 +157,7 @@
 
 <Navbar />
 <div class="fixed inset-0 top-16 flex flex-row overflow-x-scroll">
-  <SpoolDock spools={data.spools} />
+  <SpoolDock />
   <div class="flex w-72 flex-shrink-0 flex-col gap-6 p-4 pt-3 pr-3">
     <div class="flex items-start justify-between">
       <h2 class="w-full scroll-m-20 truncate border-b pb-2 text-3xl">{spoolName}</h2>

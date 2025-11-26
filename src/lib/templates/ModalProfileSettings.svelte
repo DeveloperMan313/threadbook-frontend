@@ -8,12 +8,12 @@
   import ModalLogOut from '$lib/templates/ModalLogOut.svelte';
   import UserAvatar from '$lib/templates/UserAvatar.svelte';
   import type { ModalProfileSettingsProps, UserProfileFull } from '$lib/types';
-  import { userProfile } from '$lib/writables';
+  import { stateProfile } from '$lib/states';
   import { nicknameGetError } from '$lib/validation';
 
   let { isOpen = $bindable() }: ModalProfileSettingsProps = $props();
 
-  const profile = $derived($userProfile as UserProfileFull);
+  const profile = $derived(stateProfile.profile as UserProfileFull);
   // svelte-ignore state_referenced_locally
   let nickname = $state(profile.nickname); // make a copy
   let avatarLocal = $state('');
@@ -40,11 +40,10 @@
     try {
       isLoading = true;
       const profileChanges = await ProfileApi.updateProfile({ nickname, avatar });
-      const newProfile = {
+      stateProfile.profile = {
         ...profile,
         ...profileChanges
-      } as UserProfileFull;
-      userProfile.set(newProfile);
+      };
       avatarLocal = '';
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Profile update failed');
