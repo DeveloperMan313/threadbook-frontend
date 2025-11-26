@@ -18,53 +18,42 @@ import type {
 type WsMsgHandler<T> = (payload: T) => void;
 
 interface ThreadHandlers {
-  onMessageCreated: WsMsgHandler<WsMessageCreated>;
-  onMessageUpdated: WsMsgHandler<WsMessageUpdated>;
-  onMessageDeleted: WsMsgHandler<WsMessageDeleted>;
+  'message.created'?: WsMsgHandler<WsMessageCreated>;
+  'message.updated'?: WsMsgHandler<WsMessageUpdated>;
+  'message.deleted'?: WsMsgHandler<WsMessageDeleted>;
 }
 
-const typeToThreadHandler: Record<string, keyof ThreadHandlers> = {
-  'message.created': 'onMessageCreated',
-  'message.updated': 'onMessageUpdated',
-  'message.deleted': 'onMessageDeleted'
-};
+const idToThreadHandlers: Record<number, ThreadHandlers> = {};
 
-const routeThreadPublication = (ctx: PublicationContext, handlers: ThreadHandlers) => {
-  const type = ctx.data.type;
-  if (!(type in typeToThreadHandler)) {
+const routeThreadPublication = (thread_id: number, ctx: PublicationContext) => {
+  const type = ctx.data.type as keyof ThreadHandlers;
+  if (!(thread_id in idToThreadHandlers)) {
+    throw Error(`unknown thread id: ${thread_id}`);
+  }
+  if (!(type in idToThreadHandlers[thread_id])) {
     throw Error(`unknown message type: ${type}`);
   }
-  const handlerKey = typeToThreadHandler[type];
-  handlers[handlerKey](ctx.data.payload);
+  idToThreadHandlers[thread_id][type]?.(ctx.data.payload);
 };
 
 interface UserHandlers {
-  onThreadCreated: WsMsgHandler<WsThreadCreated>;
-  onThreadUpdated: WsMsgHandler<WsThreadUpdated>;
-  onThreadClosed: WsMsgHandler<WsThreadClosed>;
-  onThreadInvited: WsMsgHandler<WsThreadInvited>;
-  onSpoolUpdated: WsMsgHandler<WsSpoolUpdated>;
-  onSpoolDeleted: WsMsgHandler<WsSpoolDeleted>;
-  onSpoolInvited: WsMsgHandler<WsSpoolInvited>;
+  'thread.created'?: WsMsgHandler<WsThreadCreated>;
+  'thread.updated'?: WsMsgHandler<WsThreadUpdated>;
+  'thread.deleted'?: WsMsgHandler<WsThreadClosed>;
+  'thread.invited'?: WsMsgHandler<WsThreadInvited>;
+  'spool.updated'?: WsMsgHandler<WsSpoolUpdated>;
+  'spool.deleted'?: WsMsgHandler<WsSpoolDeleted>;
+  'spool.invited'?: WsMsgHandler<WsSpoolInvited>;
 }
 
-const typeToUserHandler: Record<string, keyof UserHandlers> = {
-  'thread.created': 'onThreadCreated',
-  'thread.updated': 'onThreadUpdated',
-  'thread.deleted': 'onThreadClosed',
-  'thread.invited': 'onThreadInvited',
-  'spool.updated': 'onSpoolUpdated',
-  'spool.deleted': 'onSpoolDeleted',
-  'spool.invited': 'onSpoolInvited'
-};
+const userHandlers: UserHandlers = {};
 
-const routeUserPublication = (ctx: PublicationContext, handlers: UserHandlers) => {
-  const type = ctx.data.type;
-  if (!(type in typeToUserHandler)) {
+const routeUserPublication = (ctx: PublicationContext) => {
+  const type = ctx.data.type as keyof UserHandlers;
+  if (!(type in userHandlers)) {
     throw Error(`unknown message type: ${type}`);
   }
-  const handlerKey = typeToUserHandler[type];
-  handlers[handlerKey](ctx.data.payload);
+  userHandlers[type]?.(ctx.data.payload);
 };
 
 class CentrifugeClient {
@@ -115,7 +104,7 @@ class CentrifugeClient {
     this.tokens.ChannelTokens[channel] = token;
   }
 
-  public subToThread(thread_id: number, handlers: ThreadHandlers): void {
+  public subToThread(thread_id: number): void {
     if (!this.centrifuge) {
       throw Error('not connected');
     }
@@ -137,10 +126,12 @@ class CentrifugeClient {
     const sub = this.centrifuge.newSubscription(channel, { token });
 
     sub.on('publication', (ctx) => {
-      routeThreadPublication(ctx, handlers);
+      routeThreadPublication(thread_id, ctx);
     });
 
     sub.subscribe();
+
+    idToThreadHandlers[thread_id] = {};
   }
 
   public unsubFromThreads(): void {
@@ -162,7 +153,28 @@ class CentrifugeClient {
     }, this);
   }
 
-  public subToUser(handlers: UserHandlers): void {
+  public onThread<T extends keyof ThreadHandlers>(
+    thread_id: number,
+    event: T,
+    handler: ThreadHandlers[T]
+  ) {
+    if (!(thread_id in idToThreadHandlers)) {
+      throw Error(`not subscribed to thread id: ${thread_id}`);
+    }
+    if (idToThreadHandlers[thread_id][event]) {
+      throw new Error(`event "${event}" already bound`);
+    }
+    idToThreadHandlers[thread_id][event] = handler;
+  }
+
+  public clearThread(thread_id: number, event: keyof ThreadHandlers) {
+    if (!(thread_id in idToThreadHandlers)) {
+      throw Error(`not subscribed to thread id: ${thread_id}`);
+    }
+    delete idToThreadHandlers[thread_id][event];
+  }
+
+  public subToUser(): void {
     if (!this.centrifuge) {
       throw Error('not connected');
     }
@@ -185,7 +197,7 @@ class CentrifugeClient {
     const sub = this.centrifuge.newSubscription(channel, { token });
 
     sub.on('publication', (ctx) => {
-      routeUserPublication(ctx, handlers);
+      routeUserPublication(ctx);
     });
 
     sub.subscribe();
@@ -205,6 +217,17 @@ class CentrifugeClient {
     sub.unsubscribe();
     sub.removeAllListeners();
     this.centrifuge.removeSubscription(sub);
+  }
+
+  public onUser<T extends keyof UserHandlers>(event: T, handler: UserHandlers[T]) {
+    if (userHandlers[event]) {
+      throw new Error(`event "${event}" already bound`);
+    }
+    userHandlers[event] = handler;
+  }
+
+  public clearUser(event: keyof UserHandlers) {
+    delete userHandlers[event];
   }
 }
 

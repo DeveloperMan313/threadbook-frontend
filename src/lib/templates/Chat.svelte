@@ -5,18 +5,15 @@
   import Message from './Message.svelte';
   import type {
     ChatState,
-    ChatProps,
     MessageProps,
     ThreadProps,
     WsMessageCreated,
     UserProfileFull
   } from '$lib/types';
   import type { SvelteMap } from 'svelte/reactivity';
-  import { MessageApi } from '$lib/api';
+  import { centrifugeClient, MessageApi } from '$lib/api';
   import { userProfile } from '$lib/writables';
   import Spinner from '$lib/components/ui/spinner/spinner.svelte';
-
-  const { centrifugeClient }: ChatProps = $props();
 
   const { threadChats, getCurrentThreadId, getThreads } = getContext('threads') as {
     threadChats: SvelteMap<number, ChatState>;
@@ -76,18 +73,18 @@
       }
     );
 
-    const threadHandlers = {
-      onMessageCreated: (payload: WsMessageCreated) => {
-        const mine = payload.username == profile.username;
-        cacheProfilesFromMessages([payload]);
-        payload.created_at *= 1000; // convert s to ms
-        renderMessage(thread.id, payload, mine);
-      },
-      onMessageUpdated: () => {}, // TODO
-      onMessageDeleted: () => {} // TODO
-    };
+    centrifugeClient.subToThread(thread.id);
 
-    centrifugeClient.subToThread(thread.id, threadHandlers);
+    centrifugeClient.onThread(thread.id, 'message.created', (payload: WsMessageCreated) => {
+      const mine = payload.username == profile.username;
+      cacheProfilesFromMessages([payload]);
+      payload.created_at *= 1000; // convert s to ms
+      renderMessage(thread.id, payload, mine);
+    });
+
+    onDestroy(() => {
+      centrifugeClient.clearThread(thread.id, 'message.created');
+    });
   };
 
   onDestroy(() => {

@@ -5,16 +5,13 @@
   import SpoolDock from '$lib/templates/SpoolDock.svelte';
   import ThreadList from '$lib/templates/ThreadList.svelte';
   import { onDestroy, setContext } from 'svelte';
-  import { ProfileApi, ThreadApi } from '$lib/api';
+  import { centrifugeClient, ProfileApi, ThreadApi } from '$lib/api';
   import type {
     ChatState,
     MessageProps,
     ThreadProps,
     ThreadType,
     UserProfilePublic,
-    WsSpoolDeleted,
-    WsSpoolInvited,
-    WsSpoolUpdated,
     WsThreadClosed,
     WsThreadCreated,
     WsThreadInvited,
@@ -103,51 +100,53 @@
     }
   });
 
-  const userHandlers = {
-    onThreadCreated: (payload: WsThreadCreated) => {
-      if (payload.spool_id != data.spoolId) return;
-      const thread = {
-        id: payload.id,
-        title: payload.title,
-        type: payload.type,
-        is_closed: false,
-        unreadCnt: 0,
-        mentionCnt: 0
-      } as ThreadProps;
-      threads = [...threads, thread];
-      data.centrifugeClient.addToken(payload.channel, payload.token);
-    },
-    onThreadUpdated: (payload: WsThreadUpdated) => {
-      if (payload.spool_id != data.spoolId) return;
-      let thread = threads.filter((t) => t.id == payload.id)[0];
-      thread.title = payload.title;
-    },
-    onThreadClosed: (payload: WsThreadClosed) => {
-      if (payload.spool_id != data.spoolId) return;
-      let thread = threads.filter((t) => t.id == payload.id)[0];
-      thread.is_closed = true;
-    },
-    onThreadInvited: (payload: WsThreadInvited) => {
-      if (payload.spool_id != data.spoolId) return;
-      const thread = {
-        id: payload.id,
-        title: payload.title,
-        type: 'private',
-        is_closed: false,
-        unreadCnt: 0,
-        mentionCnt: 0
-      } as ThreadProps;
-      threads = [...threads, thread];
-    },
-    onSpoolUpdated: (payload: WsSpoolUpdated) => {},
-    onSpoolDeleted: (payload: WsSpoolDeleted) => {},
-    onSpoolInvited: (payload: WsSpoolInvited) => {}
-  };
+  centrifugeClient.subToUser();
 
-  data.centrifugeClient.subToUser(userHandlers);
+  centrifugeClient.onUser('thread.created', (payload: WsThreadCreated) => {
+    if (payload.spool_id != data.spoolId) return;
+    const thread = {
+      id: payload.id,
+      title: payload.title,
+      type: payload.type,
+      is_closed: false,
+      unreadCnt: 0,
+      mentionCnt: 0
+    } as ThreadProps;
+    threads = [...threads, thread];
+    data.centrifugeClient.addToken(payload.channel, payload.token);
+  });
+
+  centrifugeClient.onUser('thread.updated', (payload: WsThreadUpdated) => {
+    if (payload.spool_id != data.spoolId) return;
+    let thread = threads.filter((t) => t.id == payload.id)[0];
+    thread.title = payload.title;
+  });
+
+  centrifugeClient.onUser('thread.deleted', (payload: WsThreadClosed) => {
+    if (payload.spool_id != data.spoolId) return;
+    let thread = threads.filter((t) => t.id == payload.id)[0];
+    thread.is_closed = true;
+  });
+
+  centrifugeClient.onUser('thread.invited', (payload: WsThreadInvited) => {
+    if (payload.spool_id != data.spoolId) return;
+    const thread = {
+      id: payload.id,
+      title: payload.title,
+      type: 'private',
+      is_closed: false,
+      unreadCnt: 0,
+      mentionCnt: 0
+    } as ThreadProps;
+    threads = [...threads, thread];
+  });
 
   onDestroy(() => {
-    data.centrifugeClient.unsubFromUser();
+    centrifugeClient.clearUser('thread.created');
+    centrifugeClient.clearUser('thread.updated');
+    centrifugeClient.clearUser('thread.deleted');
+    centrifugeClient.clearUser('thread.invited');
+    centrifugeClient.unsubFromUser();
   });
 
   let isInviteUsersToSpoolModalOpen = $state(false);
@@ -199,7 +198,7 @@
   </div>
   <div class="flex w-full min-w-96 flex-col overflow-hidden bg-white">
     {#if currentThreadId}
-      <Chat centrifugeClient={data.centrifugeClient} />
+      <Chat />
     {:else}
       <div class="flex h-full items-center justify-center text-gray-500">
         Select a thread to start chatting

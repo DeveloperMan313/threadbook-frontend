@@ -1,5 +1,3 @@
-import type { CentrifugeClient } from '$lib/api';
-
 /**
  * Component properties interfaces
  */
@@ -10,10 +8,6 @@ export interface ChatState {
   messageText: string;
   firstMessageLoaded: boolean;
   initialLoading: boolean;
-}
-
-export interface ChatProps {
-  centrifugeClient: CentrifugeClient;
 }
 
 export interface ContextMenuEntry {

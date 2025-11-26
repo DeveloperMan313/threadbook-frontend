@@ -14,7 +14,6 @@ export const load: LayoutLoad = async ({ fetch }) => {
 
   return {
     spools,
-    centrifugeClient,
     isAuthorized
   };
 };
