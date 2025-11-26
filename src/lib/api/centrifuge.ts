@@ -23,7 +23,7 @@ interface ThreadHandlers {
   'message.deleted'?: WsMsgHandler<WsMessageDeleted>;
 }
 
-const idToThreadHandlers: Record<number, ThreadHandlers> = {};
+let idToThreadHandlers: Record<number, ThreadHandlers> = {};
 
 const routeThreadPublication = (thread_id: number, ctx: PublicationContext) => {
   const type = ctx.data.type as keyof ThreadHandlers;
@@ -46,7 +46,7 @@ interface UserHandlers {
   'spool.invited'?: WsMsgHandler<WsSpoolInvited>;
 }
 
-const userHandlers: UserHandlers = {};
+let userHandlers: UserHandlers = {};
 
 const routeUserPublication = (ctx: PublicationContext) => {
   const type = ctx.data.type as keyof UserHandlers;
@@ -56,64 +56,67 @@ const routeUserPublication = (ctx: PublicationContext) => {
   userHandlers[type]?.(ctx.data.payload);
 };
 
-class CentrifugeClient {
-  private centrifuge: Centrifuge | undefined = undefined;
-  private tokens: GetCentrifugeTokensResponse | undefined = undefined;
-  private userChannel: string | undefined = undefined;
+let centrifuge: Centrifuge | undefined = undefined;
+let tokens: GetCentrifugeTokensResponse | undefined = undefined;
+let userChannel: string | undefined = undefined;
 
-  public async connect(): Promise<void> {
-    if (this.centrifuge) {
+export const centrifugeClient = {
+  async connect(): Promise<void> {
+    if (centrifuge) {
       return;
     }
 
     await this.getTokens();
 
-    this.centrifuge = new Centrifuge(PUBLIC_CENTRIFUGE_ORIGIN, {
-      token: this.tokens!.ConnectToken
+    centrifuge = new Centrifuge(PUBLIC_CENTRIFUGE_ORIGIN, {
+      token: tokens!.ConnectToken
     });
 
-    this.centrifuge.on('error', (err) => console.log(`Centrifuge Error: ${JSON.stringify(err)}`));
+    centrifuge.on('error', (err) => console.log(`Centrifuge Error: ${JSON.stringify(err)}`));
 
-    this.centrifuge.connect();
-  }
+    centrifuge.connect();
+  },
 
-  public disconnect(): void {
-    if (!this.centrifuge) {
+  disconnect(): void {
+    if (!centrifuge) {
       throw Error('not connected');
     }
 
-    this.centrifuge.disconnect();
+    centrifuge.disconnect();
 
-    delete this.centrifuge;
-  }
+    centrifuge = undefined;
 
-  public async getTokens(spool_id?: number): Promise<void> {
+    idToThreadHandlers = {};
+    userHandlers = {};
+  },
+
+  async getTokens(spool_id?: number): Promise<void> {
     const fetchedTokens = await ThreadApi.getCentrifugeTokens({ spool_id });
-    if (!this.tokens) {
-      this.tokens = fetchedTokens;
+    if (!tokens) {
+      tokens = fetchedTokens;
       return;
     }
-    this.tokens.ChannelTokens = { ...this.tokens.ChannelTokens, ...fetchedTokens.ChannelTokens };
-  }
+    tokens.ChannelTokens = { ...tokens.ChannelTokens, ...fetchedTokens.ChannelTokens };
+  },
 
-  public addToken(channel: string, token: string): void {
-    if (!this.tokens) {
+  addToken(channel: string, token: string): void {
+    if (!tokens) {
       throw Error('no tokens');
     }
 
-    this.tokens.ChannelTokens[channel] = token;
-  }
+    tokens.ChannelTokens[channel] = token;
+  },
 
-  public subToThread(thread_id: number): void {
-    if (!this.centrifuge) {
+  subToThread(thread_id: number): void {
+    if (!centrifuge) {
       throw Error('not connected');
     }
 
-    if (!this.tokens) {
+    if (!tokens) {
       throw Error('no tokens');
     }
 
-    const channelToken = Object.entries(this.tokens.ChannelTokens).find(
+    const channelToken = Object.entries(tokens.ChannelTokens).find(
       ([channel]) => channel == `thread#${thread_id}`
     ) as [string, string];
 
@@ -123,7 +126,7 @@ class CentrifugeClient {
 
     const [channel, token] = channelToken;
 
-    const sub = this.centrifuge.newSubscription(channel, { token });
+    const sub = centrifuge.newSubscription(channel, { token });
 
     sub.on('publication', (ctx) => {
       routeThreadPublication(thread_id, ctx);
@@ -132,28 +135,28 @@ class CentrifugeClient {
     sub.subscribe();
 
     idToThreadHandlers[thread_id] = {};
-  }
+  },
 
-  public unsubFromThreads(): void {
-    if (!this.centrifuge) {
+  unsubFromThreads(): void {
+    if (!centrifuge) {
       throw Error('not connected');
     }
 
-    if (!this.tokens) {
+    if (!tokens) {
       throw Error('no tokens');
     }
 
-    Object.entries(this.tokens.ChannelTokens).forEach(([channel]) => {
+    Object.entries(tokens.ChannelTokens).forEach(([channel]) => {
       if (channel.startsWith('user')) return;
-      const sub = this.centrifuge!.getSubscription(channel);
+      const sub = centrifuge!.getSubscription(channel);
       if (!sub) return;
       sub.unsubscribe();
       sub.removeAllListeners();
-      this.centrifuge!.removeSubscription(sub);
+      centrifuge!.removeSubscription(sub);
     }, this);
-  }
+  },
 
-  public onThread<T extends keyof ThreadHandlers>(
+  onThread<T extends keyof ThreadHandlers>(
     thread_id: number,
     event: T,
     handler: ThreadHandlers[T]
@@ -165,25 +168,25 @@ class CentrifugeClient {
       throw new Error(`event "${event}" already bound`);
     }
     idToThreadHandlers[thread_id][event] = handler;
-  }
+  },
 
-  public clearThread(thread_id: number, event: keyof ThreadHandlers) {
+  clearThread(thread_id: number, event: keyof ThreadHandlers) {
     if (!(thread_id in idToThreadHandlers)) {
       throw Error(`not subscribed to thread id: ${thread_id}`);
     }
     delete idToThreadHandlers[thread_id][event];
-  }
+  },
 
-  public subToUser(): void {
-    if (!this.centrifuge) {
+  subToUser(): void {
+    if (!centrifuge) {
       throw Error('not connected');
     }
 
-    if (!this.tokens) {
+    if (!tokens) {
       throw Error('no tokens');
     }
 
-    const channelToken = Object.entries(this.tokens.ChannelTokens).find(([channel]) =>
+    const channelToken = Object.entries(tokens.ChannelTokens).find(([channel]) =>
       channel.startsWith('user')
     ) as [string, string];
 
@@ -192,43 +195,41 @@ class CentrifugeClient {
     }
 
     const [channel, token] = channelToken;
-    this.userChannel = channel;
+    userChannel = channel;
 
-    const sub = this.centrifuge.newSubscription(channel, { token });
+    const sub = centrifuge.newSubscription(channel, { token });
 
     sub.on('publication', (ctx) => {
       routeUserPublication(ctx);
     });
 
     sub.subscribe();
-  }
+  },
 
-  public unsubFromUser(): void {
-    if (!this.centrifuge) {
+  unsubFromUser(): void {
+    if (!centrifuge) {
       throw Error('not connected');
     }
 
-    if (!this.userChannel) {
+    if (!userChannel) {
       throw Error('not subscribed to user');
     }
 
-    const sub = this.centrifuge.getSubscription(this.userChannel)!;
+    const sub = centrifuge.getSubscription(userChannel)!;
 
     sub.unsubscribe();
     sub.removeAllListeners();
-    this.centrifuge.removeSubscription(sub);
-  }
+    centrifuge.removeSubscription(sub);
+  },
 
-  public onUser<T extends keyof UserHandlers>(event: T, handler: UserHandlers[T]) {
+  onUser<T extends keyof UserHandlers>(event: T, handler: UserHandlers[T]) {
     if (userHandlers[event]) {
       throw new Error(`event "${event}" already bound`);
     }
     userHandlers[event] = handler;
-  }
+  },
 
-  public clearUser(event: keyof UserHandlers) {
+  clearUser(event: keyof UserHandlers) {
     delete userHandlers[event];
   }
-}
-
-export const centrifugeClient = new CentrifugeClient();
+};
