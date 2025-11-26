@@ -113,6 +113,12 @@ export interface CreateSpoolRequest {
   banner?: File;
 }
 
+export interface CreateSpoolResponse {
+  spool_id: number;
+  name: string;
+  banner_link: string;
+}
+
 export interface GetProfilesRequest {
   usernames: Array<string>;
 }

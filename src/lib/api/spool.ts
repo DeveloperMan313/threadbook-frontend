@@ -1,14 +1,14 @@
 import { ApiClient } from './client';
 import type {
   SpoolProps,
-  SpoolDockProps,
   GetSpoolInfoRequest,
   CreateSpoolRequest,
   LeaveSpoolRequest,
-  InviteUsersToSpoolRequest
+  InviteUsersToSpoolRequest,
+  CreateSpoolResponse
 } from '$lib/types';
 
-const MockGetUserSpoolList: SpoolDockProps = {
+const MockGetUserSpoolList: SpoolProps[] = {
   spools: [
     {
       id: 1,
@@ -77,8 +77,9 @@ export const SpoolApi = {
   /**
    * Create a new spool
    * @param {CreateSpoolRequest} request - request object with name and optional banner file
+   * @returns {Promise<CreateSpoolResponse>} - API response
    */
-  async createSpool(request: CreateSpoolRequest) {
+  async createSpool(request: CreateSpoolRequest): Promise<CreateSpoolResponse> {
     const formData = new FormData();
     formData.append('name', request.name);
     if (request.banner) {

@@ -5,9 +5,9 @@
   import InputField from './InputField.svelte';
   import { SpoolApi } from '$lib/api';
   import { spoolNameGetError } from '$lib/validation';
-  import type { CreateSpoolRequest, ModalSpoolCreateProps } from '$lib/types';
+  import type { CreateSpoolRequest, ModalSpoolCreateProps, SpoolProps } from '$lib/types';
   import Input from '$lib/components/ui/input/input.svelte';
-  import { invalidateAll } from '$app/navigation';
+  import { stateSpoolsAdd } from '$lib/states';
 
   let { isOpen = $bindable(false) }: ModalSpoolCreateProps = $props();
 
@@ -26,14 +26,22 @@
         banner: bannerFile
       };
 
-      await SpoolApi.createSpool(request);
+      const response = await SpoolApi.createSpool(request);
+      const newSpool = {
+        id: response.spool_id,
+        name: response.name,
+        banner_link: response.banner_link,
+        description: '',
+        members: 0,
+        threads: 0
+      } as SpoolProps;
+      stateSpoolsAdd(newSpool);
+
       isOpen = false;
 
       spoolName = '';
       bannerFile = undefined;
       nameIsValid = false;
-
-      invalidateAll(); // maybe it's too much, but idc atm
     } catch (error) {
       console.error('Failed to create spool:', error);
     } finally {
