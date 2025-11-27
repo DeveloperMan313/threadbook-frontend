@@ -280,12 +280,100 @@
     document.removeEventListener('mouseup', stopResize);
   }
 
+  async function testTurnServer(
+    turn_urls: string[] | undefined,
+    username: string | undefined,
+    credential: string | undefined
+  ) {
+    if (turn_urls && turn_urls.length > 0 && username && credential) {
+      return new Promise((resolve) => {
+        const config: RTCConfiguration = {
+          iceServers: [
+            {
+              urls: turn_urls,
+              username: username,
+              credential: credential
+            }
+          ]
+        };
+
+        const pc = new RTCPeerConnection(config);
+        const candidates: RTCIceCandidate[] = [];
+
+        pc.onicecandidate = (e) => {
+          if (e.candidate) {
+            console.log(
+              '🧊 ICE Candidate:',
+              e.candidate.type,
+              e.candidate.protocol,
+              e.candidate.address
+            );
+            candidates.push(e.candidate);
+
+            if (e.candidate.type === 'relay') {
+              console.log('✅ TURN WORKING! Relay candidate found:', e.candidate);
+              resolve(true);
+            }
+          } else {
+            console.log('❌ No relay candidates found. All candidates:', candidates);
+            resolve(false);
+          }
+        };
+
+        pc.createDataChannel('test');
+        pc.createOffer()
+          .then((offer) => pc.setLocalDescription(offer))
+          .catch(console.error);
+
+        // Timeout after 5 seconds
+        setTimeout(() => {
+          console.log('⏰ TURN test timeout');
+          resolve(false);
+        }, 5000);
+      });
+    }
+  }
+
+  async function testPureTurn() {
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        {
+          urls: 'turn:threadbook.ru:3478?transport=udp',
+          username: '1732770000:test',
+          credential: 'dummy' // при auth-secret не проверяется сразу, но лучше правильный
+        }
+      ],
+      iceTransportPolicy: 'relay' // ← КЛЮЧЕВО!
+    });
+
+    pc.createDataChannel('test');
+    console.log('🧪 Pure TURN test started (relay only)');
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate) {
+        console.log('🧊', e.candidate.type, e.candidate.candidate);
+        if (e.candidate.type === 'relay') {
+          console.log('✅ SUCCESS: relay candidate!');
+        }
+      } else {
+        console.warn('ICE complete, no relay');
+      }
+    };
+
+    await pc.setLocalDescription(await pc.createOffer());
+  }
+
   async function joinRoom(roomThreadId: number) {
     if (!isBrowser) return;
+
     try {
-      const token = (await ThreadApi.getSFUToken({ thread_id: roomThreadId })).token;
+      // 1. Получаем токен и TURN/STUN данные
+      const resp = await ThreadApi.getSFUToken({ thread_id: roomThreadId });
+      const token = resp.token;
+
       room = new Room();
 
+      // 2. Подписываемся на события
       room.on('participantConnected', (p) => handleParticipant(p));
       room.on('participantDisconnected', (p) => {
         participants = participants.filter((part) => part.identity !== p.identity);
@@ -294,15 +382,39 @@
         delete volumeDisplayFor[p.identity];
         delete volumes[p.identity];
       });
-
       room.on('connected', () => {
         room!.remoteParticipants.forEach((p) => handleParticipant(p));
       });
-
       room.on('disconnected', leaveRoom);
 
-      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
+      // 3. Формируем iceServers для RTCPeerConnection
+      const iceServers: RTCIceServer[] = [
+        { urls: ['stun:stun.l.google.com:19302'] } // STUN отдельно
+      ];
 
+      // Добавляем TURN только если есть username и credential
+      if (
+        resp.turn_urls &&
+        resp.turn_urls.length > 0 &&
+        resp.turn_username &&
+        resp.turn_credential
+      ) {
+        iceServers.push({
+          urls: resp.turn_urls,
+          username: resp.turn_username,
+          credential: resp.turn_credential
+        });
+      }
+
+      await testPureTurn();
+      await testTurnServer(resp.turn_urls, resp.turn_username, resp.turn_credential);
+
+      // 4. Подключаемся к LiveKit
+      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token, {
+        rtcConfig: { iceServers }
+      });
+
+      // 5. Создаём локальные треки
       const tracks = await room.localParticipant.createTracks({
         audio: {
           echoCancellation: true,
