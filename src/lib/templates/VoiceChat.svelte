@@ -343,9 +343,11 @@
       await Promise.all(tracks.map((track) => room!.localParticipant.publishTrack(track)));
 
       const videoTrack = tracks.find((track) => track.kind === 'video');
-      if (videoTrack && localVideoEl) {
+      if (videoTrack) {
         pendingLocalVideoTrack = videoTrack;
-        videoTrack.attach(localVideoEl);
+        if (localVideoEl) {
+          videoTrack.attach(localVideoEl);
+        }
       }
 
       isConnected = true;
