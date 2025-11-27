@@ -147,7 +147,6 @@
     centrifugeClient.clearUser('thread.updated');
     centrifugeClient.clearUser('thread.deleted');
     centrifugeClient.clearUser('thread.invited');
-    centrifugeClient.unsubFromUser();
   });
 
   let isInviteUsersToSpoolModalOpen = $state(false);
