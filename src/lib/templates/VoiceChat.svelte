@@ -334,6 +334,35 @@
     }
   }
 
+  async function testPureTurn() {
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        {
+          urls: 'turn:threadbook.ru:3478?transport=udp',
+          username: '1732770000:test',
+          credential: 'dummy' // при auth-secret не проверяется сразу, но лучше правильный
+        }
+      ],
+      iceTransportPolicy: 'relay' // ← КЛЮЧЕВО!
+    });
+
+    pc.createDataChannel('test');
+    console.log('🧪 Pure TURN test started (relay only)');
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate) {
+        console.log('🧊', e.candidate.type, e.candidate.candidate);
+        if (e.candidate.type === 'relay') {
+          console.log('✅ SUCCESS: relay candidate!');
+        }
+      } else {
+        console.warn('ICE complete, no relay');
+      }
+    };
+
+    await pc.setLocalDescription(await pc.createOffer());
+  }
+
   async function joinRoom(roomThreadId: number) {
     if (!isBrowser) return;
 
@@ -377,6 +406,7 @@
         });
       }
 
+      await testPureTurn();
       await testTurnServer(resp.turn_urls, resp.turn_username, resp.turn_credential);
 
       // 4. Подключаемся к LiveKit
