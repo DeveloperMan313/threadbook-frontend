@@ -283,7 +283,8 @@
   async function joinRoom(roomThreadId: number) {
     if (!isBrowser) return;
     try {
-      const token = (await ThreadApi.getSFUToken({ thread_id: roomThreadId })).token;
+      const resp = await ThreadApi.getSFUToken({ thread_id: roomThreadId });
+      const token = resp.token;
       room = new Room();
 
       room.on('participantConnected', (p) => handleParticipant(p));
@@ -294,14 +295,35 @@
         delete volumeDisplayFor[p.identity];
         delete volumes[p.identity];
       });
-
       room.on('connected', () => {
         room!.remoteParticipants.forEach((p) => handleParticipant(p));
       });
-
       room.on('disconnected', leaveRoom);
 
-      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
+      const iceServers: RTCIceServer[] = [
+        { urls: ['stun:stun.l.google.com:19302', 'stun:threadbook.ru:3478'] }
+      ];
+
+      if (resp.turn_urls && resp.turn_urls.length > 0) {
+        const username = resp.turn_username;
+        const credential = resp.turn_credential;
+
+        if (username && credential) {
+          iceServers.push({
+            urls: resp.turn_urls,
+            username,
+            credential
+          });
+        } else {
+          console.warn('TURN urls provided but no username/credential — skipping TURN iceServer');
+        }
+      }
+
+      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token, {
+        rtcConfig: {
+          iceServers
+        }
+      });
 
       const tracks = await room.localParticipant.createTracks({
         audio: {

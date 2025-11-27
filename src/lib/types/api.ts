@@ -105,7 +105,11 @@ export interface GetSFUTokenRequest {
 }
 
 export interface GetSFUTokenResponse {
-  token: string;
+  token: string;                  // JWT для подключения к LiveKit
+  turn_urls?: string[];           // массив TURN серверов, напр. ["turn:threadbook.ru:3478?transport=udp"]
+  turn_username?: string;         // username для TURN
+  turn_credential?: string;       // credential (password) для TURN
+  turn_ttl_seconds?: number;      // время жизни creds в секундах (TTL)
 }
 
 export interface CreateSpoolRequest {
