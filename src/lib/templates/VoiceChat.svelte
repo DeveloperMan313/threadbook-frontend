@@ -280,6 +280,60 @@
     document.removeEventListener('mouseup', stopResize);
   }
 
+  async function testTurnServer(
+    turn_urls: string[] | undefined,
+    username: string | undefined,
+    credential: string | undefined
+  ) {
+    if (turn_urls && turn_urls.length > 0 && username && credential) {
+      return new Promise((resolve) => {
+        const config: RTCConfiguration = {
+          iceServers: [
+            {
+              urls: turn_urls,
+              username: username,
+              credential: credential
+            }
+          ]
+        };
+
+        const pc = new RTCPeerConnection(config);
+        const candidates: RTCIceCandidate[] = [];
+
+        pc.onicecandidate = (e) => {
+          if (e.candidate) {
+            console.log(
+              '🧊 ICE Candidate:',
+              e.candidate.type,
+              e.candidate.protocol,
+              e.candidate.address
+            );
+            candidates.push(e.candidate);
+
+            if (e.candidate.type === 'relay') {
+              console.log('✅ TURN WORKING! Relay candidate found:', e.candidate);
+              resolve(true);
+            }
+          } else {
+            console.log('❌ No relay candidates found. All candidates:', candidates);
+            resolve(false);
+          }
+        };
+
+        pc.createDataChannel('test');
+        pc.createOffer()
+          .then((offer) => pc.setLocalDescription(offer))
+          .catch(console.error);
+
+        // Timeout after 5 seconds
+        setTimeout(() => {
+          console.log('⏰ TURN test timeout');
+          resolve(false);
+        }, 5000);
+      });
+    }
+  }
+
   async function joinRoom(roomThreadId: number) {
     if (!isBrowser) return;
 
@@ -322,6 +376,8 @@
           credential: resp.turn_credential
         });
       }
+
+      await testTurnServer(resp.turn_urls, resp.turn_username, resp.turn_credential);
 
       // 4. Подключаемся к LiveKit
       await room.connect(PUBLIC_LIVEKIT_ORIGIN, token, {
