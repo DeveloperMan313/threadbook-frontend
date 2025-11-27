@@ -2,36 +2,7 @@
   import SpoolEntry from './SpoolEntry.svelte';
   import ModalSpoolCreate from './ModalSpoolCreate.svelte';
   import { Button } from '$lib/components/ui/button/index.js';
-  import { SpoolApi } from '$lib/api';
-  import { setContext } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { page } from '$app/state';
-  import { resolve } from '$app/paths';
   import { stateSpools } from '$lib/states';
-
-  setContext('spools', {
-    leave: async (spool_id: number) => {
-      const spoolToRemove = stateSpools.spools.find((spool) => spool.id == spool_id);
-      if (!spoolToRemove) return;
-
-      stateSpools.spools = stateSpools.spools.filter((spool) => spool.id !== spool_id);
-
-      const currentPath = page.url.pathname;
-      if (currentPath.startsWith('/spools/')) {
-        const currentSpoolId = currentPath.split('/')[2];
-        if (currentSpoolId && parseInt(currentSpoolId) == spool_id) {
-          goto(resolve('/spools'));
-        }
-      }
-
-      try {
-        await SpoolApi.leaveFromSpool({ spool_id });
-      } catch (error) {
-        stateSpools.spools = [...stateSpools.spools, spoolToRemove];
-        console.error('Failed to leave spool:', error);
-      }
-    }
-  });
 
   let isCreateModalOpen = $state(false);
 </script>

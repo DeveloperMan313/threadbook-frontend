@@ -7,7 +7,25 @@ export const stateSpoolsFetch = async () => {
   stateSpools.spools = await SpoolApi.getUserSpoolList();
 };
 
-export const stateSpoolsAdd = (spool: SpoolProps) => {
+export const stateSpoolCreate = async (name: string, banner?: File) => {
+  const response = await SpoolApi.createSpool({ name, banner });
+  const newSpool = {
+    id: response.spool_id,
+    name: response.name,
+    banner_link: response.banner_link,
+    description: '',
+    members: 0,
+    threads: 0
+  } as SpoolProps;
+  stateSpoolsAdd(newSpool);
+};
+
+export const stateSpoolLeave = async (spoolId: number) => {
+  await SpoolApi.leaveFromSpool({ spool_id: spoolId });
+  stateSpoolsDelete(spoolId);
+};
+
+const stateSpoolsAdd = (spool: SpoolProps) => {
   stateSpools.spools = [...stateSpools.spools, spool];
 };
 

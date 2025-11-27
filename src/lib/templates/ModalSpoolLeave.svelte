@@ -2,17 +2,26 @@
   import type { ModalSpoolLeaveProps } from '$lib/types';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
-  import { getContext } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
+  import { resolve } from '$app/paths';
+  import { stateSpoolLeave } from '$lib/states';
 
   let { spoolId, spoolName, isOpen = $bindable() }: ModalSpoolLeaveProps = $props();
 
-  const { leave } = getContext('spools') as {
-    leave: { (spool_id: number): Promise<void> };
-  };
-
-  const onLeaveClick = () => {
-    isOpen = false;
-    leave(spoolId);
+  const onLeaveClick = async () => {
+    try {
+      await stateSpoolLeave(spoolId);
+      const currentPath = page.url.pathname;
+      if (currentPath.startsWith('/spools/')) {
+        const currentSpoolId = currentPath.split('/')[2];
+        if (currentSpoolId && parseInt(currentSpoolId) == spoolId) {
+          goto(resolve('/spools'));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to leave spool:', error);
+    }
   };
 
   const onCancel = () => {

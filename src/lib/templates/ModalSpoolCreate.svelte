@@ -3,11 +3,10 @@
   import { Label } from '$lib/components/ui/label/index.js';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import InputField from './InputField.svelte';
-  import { SpoolApi } from '$lib/api';
   import { spoolNameGetError } from '$lib/validation';
-  import type { CreateSpoolRequest, ModalSpoolCreateProps, SpoolProps } from '$lib/types';
+  import type { ModalSpoolCreateProps } from '$lib/types';
   import Input from '$lib/components/ui/input/input.svelte';
-  import { stateSpoolsAdd } from '$lib/states';
+  import { stateSpoolCreate } from '$lib/states';
 
   let { isOpen = $bindable(false) }: ModalSpoolCreateProps = $props();
 
@@ -18,27 +17,10 @@
 
   const onCreateClick = async () => {
     if (!nameIsValid) return;
-
     isLoading = true;
     try {
-      const request: CreateSpoolRequest = {
-        name: spoolName,
-        banner: bannerFile
-      };
-
-      const response = await SpoolApi.createSpool(request);
-      const newSpool = {
-        id: response.spool_id,
-        name: response.name,
-        banner_link: response.banner_link,
-        description: '',
-        members: 0,
-        threads: 0
-      } as SpoolProps;
-      stateSpoolsAdd(newSpool);
-
+      stateSpoolCreate(spoolName, bannerFile);
       isOpen = false;
-
       spoolName = '';
       bannerFile = undefined;
       nameIsValid = false;
