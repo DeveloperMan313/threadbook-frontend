@@ -1,15 +1,16 @@
 import type { LayoutLoad } from './$types';
-import { centrifugeClient, SpoolApi } from '$lib/api';
-import { tryGetUserProfile } from '$lib/states';
+import { centrifugeClient } from '$lib/api';
+import { stateSpoolsFetch, subToSpoolEvents, tryGetUserProfile } from '$lib/states';
 import { ApiClient } from '$lib/api/client';
-import { stateSpools } from '$lib/states';
 
 export const load: LayoutLoad = async ({ fetch }) => {
   ApiClient.setFetch(fetch);
 
-  stateSpools.spools = await SpoolApi.getUserSpoolList();
+  await stateSpoolsFetch();
 
   await centrifugeClient.connect();
+  centrifugeClient.subToUser();
+  subToSpoolEvents();
 
   const isAuthorized = await tryGetUserProfile();
 

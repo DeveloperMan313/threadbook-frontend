@@ -103,8 +103,6 @@
     }
   });
 
-  centrifugeClient.subToUser();
-
   centrifugeClient.onUser('thread.created', (payload: WsThreadCreated) => {
     if (payload.spool_id != data.spoolId) return;
     const thread = {
