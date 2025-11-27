@@ -282,11 +282,15 @@
 
   async function joinRoom(roomThreadId: number) {
     if (!isBrowser) return;
+
     try {
+      // 1. Получаем токен и TURN/STUN данные
       const resp = await ThreadApi.getSFUToken({ thread_id: roomThreadId });
       const token = resp.token;
+
       room = new Room();
 
+      // 2. Подписываемся на события
       room.on('participantConnected', (p) => handleParticipant(p));
       room.on('participantDisconnected', (p) => {
         participants = participants.filter((part) => part.identity !== p.identity);
@@ -300,31 +304,31 @@
       });
       room.on('disconnected', leaveRoom);
 
+      // 3. Формируем iceServers для RTCPeerConnection
       const iceServers: RTCIceServer[] = [
-        { urls: ['stun:stun.l.google.com:19302', 'stun:threadbook.ru:3478'] }
+        { urls: ['stun:stun.l.google.com:19302'] } // STUN отдельно
       ];
 
-      if (resp.turn_urls && resp.turn_urls.length > 0) {
-        const username = resp.turn_username;
-        const credential = resp.turn_credential;
-
-        if (username && credential) {
-          iceServers.push({
-            urls: resp.turn_urls,
-            username,
-            credential
-          });
-        } else {
-          console.warn('TURN urls provided but no username/credential — skipping TURN iceServer');
-        }
+      // Добавляем TURN только если есть username и credential
+      if (
+        resp.turn_urls &&
+        resp.turn_urls.length > 0 &&
+        resp.turn_username &&
+        resp.turn_credential
+      ) {
+        iceServers.push({
+          urls: resp.turn_urls,
+          username: resp.turn_username,
+          credential: resp.turn_credential
+        });
       }
 
+      // 4. Подключаемся к LiveKit
       await room.connect(PUBLIC_LIVEKIT_ORIGIN, token, {
-        rtcConfig: {
-          iceServers
-        }
+        rtcConfig: { iceServers }
       });
 
+      // 5. Создаём локальные треки
       const tracks = await room.localParticipant.createTracks({
         audio: {
           echoCancellation: true,
@@ -339,11 +343,9 @@
       await Promise.all(tracks.map((track) => room!.localParticipant.publishTrack(track)));
 
       const videoTrack = tracks.find((track) => track.kind === 'video');
-      if (videoTrack) {
+      if (videoTrack && localVideoEl) {
         pendingLocalVideoTrack = videoTrack;
-        if (localVideoEl) {
-          videoTrack.attach(localVideoEl);
-        }
+        videoTrack.attach(localVideoEl);
       }
 
       isConnected = true;
