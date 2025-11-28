@@ -177,6 +177,7 @@
         </DropdownMenu.Trigger>
         <DropdownMenu.Content class="w-52" align="start">
           <DropdownMenu.Item
+            class="cursor-pointer"
             onclick={() => {
               isInviteUsersToSpoolModalOpen = true;
             }}
@@ -184,19 +185,21 @@
             Invite users</DropdownMenu.Item
           >
           <DropdownMenu.Item
+            class="cursor-pointer"
             onclick={() => {
               isSpoolEditModalOpen = true;
             }}
           >
-            Edit spool</DropdownMenu.Item
+            Edit</DropdownMenu.Item
           >
           <DropdownMenu.Item
+            class="cursor-pointer"
             variant="destructive"
             onclick={() => {
               isSpoolLeaveModalOpen = true;
             }}
           >
-            Leave spool</DropdownMenu.Item
+            Leave</DropdownMenu.Item
           >
         </DropdownMenu.Content>
       </DropdownMenu.Root>
@@ -209,11 +212,6 @@
     {:else}
       <ThreadList {threads} />
     {/if}
-    <ModalInviteUsersToSpool
-      spoolId={data.spoolId}
-      {spoolName}
-      bind:isOpen={isInviteUsersToSpoolModalOpen}
-    />
   </div>
   <div class="flex w-full min-w-96 flex-col overflow-hidden bg-white">
     {#if currentThreadId}
@@ -225,5 +223,6 @@
     {/if}
   </div>
 </div>
+<ModalInviteUsersToSpool spoolId={data.spoolId} bind:isOpen={isInviteUsersToSpoolModalOpen} />
 <ModalSpoolEdit spoolId={data.spoolId} bind:isOpen={isSpoolEditModalOpen} />
 <ModalSpoolLeave spoolId={data.spoolId} bind:isOpen={isSpoolLeaveModalOpen} />

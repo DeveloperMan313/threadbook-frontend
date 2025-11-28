@@ -40,7 +40,6 @@ export interface MessageProps {
 
 export interface ModalInviteUsersToSpool {
   spoolId: number;
-  spoolName: string;
   isOpen: boolean; // bindable
 }
 

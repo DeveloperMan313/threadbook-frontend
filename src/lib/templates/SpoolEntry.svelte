@@ -7,10 +7,12 @@
   import { ImageApi } from '$lib/api';
   import { page } from '$app/state';
   import ModalSpoolEdit from './ModalSpoolEdit.svelte';
+  import ModalInviteUsersToSpool from './ModalInviteUsersToSpool.svelte';
 
   const { id, name, banner_link }: SpoolProps = $props();
   const currentSpoolId = $derived<number>(page.data.spoolId);
 
+  let isInviteUsersToSpoolModalOpen = $state(false);
   let isSpoolLeaveModalOpen = $state(false);
   let isSpoolUpdateModalOpen = $state(false);
 </script>
@@ -33,6 +35,13 @@
       class="cursor-pointer"
       variant="default"
       onclick={() => {
+        isInviteUsersToSpoolModalOpen = true;
+      }}>Invite users</ContextMenu.Item
+    >
+    <ContextMenu.Item
+      class="cursor-pointer"
+      variant="default"
+      onclick={() => {
         isSpoolUpdateModalOpen = true;
       }}>Edit</ContextMenu.Item
     >
@@ -45,5 +54,6 @@
     >
   </ContextMenu.Content>
 </ContextMenu.Root>
+<ModalInviteUsersToSpool spoolId={id} bind:isOpen={isInviteUsersToSpoolModalOpen} />
 <ModalSpoolEdit spoolId={id} bind:isOpen={isSpoolUpdateModalOpen} />
 <ModalSpoolLeave spoolId={id} bind:isOpen={isSpoolLeaveModalOpen} />

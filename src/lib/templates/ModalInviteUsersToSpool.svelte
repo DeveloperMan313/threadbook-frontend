@@ -5,8 +5,11 @@
   import InputField from './InputField.svelte';
   import { SpoolApi } from '$lib/api';
   import { inviteUsernamesGetError } from '$lib/validation';
+  import { stateSpools } from '$lib/states';
 
-  let { spoolId, spoolName, isOpen = $bindable() }: ModalInviteUsersToSpool = $props();
+  let { spoolId, isOpen = $bindable() }: ModalInviteUsersToSpool = $props();
+
+  const spoolName = $derived(stateSpools.spools.find((s) => s.id === spoolId)!.name);
 
   let usernames = $state('');
   let usernamesAreValid = $state(true);
