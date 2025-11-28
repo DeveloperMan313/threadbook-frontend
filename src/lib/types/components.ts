@@ -52,7 +52,6 @@ export interface ModalInviteUsersToThread {
 
 export interface ModalSpoolLeaveProps {
   spoolId: number;
-  spoolName: string;
   isOpen: boolean; // bindable
 }
 
@@ -69,6 +68,11 @@ export interface ModalThreadCreateProps {
 
 export interface ModalSpoolCreateProps {
   isOpen: boolean; // bindable
+}
+
+export interface ModalSpoolEditProps {
+  isOpen: boolean; // bindable
+  spoolId: number;
 }
 
 export interface ModalLogOutProps {

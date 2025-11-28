@@ -4,25 +4,28 @@
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import InputField from './InputField.svelte';
   import { spoolNameGetError } from '$lib/validation';
-  import type { ModalSpoolCreateProps } from '$lib/types';
+  import type { ModalSpoolEditProps } from '$lib/types';
   import Input from '$lib/components/ui/input/input.svelte';
-  import { stateSpoolCreate } from '$lib/states';
+  import { stateSpools, stateSpoolUpdate } from '$lib/states';
 
-  let { isOpen = $bindable(false) }: ModalSpoolCreateProps = $props();
+  let { isOpen = $bindable(false), spoolId }: ModalSpoolEditProps = $props();
 
-  let spoolName = $state('');
+  const oldSpoolName = $derived(stateSpools.spools.find((s) => s.id === spoolId)!.name);
+
+  // svelte-ignore state_referenced_locally
+  let spoolName = $state(oldSpoolName); // capture
   let bannerFile = $state<File | undefined>(undefined);
-  let nameIsValid = $state(false);
+  let nameIsValid = $state(true);
   let isLoading = $state(false);
 
-  const onCreateClick = async () => {
+  const onEditClick = async () => {
     if (!nameIsValid) return;
     isLoading = true;
     try {
-      await stateSpoolCreate(spoolName, bannerFile);
+      await stateSpoolUpdate(spoolId, spoolName, bannerFile);
       isOpen = false;
     } catch (error) {
-      console.error('Failed to create spool:', error);
+      console.error('Failed to edit spool:', error);
     } finally {
       isLoading = false;
     }
@@ -41,9 +44,9 @@
 
   $effect(() => {
     if (isOpen) {
-      spoolName = '';
+      spoolName = oldSpoolName;
       bannerFile = undefined;
-      nameIsValid = false;
+      nameIsValid = true;
       isLoading = false;
     }
   });
@@ -52,8 +55,8 @@
 <Dialog.Root bind:open={isOpen}>
   <Dialog.Content class="sm:max-w-[425px]">
     <Dialog.Header>
-      <Dialog.Title>New spool</Dialog.Title>
-      <Dialog.Description>Create a new spool.</Dialog.Description>
+      <Dialog.Title>Edit spool</Dialog.Title>
+      <Dialog.Description>Change name or banner of spool "{oldSpoolName}".</Dialog.Description>
     </Dialog.Header>
     <InputField
       type="text"
@@ -77,11 +80,11 @@
       <Button variant="outline" class="cursor-pointer" onclick={onCancel} disabled={isLoading}>
         Cancel
       </Button>
-      <Button class="cursor-pointer" onclick={onCreateClick} disabled={!nameIsValid || isLoading}>
+      <Button class="cursor-pointer" onclick={onEditClick} disabled={!nameIsValid || isLoading}>
         {#if isLoading}
-          Creating...
+          Saving...
         {:else}
-          Create
+          Save
         {/if}
       </Button>
     </Dialog.Footer>

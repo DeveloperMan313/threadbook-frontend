@@ -5,9 +5,11 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { resolve } from '$app/paths';
-  import { stateSpoolLeave } from '$lib/states';
+  import { stateSpoolLeave, stateSpools } from '$lib/states';
 
-  let { spoolId, spoolName, isOpen = $bindable() }: ModalSpoolLeaveProps = $props();
+  let { spoolId, isOpen = $bindable() }: ModalSpoolLeaveProps = $props();
+
+  const spoolName = $derived(stateSpools.spools.find((s) => s.id === spoolId)!.name);
 
   const onLeaveClick = async () => {
     try {

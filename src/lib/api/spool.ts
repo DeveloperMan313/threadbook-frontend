@@ -5,7 +5,9 @@ import type {
   CreateSpoolRequest,
   LeaveSpoolRequest,
   InviteUsersToSpoolRequest,
-  CreateSpoolResponse
+  CreateSpoolResponse,
+  UpdateSpoolRequest,
+  UpdateSpoolResponse
 } from '$lib/types';
 
 const MockGetUserSpoolList: SpoolProps[] = {
@@ -88,6 +90,26 @@ export const SpoolApi = {
 
     return ApiClient.fetchJSON('/spool', {
       method: 'POST',
+      headers: {},
+      body: formData
+    });
+  },
+
+  /**
+   * Update existent spool
+   * @param {UpdateSpoolRequest} request - request object with spool_id, name and optional banner file
+   * @returns {Promise<UpdateSpoolResponse>} - API response
+   */
+  async updateSpool(request: UpdateSpoolRequest): Promise<UpdateSpoolResponse> {
+    const formData = new FormData();
+    formData.append('spool_id', request.spool_id.toString());
+    formData.append('name', request.name);
+    if (request.banner) {
+      formData.append('banner', request.banner);
+    }
+
+    return ApiClient.fetchJSON('/spool', {
+      method: 'PUT',
       headers: {},
       body: formData
     });

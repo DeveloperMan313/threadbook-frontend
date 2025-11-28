@@ -6,11 +6,13 @@
   import * as Avatar from '$lib/components/ui/avatar/index.js';
   import { ImageApi } from '$lib/api';
   import { page } from '$app/state';
+  import ModalSpoolEdit from './ModalSpoolEdit.svelte';
 
   const { id, name, banner_link }: SpoolProps = $props();
   const currentSpoolId = $derived<number>(page.data.spoolId);
 
   let isSpoolLeaveModalOpen = $state(false);
+  let isSpoolUpdateModalOpen = $state(false);
 </script>
 
 <ContextMenu.Root>
@@ -29,6 +31,13 @@
   <ContextMenu.Content class="w-52">
     <ContextMenu.Item
       class="cursor-pointer"
+      variant="default"
+      onclick={() => {
+        isSpoolUpdateModalOpen = true;
+      }}>Edit</ContextMenu.Item
+    >
+    <ContextMenu.Item
+      class="cursor-pointer"
       variant="destructive"
       onclick={() => {
         isSpoolLeaveModalOpen = true;
@@ -36,4 +45,5 @@
     >
   </ContextMenu.Content>
 </ContextMenu.Root>
-<ModalSpoolLeave spoolId={id} spoolName={name} bind:isOpen={isSpoolLeaveModalOpen} />
+<ModalSpoolEdit spoolId={id} bind:isOpen={isSpoolUpdateModalOpen} />
+<ModalSpoolLeave spoolId={id} bind:isOpen={isSpoolLeaveModalOpen} />

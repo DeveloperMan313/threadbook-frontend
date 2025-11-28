@@ -20,6 +20,15 @@ export const stateSpoolCreate = async (name: string, banner?: File) => {
   stateSpoolsAdd(newSpool);
 };
 
+export const stateSpoolUpdate = async (spoolId: number, name: string, banner?: File) => {
+  const response = await SpoolApi.updateSpool({ spool_id: spoolId, name, banner });
+  const updatedSpool = {
+    id: spoolId,
+    ...response
+  };
+  stateSpoolsUpdate(updatedSpool);
+};
+
 export const stateSpoolLeave = async (spoolId: number) => {
   await SpoolApi.leaveFromSpool({ spool_id: spoolId });
   stateSpoolsDelete(spoolId);
@@ -29,8 +38,8 @@ const stateSpoolsAdd = (spool: SpoolProps) => {
   stateSpools.spools = [...stateSpools.spools, spool];
 };
 
-const stateSpoolsUpdate = (spool: SpoolProps) => {
-  stateSpools.spools = stateSpools.spools.filter((s) => (s.id === spool.id ? spool : s));
+const stateSpoolsUpdate = (spool: { id: number }) => {
+  stateSpools.spools = stateSpools.spools.map((s) => (s.id === spool.id ? { ...s, ...spool } : s));
 };
 
 const stateSpoolsDelete = (spoolId: number) => {
@@ -50,14 +59,7 @@ export const subToSpoolEvents = () => {
   });
 
   centrifugeClient.onUser('spool.updated', (payload: WsSpoolUpdated) => {
-    const updatedSpool: SpoolProps = {
-      ...payload,
-      is_creator: false,
-      description: '',
-      members: 0,
-      threads: 0
-    };
-    stateSpoolsUpdate(updatedSpool);
+    stateSpoolsUpdate(payload);
   });
 
   centrifugeClient.onUser('spool.deleted', (payload: WsSpoolDeleted) => {

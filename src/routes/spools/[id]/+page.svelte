@@ -23,6 +23,8 @@
   import { EllipsisVertical } from '@lucide/svelte';
   import Spinner from '$lib/components/ui/spinner/spinner.svelte';
   import { stateSpools } from '$lib/states';
+  import ModalSpoolLeave from '$lib/templates/ModalSpoolLeave.svelte';
+  import ModalSpoolEdit from '$lib/templates/ModalSpoolEdit.svelte';
 
   let { data } = $props();
 
@@ -150,6 +152,8 @@
   });
 
   let isInviteUsersToSpoolModalOpen = $state(false);
+  let isSpoolLeaveModalOpen = $state(false);
+  let isSpoolEditModalOpen = $state(false);
 </script>
 
 <Navbar />
@@ -179,6 +183,21 @@
           >
             Invite users</DropdownMenu.Item
           >
+          <DropdownMenu.Item
+            onclick={() => {
+              isSpoolEditModalOpen = true;
+            }}
+          >
+            Edit spool</DropdownMenu.Item
+          >
+          <DropdownMenu.Item
+            variant="destructive"
+            onclick={() => {
+              isSpoolLeaveModalOpen = true;
+            }}
+          >
+            Leave spool</DropdownMenu.Item
+          >
         </DropdownMenu.Content>
       </DropdownMenu.Root>
     </div>
@@ -206,3 +225,5 @@
     {/if}
   </div>
 </div>
+<ModalSpoolEdit spoolId={data.spoolId} bind:isOpen={isSpoolEditModalOpen} />
+<ModalSpoolLeave spoolId={data.spoolId} bind:isOpen={isSpoolLeaveModalOpen} />
