@@ -171,7 +171,7 @@
             </Button>
           {/snippet}
         </DropdownMenu.Trigger>
-        <DropdownMenu.Content class="w-56" align="start">
+        <DropdownMenu.Content class="w-52" align="start">
           <DropdownMenu.Item
             onclick={() => {
               isInviteUsersToSpoolModalOpen = true;

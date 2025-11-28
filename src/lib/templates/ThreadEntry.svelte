@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ContextMenuEntry, ThreadProps } from '$lib/types';
+  import type { ThreadProps } from '$lib/types';
   import ModalThreadClose from './ModalThreadClose.svelte';
   import ModalThreadRename from './ModalThreadRename.svelte';
   import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
@@ -19,23 +19,6 @@
   let isThreadRenameModalOpen = $state(false);
   let isThreadCloseModalOpen = $state(false);
   let isInviteUsersToThreadModalOpen = $state(false);
-
-  const contextMenuEntries: Array<ContextMenuEntry> = [
-    {
-      type: 'neutral',
-      label: 'Rename',
-      onSelect: () => {
-        isThreadRenameModalOpen = true;
-      }
-    },
-    {
-      type: 'danger',
-      label: 'Close',
-      onSelect: () => {
-        isThreadCloseModalOpen = true;
-      }
-    }
-  ];
 </script>
 
 <ContextMenu.Root>
@@ -87,15 +70,21 @@
       </div>
     </div>
   </ContextMenu.Trigger>
-  <ContextMenu.Content class="min-w-[10rem]">
-    {#each contextMenuEntries as entry (entry.label)}
-      <ContextMenu.Item
-        class={entry.type === 'danger' ? 'text-destructive focus:text-destructive' : ''}
-        onSelect={entry.onSelect}
-      >
-        {entry.label}
-      </ContextMenu.Item>
-    {/each}
+  <ContextMenu.Content class="w-52">
+    <ContextMenu.Item
+      class="cursor-pointer"
+      variant="default"
+      onclick={() => {
+        isThreadRenameModalOpen = true;
+      }}>Rename</ContextMenu.Item
+    >
+    <ContextMenu.Item
+      class="cursor-pointer"
+      variant="destructive"
+      onclick={() => {
+        isThreadCloseModalOpen = true;
+      }}>Close</ContextMenu.Item
+    >
   </ContextMenu.Content>
 </ContextMenu.Root>
 <ModalThreadRename threadId={id} threadTitle={title} bind:isOpen={isThreadRenameModalOpen} />

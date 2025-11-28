@@ -10,12 +10,6 @@ export interface ChatState {
   initialLoading: boolean;
 }
 
-export interface ContextMenuEntry {
-  type: 'neutral' | 'danger';
-  label: string;
-  onSelect: (event: Event) => void;
-}
-
 type InputFieldGetError =
   | ((value: string) => string | null)
   | ((value: string) => Promise<string | null>);
