@@ -1,11 +1,12 @@
 <script lang="ts">
+  import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
   import type { ThreadProps } from '$lib/types';
   import ModalThreadClose from './ModalThreadClose.svelte';
   import ModalThreadRename from './ModalThreadRename.svelte';
   import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
   import { getContext } from 'svelte';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { Phone, UserPlus } from '@lucide/svelte';
+  import { EllipsisVertical, Phone, UserPlus } from '@lucide/svelte';
   import ModalInviteUsersToThread from './ModalInviteUsersToThread.svelte';
   import { stateVoiceThreadId } from '$lib/states';
 
@@ -47,17 +48,48 @@
         {#if unreadCnt > 0}
           <p class="text-sm text-gray-600">{unreadCnt}</p>
         {/if}
-        {#if type === 'private'}
-          <Button
-            variant="ghost"
-            class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200"
-            onclick={() => {
-              isInviteUsersToThreadModalOpen = true;
-            }}
-          >
-            <UserPlus />
-          </Button>
-        {/if}
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger>
+            {#snippet child({ props })}
+              <Button
+                {...props}
+                variant="ghost"
+                class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200"
+              >
+                <EllipsisVertical />
+              </Button>
+            {/snippet}
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content class="w-52" align="start">
+            {#if type === 'private'}
+              <DropdownMenu.Item
+                class="cursor-pointer"
+                onclick={() => {
+                  isInviteUsersToThreadModalOpen = true;
+                }}
+              >
+                Invite users</DropdownMenu.Item
+              >
+            {/if}
+            <DropdownMenu.Item
+              class="cursor-pointer"
+              onclick={() => {
+                isThreadRenameModalOpen = true;
+              }}
+            >
+              Rename</DropdownMenu.Item
+            >
+            <DropdownMenu.Item
+              class="cursor-pointer"
+              variant="destructive"
+              onclick={() => {
+                isThreadCloseModalOpen = true;
+              }}
+            >
+              Close</DropdownMenu.Item
+            >
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
         <Button
           variant="ghost"
           class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200"
@@ -71,6 +103,15 @@
     </div>
   </ContextMenu.Trigger>
   <ContextMenu.Content class="w-52">
+    {#if type === 'private'}
+      <ContextMenu.Item
+        class="cursor-pointer"
+        variant="default"
+        onclick={() => {
+          isInviteUsersToThreadModalOpen = true;
+        }}>Invite users</ContextMenu.Item
+      >
+    {/if}
     <ContextMenu.Item
       class="cursor-pointer"
       variant="default"
