@@ -63,6 +63,23 @@ export interface InviteUsersToThreadRequest {
   invitee_usernames: Array<string>;
 }
 
+export interface CreateInviteLinkRequest {
+  thread_id: number;
+  max_uses: number;
+  expires_at: Date;
+}
+
+export interface CreateInviteLinkResponse {
+  id: string;
+  type: string;
+  resource_id: number;
+  creator_id: number;
+  remaining_uses: number;
+  expires_at: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
 export interface CloseThreadRequest {
   id: number;
 }

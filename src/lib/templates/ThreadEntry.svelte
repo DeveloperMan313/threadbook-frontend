@@ -6,9 +6,10 @@
   import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
   import { getContext } from 'svelte';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { EllipsisVertical, Phone, UserPlus } from '@lucide/svelte';
+  import { EllipsisVertical, Phone } from '@lucide/svelte';
   import ModalInviteUsersToThread from './ModalInviteUsersToThread.svelte';
   import { stateVoiceThreadId } from '$lib/states';
+  import ModalThreadInviteLinkCreate from './ModalThreadInviteLinkCreate.svelte';
 
   let { id, title, type, unreadCnt, mentionCnt }: ThreadProps = $props();
 
@@ -20,6 +21,7 @@
   let isThreadRenameModalOpen = $state(false);
   let isThreadCloseModalOpen = $state(false);
   let isInviteUsersToThreadModalOpen = $state(false);
+  let isThreadInviteLinkCreateModalOpen = $state(false);
 </script>
 
 <ContextMenu.Root>
@@ -70,6 +72,14 @@
               >
                 Invite users</DropdownMenu.Item
               >
+              <DropdownMenu.Item
+                class="cursor-pointer"
+                onclick={() => {
+                  isThreadInviteLinkCreateModalOpen = true;
+                }}
+              >
+                Create invite link</DropdownMenu.Item
+              >
             {/if}
             <DropdownMenu.Item
               class="cursor-pointer"
@@ -111,6 +121,13 @@
           isInviteUsersToThreadModalOpen = true;
         }}>Invite users</ContextMenu.Item
       >
+      <ContextMenu.Item
+        class="cursor-pointer"
+        variant="default"
+        onclick={() => {
+          isThreadInviteLinkCreateModalOpen = true;
+        }}>Create invite link</ContextMenu.Item
+      >
     {/if}
     <ContextMenu.Item
       class="cursor-pointer"
@@ -128,10 +145,15 @@
     >
   </ContextMenu.Content>
 </ContextMenu.Root>
-<ModalThreadRename threadId={id} threadTitle={title} bind:isOpen={isThreadRenameModalOpen} />
-<ModalThreadClose threadId={id} threadTitle={title} bind:isOpen={isThreadCloseModalOpen} />
 <ModalInviteUsersToThread
   threadId={id}
   threadTitle={title}
   bind:isOpen={isInviteUsersToThreadModalOpen}
 />
+<ModalThreadInviteLinkCreate
+  threadId={id}
+  threadTitle={title}
+  bind:isOpen={isThreadInviteLinkCreateModalOpen}
+/>
+<ModalThreadRename threadId={id} threadTitle={title} bind:isOpen={isThreadRenameModalOpen} />
+<ModalThreadClose threadId={id} threadTitle={title} bind:isOpen={isThreadCloseModalOpen} />

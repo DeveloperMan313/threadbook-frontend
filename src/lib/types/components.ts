@@ -65,6 +65,12 @@ export interface ModalThreadCreateProps {
   threadType: ThreadType;
 }
 
+export interface ModalThreadInviteLinkCreateProps {
+  isOpen: boolean; // bindable
+  threadId: number;
+  threadTitle: string;
+}
+
 export interface ModalSpoolCreateProps {
   isOpen: boolean; // bindable
 }

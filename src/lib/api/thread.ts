@@ -9,7 +9,9 @@ import type {
   GetCentrifugeTokensRequest,
   InviteUsersToThreadRequest,
   GetSFUTokenRequest,
-  GetSFUTokenResponse
+  GetSFUTokenResponse,
+  CreateInviteLinkRequest,
+  CreateInviteLinkResponse
 } from '$lib/types';
 
 const MockGetSpoolThreads: Array<ThreadProps> = [
@@ -149,11 +151,23 @@ export const ThreadApi = {
 
   /**
    * Invite users to thread
-   * @param {InviteUsersToThreadRequest} request - request object with thread_id and username list
+   * @param {InviteUsersToThreadRequest} request - request object
    */
   async inviteUsersToThread(request: InviteUsersToThreadRequest) {
     const requestNoId = { invitee_usernames: request.invitee_usernames };
     return ApiClient.fetch(`/thread/${request.thread_id}/invite`, {
+      method: 'POST',
+      body: JSON.stringify(requestNoId)
+    });
+  },
+
+  /**
+   * Create invite link for thread
+   * @param {CreateInviteLinkRequest} request - request object
+   */
+  async createInviteLink(request: CreateInviteLinkRequest): Promise<CreateInviteLinkResponse> {
+    const requestNoId = { max_uses: request.max_uses, expires_at: request.expires_at };
+    return ApiClient.fetchJSON(`/thread/${request.thread_id}/invite-link/create`, {
       method: 'POST',
       body: JSON.stringify(requestNoId)
     });
