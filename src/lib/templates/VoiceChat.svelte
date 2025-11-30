@@ -387,7 +387,7 @@
             ? false
             : {
                 echoCancellation: true,
-                noiseSuppression: false,
+                noiseSuppression: true,
                 autoGainControl: true,
                 sampleRate: 48000,
                 channelCount: 1
@@ -742,6 +742,7 @@
           {#each videoTiles as tile (tile.id)}
             <div class="video-tile-min">
               <div class="video-inner-min">
+                <div class="video-container" data-participant={tile.id}></div>
                 <span class="video-label-min">
                   {tile.isLocal ? 'You' : tile.id}
                 </span>
