@@ -1,6 +1,6 @@
 import type { LayoutLoad } from './$types';
 import { centrifugeClient } from '$lib/api';
-import { stateSpoolsFetch, subToSpoolEvents, tryGetUserProfile } from '$lib/states';
+import { stateSpoolsFetch, subToSpoolEvents } from '$lib/states';
 import { ApiClient } from '$lib/api/client';
 
 export const load: LayoutLoad = async ({ fetch }) => {
@@ -11,10 +11,4 @@ export const load: LayoutLoad = async ({ fetch }) => {
   await centrifugeClient.connect();
   centrifugeClient.subToUser();
   subToSpoolEvents();
-
-  const isAuthorized = await tryGetUserProfile();
-
-  return {
-    isAuthorized
-  };
 };

@@ -80,6 +80,14 @@ export interface CreateInviteLinkResponse {
   updated_at: Date;
 }
 
+export interface JoinByThreadInviteLinkRequest {
+  link_id: string;
+}
+
+export interface JoinByThreadInviteLinkResponse {
+  status: string;
+}
+
 export interface CloseThreadRequest {
   id: number;
 }

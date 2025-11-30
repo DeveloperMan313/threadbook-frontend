@@ -71,6 +71,11 @@ export interface ModalThreadInviteLinkCreateProps {
   threadTitle: string;
 }
 
+export interface ModalThreadInviteLinkJoinProps {
+  isOpen: boolean; // bindable
+  linkId: string;
+}
+
 export interface ModalSpoolCreateProps {
   isOpen: boolean; // bindable
 }
