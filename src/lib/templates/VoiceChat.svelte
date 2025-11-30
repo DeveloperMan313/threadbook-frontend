@@ -25,6 +25,8 @@
   import { stateVoiceThreadId } from '$lib/states';
   import { ThreadApi } from '$lib/api';
 
+  import { DeepFilterNet3Processor as DeepFilterNoiseFilterProcessor } from 'deepfilternet3-noise-filter';
+
   let isConnected = $state(false);
   let error = $state(''); // текст для тоста
   let showError = $state(false); // флаг показа тоста
@@ -48,6 +50,8 @@
   let audioElements = new SvelteMap<string, HTMLAudioElement>();
   let localVideoEl = $state<HTMLVideoElement | null>(null);
   let localVideoTrack = $state<LocalVideoTrack | null>(null);
+
+  let dfnProcessor: DeepFilterNoiseFilterProcessor | null = null;
 
   let isDragging = false;
   let isResizing = false;
@@ -383,7 +387,7 @@
             ? false
             : {
                 echoCancellation: true,
-                noiseSuppression: true,
+                noiseSuppression: false,
                 autoGainControl: true,
                 sampleRate: 48000,
                 channelCount: 1
@@ -393,6 +397,32 @@
 
         if (tracks.length > 0) {
           await Promise.all(tracks.map((track) => room!.localParticipant.publishTrack(track)));
+
+          const audioTrack = tracks.find((t) => t.kind === 'audio') as LocalTrack | undefined;
+          if (audioTrack) {
+            try {
+              if (!dfnProcessor) {
+                dfnProcessor = new DeepFilterNoiseFilterProcessor({
+                  sampleRate: 48000,
+                  noiseReductionLevel: 80
+                });
+                await dfnProcessor.initialize();
+              }
+              if ((audioTrack as any).setProcessor) {
+                await (audioTrack as any).setProcessor(dfnProcessor);
+              }
+            } catch (e) {
+              console.warn('DFN3 init/setProcessor failed, falling back to plain audio', e);
+              if (dfnProcessor && typeof dfnProcessor.destroy === 'function') {
+                try {
+                  await dfnProcessor.destroy();
+                } catch {
+                  // ignore
+                }
+              }
+              dfnProcessor = null;
+            }
+          }
 
           const videoTrack = tracks.find((track) => track.kind === 'video') as
             | LocalVideoTrack
@@ -447,6 +477,15 @@
       localVideoEl.load();
     }
     localVideoTrack = null;
+
+    if (dfnProcessor && typeof dfnProcessor.destroy === 'function') {
+      try {
+        await dfnProcessor.destroy();
+      } catch (e) {
+        console.warn('DFN3 destroy failed', e);
+      }
+    }
+    dfnProcessor = null;
 
     isConnected = false;
     isSelfMuted = false;
