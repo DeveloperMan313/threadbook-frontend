@@ -24,21 +24,6 @@
   import { stateVoiceThreadId } from '$lib/states';
   import { ThreadApi } from '$lib/api';
 
-  $effect(() => {
-    const vtId = stateVoiceThreadId.id;
-    untrack(async () => {
-      if (isConnected) {
-        const voiceThreadIdCopy = vtId; // HACK, cuz leaveRoom() sets it to null
-        await leaveRoom();
-        stateVoiceThreadId.id = voiceThreadIdCopy;
-      }
-    }).then(() => {
-      if (vtId) {
-        joinRoom(vtId);
-      }
-    });
-  });
-
   let isConnected = $state(false);
   let error = $state('');
   let room = $state<Room | null>(null);
@@ -46,8 +31,12 @@
   let isSelfMuted = $state(false);
   let isOthersMuted = $state(false);
   let isSelfVideoEnabled = $state(true);
-  let isMinimized = $state(false);
-  let isFullscreen = $state(false);
+
+  type ViewMode = 'normal' | 'fullscreen' | 'minimized';
+  let viewMode = $state<ViewMode>('normal');
+
+  let isFullscreen = $derived(viewMode === 'fullscreen');
+  let isMinimized = $derived(viewMode === 'minimized');
 
   let participants = $state<RemoteParticipant[]>([]);
   let volumes = $state<Record<string, number>>({});
@@ -74,6 +63,32 @@
   const isBrowser = typeof document !== 'undefined';
   let pendingLocalVideoTrack: LocalTrack | null = null;
 
+  type VideoTile = {
+    id: string;
+    isLocal: boolean;
+  };
+
+  let videoTiles = $state<VideoTile[]>([]);
+
+  function recomputeVideoTiles() {
+    if (!room || !isConnected) {
+      videoTiles = [];
+      return;
+    }
+
+    const tiles: VideoTile[] = [];
+    const localId = room.localParticipant.identity;
+    if (localId) {
+      tiles.push({ id: localId, isLocal: true });
+    }
+
+    participants.forEach((p) => {
+      tiles.push({ id: p.identity, isLocal: false });
+    });
+
+    videoTiles = tiles;
+  }
+
   function setDefaultPosition() {
     if (isBrowser) {
       position.x = window.innerWidth - dimensions.width - 16;
@@ -82,6 +97,13 @@
   }
 
   if (isBrowser) setDefaultPosition();
+
+  $effect(() => {
+    if (isFullscreen && isBrowser) {
+      position = { x: 0, y: 0 };
+      dimensions = { width: window.innerWidth, height: window.innerHeight };
+    }
+  });
 
   function attachAudioTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
@@ -96,10 +118,12 @@
 
   function attachVideoTrack(track: RemoteTrack, participantId: string) {
     if (!isBrowser) return;
+    if (room && participantId === room.localParticipant.identity) return;
+
     const element = track.attach() as HTMLVideoElement;
     element.autoplay = true;
     element.playsInline = true;
-    element.muted = true;
+    element.muted = false;
 
     const tryAttach = () => {
       const container = document.querySelector(
@@ -107,6 +131,7 @@
       ) as HTMLElement | null;
       if (container) {
         container.innerHTML = '';
+        element.classList.add('video-element');
         container.appendChild(element);
       } else {
         setTimeout(tryAttach, 100);
@@ -125,7 +150,7 @@
     const container = document.querySelector(
       `.video-container[data-participant="${participantId}"]`
     );
-    if (container) container.innerHTML = '';
+    if (container) (container as HTMLElement).innerHTML = '';
   }
 
   function updateVolume(id: string, vol: number) {
@@ -137,14 +162,19 @@
     volumeDisplayFor[id] = {
       value: `${Math.round(vol * 100)}%`,
       timeout: setTimeout(() => {
-        volumeDisplayFor = { ...volumeDisplayFor, [id]: { value: '', timeout: undefined } };
+        volumeDisplayFor = {
+          ...volumeDisplayFor,
+          [id]: { value: '', timeout: undefined }
+        };
       }, 1500)
     };
   }
 
-  function toggleVolumeSlider(id: string, e: MouseEvent) {
-    e.preventDefault();
-    showVolumeSliderFor = { ...showVolumeSliderFor, [id]: !showVolumeSliderFor[id] };
+  function toggleVolumeSlider(id: string) {
+    showVolumeSliderFor = {
+      ...showVolumeSliderFor,
+      [id]: !showVolumeSliderFor[id]
+    };
   }
 
   async function toggleSelfMute() {
@@ -164,19 +194,12 @@
     await room.localParticipant.setCameraEnabled(isSelfVideoEnabled);
   }
 
-  function toggleMinimize() {
-    isMinimized = !isMinimized;
-  }
-
-  function toggleFullscreen() {
-    isFullscreen = !isFullscreen;
-    if (isFullscreen) {
-      position = { x: 0, y: 0 };
-      dimensions = { width: window.innerWidth, height: window.innerHeight };
-    } else {
+  function setViewMode(next: ViewMode) {
+    if (next === 'normal') {
       dimensions = { width: 360, height: 420 };
       setDefaultPosition();
     }
+    viewMode = next;
   }
 
   function handleParticipant(participant: RemoteParticipant) {
@@ -222,18 +245,17 @@
 
     if (!participants.some((p) => p.identity === participant.identity)) {
       participants = [...participants, participant];
+      recomputeVideoTiles();
     }
   }
 
   function startDrag(e: MouseEvent) {
-    if (isFullscreen) return;
+    if (viewMode !== 'normal') return;
     isDragging = true;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
     initialX = position.x;
     initialY = position.y;
-    document.addEventListener('mousemove', handleDrag);
-    document.addEventListener('mouseup', stopDrag);
     e.preventDefault();
   }
 
@@ -247,19 +269,15 @@
 
   function stopDrag() {
     isDragging = false;
-    document.removeEventListener('mousemove', handleDrag);
-    document.removeEventListener('mouseup', stopDrag);
   }
 
   function startResize(e: MouseEvent) {
-    if (isFullscreen || isMinimized) return;
+    if (viewMode !== 'normal') return;
     isResizing = true;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
     initialWidth = dimensions.width;
     initialHeight = dimensions.height;
-    document.addEventListener('mousemove', handleResize);
-    document.addEventListener('mouseup', stopResize);
     e.preventDefault();
     e.stopPropagation();
   }
@@ -276,104 +294,17 @@
 
   function stopResize() {
     isResizing = false;
-    document.removeEventListener('mousemove', handleResize);
-    document.removeEventListener('mouseup', stopResize);
-  }
-
-  async function testTurnServer(
-    turn_urls: string[] | undefined,
-    username: string | undefined,
-    credential: string | undefined
-  ) {
-    if (turn_urls && turn_urls.length > 0 && username && credential) {
-      return new Promise((resolve) => {
-        const config: RTCConfiguration = {
-          iceServers: [
-            {
-              urls: turn_urls,
-              username: username,
-              credential: credential
-            }
-          ]
-        };
-
-        const pc = new RTCPeerConnection(config);
-        const candidates: RTCIceCandidate[] = [];
-
-        pc.onicecandidate = (e) => {
-          if (e.candidate) {
-            console.log(
-              '🧊 ICE Candidate:',
-              e.candidate.type,
-              e.candidate.protocol,
-              e.candidate.address
-            );
-            candidates.push(e.candidate);
-
-            if (e.candidate.type === 'relay') {
-              console.log('✅ TURN WORKING! Relay candidate found:', e.candidate);
-              resolve(true);
-            }
-          } else {
-            console.log('❌ No relay candidates found. All candidates:', candidates);
-            resolve(false);
-          }
-        };
-
-        pc.createDataChannel('test');
-        pc.createOffer()
-          .then((offer) => pc.setLocalDescription(offer))
-          .catch(console.error);
-
-        // Timeout after 5 seconds
-        setTimeout(() => {
-          console.log('⏰ TURN test timeout');
-          resolve(false);
-        }, 5000);
-      });
-    }
-  }
-
-  async function testPureTurn() {
-    const pc = new RTCPeerConnection({
-      iceServers: [
-        {
-          urls: 'turn:threadbook.ru:3478?transport=udp',
-          username: '1732770000:test',
-          credential: 'dummy' // при auth-secret не проверяется сразу, но лучше правильный
-        }
-      ],
-      iceTransportPolicy: 'relay' // ← КЛЮЧЕВО!
-    });
-
-    pc.createDataChannel('test');
-    console.log('🧪 Pure TURN test started (relay only)');
-
-    pc.onicecandidate = (e) => {
-      if (e.candidate) {
-        console.log('🧊', e.candidate.type, e.candidate.candidate);
-        if (e.candidate.type === 'relay') {
-          console.log('✅ SUCCESS: relay candidate!');
-        }
-      } else {
-        console.warn('ICE complete, no relay');
-      }
-    };
-
-    await pc.setLocalDescription(await pc.createOffer());
   }
 
   async function joinRoom(roomThreadId: number) {
     if (!isBrowser) return;
 
     try {
-      // 1. Получаем токен и TURN/STUN данные
       const resp = await ThreadApi.getSFUToken({ thread_id: roomThreadId });
       const token = resp.token;
 
       room = new Room();
 
-      // 2. Подписываемся на события
       room.on('participantConnected', (p) => handleParticipant(p));
       room.on('participantDisconnected', (p) => {
         participants = participants.filter((part) => part.identity !== p.identity);
@@ -381,18 +312,16 @@
         delete showVolumeSliderFor[p.identity];
         delete volumeDisplayFor[p.identity];
         delete volumes[p.identity];
+        recomputeVideoTiles();
       });
       room.on('connected', () => {
         room!.remoteParticipants.forEach((p) => handleParticipant(p));
+        recomputeVideoTiles();
       });
       room.on('disconnected', leaveRoom);
 
-      // 3. Формируем iceServers для RTCPeerConnection
-      const iceServers: RTCIceServer[] = [
-        { urls: ['stun:stun.l.google.com:19302'] } // STUN отдельно
-      ];
+      const iceServers: RTCIceServer[] = [{ urls: ['stun:stun.l.google.com:19302'] }];
 
-      // Добавляем TURN только если есть username и credential
       if (
         resp.turn_urls &&
         resp.turn_urls.length > 0 &&
@@ -406,42 +335,49 @@
         });
       }
 
-      await testPureTurn();
-      await testTurnServer(resp.turn_urls, resp.turn_username, resp.turn_credential);
-
-      // 4. Подключаемся к LiveKit
       await room.connect(PUBLIC_LIVEKIT_ORIGIN, token, {
         rtcConfig: { iceServers }
       });
 
-      // 5. Создаём локальные треки
-      const tracks = await room.localParticipant.createTracks({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000,
-          channelCount: 1
-        },
-        video: isSelfVideoEnabled
-      });
+      // Пытаемся создать локальные треки, но не считаем ошибку критичной
+      try {
+        const tracks = await room.localParticipant.createTracks({
+          audio: isSelfMuted
+            ? false
+            : {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                sampleRate: 48000,
+                channelCount: 1
+              },
+          video: isSelfVideoEnabled ? true : false
+        });
 
-      await Promise.all(tracks.map((track) => room!.localParticipant.publishTrack(track)));
+        if (tracks.length > 0) {
+          await Promise.all(tracks.map((track) => room!.localParticipant.publishTrack(track)));
 
-      const videoTrack = tracks.find((track) => track.kind === 'video');
-      if (videoTrack) {
-        pendingLocalVideoTrack = videoTrack;
-        if (localVideoEl) {
-          videoTrack.attach(localVideoEl);
+          const videoTrack = tracks.find((track) => track.kind === 'video');
+          if (videoTrack) {
+            pendingLocalVideoTrack = videoTrack;
+            if (localVideoEl) {
+              videoTrack.attach(localVideoEl);
+            }
+          }
         }
+      } catch (mediaErr) {
+        console.warn('Media devices error:', mediaErr);
+        // Не выкидываем из комнаты, просто показываем сообщение
+        error = 'Не удалось получить доступ к камере или микрофону. Вы подключены как слушатель.';
       }
 
       isConnected = true;
-      error = '';
+      if (!error) error = '';
+      recomputeVideoTiles();
     } catch (err) {
       error = (err as Error).message || 'Connection failed';
       console.error('Join error:', err);
-      leaveRoom();
+      await leaveRoom();
     }
   }
 
@@ -470,14 +406,40 @@
     volumes = {};
     showVolumeSliderFor = {};
     volumeDisplayFor = {};
+    videoTiles = [];
 
     stateVoiceThreadId.id = null;
+    viewMode = 'normal';
+    dimensions = { width: 360, height: 420 };
+    setDefaultPosition();
   }
+
+  $effect(() => {
+    const vtId = stateVoiceThreadId.id;
+    untrack(async () => {
+      if (isConnected) {
+        const voiceThreadIdCopy = vtId;
+        await leaveRoom();
+        stateVoiceThreadId.id = voiceThreadIdCopy;
+      }
+    }).then(() => {
+      if (vtId) {
+        joinRoom(vtId);
+      }
+    });
+  });
 
   $effect(() => {
     if (localVideoEl && pendingLocalVideoTrack) {
       pendingLocalVideoTrack.attach(localVideoEl);
       pendingLocalVideoTrack = null;
+    }
+  });
+
+  $effect(() => {
+    participants;
+    if (isConnected && room) {
+      recomputeVideoTiles();
     }
   });
 
@@ -487,11 +449,11 @@
 </script>
 
 <svelte:window
-  on:mousemove={(e) => {
+  onmousemove={(e) => {
     if (isDragging) handleDrag(e);
     if (isResizing) handleResize(e);
   }}
-  on:mouseup={() => {
+  onmouseup={() => {
     if (isDragging) stopDrag();
     if (isResizing) stopResize();
   }}
@@ -515,34 +477,50 @@
   >
     <h3 class="text-lg font-semibold">Voice Chat</h3>
     <div class="flex items-center gap-1">
-      <button
-        class="rounded p-1 hover:bg-accent"
-        onclick={(e) => {
-          e.stopPropagation();
-          toggleFullscreen();
-        }}
-        title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-      >
-        {#if isFullscreen}
-          <Minimize2 size={18} />
-        {:else}
+      {#if viewMode === 'normal'}
+        <button
+          class="rounded p-1 hover:bg-accent"
+          onclick={(e) => {
+            e.stopPropagation();
+            setViewMode('fullscreen');
+          }}
+          title="Fullscreen"
+        >
           <Maximize2 size={18} />
-        {/if}
-      </button>
-      <button
-        class="rounded p-1 hover:bg-accent"
-        onclick={(e) => {
-          e.stopPropagation();
-          toggleMinimize();
-        }}
-        title={isMinimized ? 'Expand' : 'Collapse'}
-      >
-        {#if isMinimized}
-          <Maximize2 size={18} />
-        {:else}
+        </button>
+        <button
+          class="rounded p-1 hover:bg-accent"
+          onclick={(e) => {
+            e.stopPropagation();
+            setViewMode('minimized');
+          }}
+          title="Minimize"
+        >
           <Minimize2 size={18} />
-        {/if}
-      </button>
+        </button>
+      {:else if viewMode === 'fullscreen'}
+        <button
+          class="rounded p-1 hover:bg-accent"
+          onclick={(e) => {
+            e.stopPropagation();
+            setViewMode('normal');
+          }}
+          title="Exit fullscreen"
+        >
+          <Minimize2 size={18} />
+        </button>
+      {:else}
+        <button
+          class="rounded p-1 hover:bg-accent"
+          onclick={(e) => {
+            e.stopPropagation();
+            setViewMode('normal');
+          }}
+          title="Expand"
+        >
+          <Maximize2 size={18} />
+        </button>
+      {/if}
     </div>
   </div>
 
@@ -553,66 +531,55 @@
   {#if !isMinimized}
     <div class="flex flex-col" style="height: calc(100% - 60px);">
       {#if isConnected}
-        <div class="relative mb-3 aspect-video overflow-hidden rounded-lg bg-black">
-          <video
-            bind:this={localVideoEl}
-            autoplay
-            playsinline
-            muted
-            class="h-full w-full object-cover"
-          ></video>
-          <span class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
-            >You</span
-          >
-        </div>
-      {/if}
+        <div class="videos-grid {isFullscreen ? 'videos-grid-fullscreen' : ''}">
+          {#each videoTiles as tile (tile.id)}
+            <div class="video-tile">
+              <div class="video-container" data-participant={tile.id}>
+                {#if tile.isLocal}
+                  <video bind:this={localVideoEl} autoplay playsinline muted class="video-element"
+                  ></video>
+                {/if}
+              </div>
 
-      <div class="mb-3 flex-1 overflow-auto">
-        <div class="flex flex-row flex-wrap justify-center gap-2">
-          {#each participants as p (p.sid)}
-            {#if room && p.identity !== room.localParticipant.identity}
-              <div class="flex w-24 flex-col items-center gap-1">
+              <span class="video-label">
+                {tile.isLocal ? 'You' : tile.id}
+              </span>
+
+              {#if !tile.isLocal}
                 <div
-                  class="relative aspect-video w-full cursor-pointer overflow-hidden rounded-lg bg-black transition-colors hover:ring-2 hover:ring-accent"
+                  class="video-overlay"
                   oncontextmenu={(e) => {
                     e.preventDefault();
-                    toggleVolumeSlider(p.identity, e);
+                    toggleVolumeSlider(tile.id);
                   }}
-                >
-                  <div class="video-container absolute inset-0" data-participant={p.identity}></div>
-                  <span
-                    class="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-xs text-white"
-                  >
-                    {p.identity}
-                  </span>
-                </div>
+                ></div>
 
-                {#if showVolumeSliderFor[p.identity]}
-                  <div class="w-full rounded bg-black/30 p-1">
+                {#if showVolumeSliderFor[tile.id]}
+                  <div class="volume-popover">
                     <input
                       type="range"
                       min="0"
                       max="1"
                       step="0.01"
-                      class="h-1.5 w-full cursor-pointer accent-primary"
-                      value={volumes[p.identity] ?? 1}
+                      class="volume-range"
+                      value={volumes[tile.id] ?? 1}
                       oninput={(e) => {
                         const val = parseFloat((e.target as HTMLInputElement).value);
-                        updateVolume(p.identity, val);
+                        updateVolume(tile.id, val);
                       }}
                     />
-                    {#if volumeDisplayFor[p.identity]?.value}
-                      <span class="mt-0.5 block text-center text-[10px] text-white">
-                        {volumeDisplayFor[p.identity].value}
+                    {#if volumeDisplayFor[tile.id]?.value}
+                      <span class="volume-value">
+                        {volumeDisplayFor[tile.id].value}
                       </span>
                     {/if}
                   </div>
                 {/if}
-              </div>
-            {/if}
+              {/if}
+            </div>
           {/each}
         </div>
-      </div>
+      {/if}
 
       <div class="mt-auto flex flex-wrap justify-center gap-3 border-t border-border py-2">
         <button
@@ -670,34 +637,49 @@
       </div>
     </div>
   {:else}
-    <div class="flex justify-center gap-2 py-2">
-      <button
-        class="rounded-full p-2 transition-colors {isSelfMuted
-          ? 'bg-destructive text-white hover:bg-destructive/90'
-          : 'bg-secondary hover:bg-secondary/80'}"
-        onclick={toggleSelfMute}
-        disabled={!isConnected}
-      >
-        {#if isSelfMuted}
-          <MicOff size={16} />
-        {:else}
-          <Mic size={16} />
-        {/if}
-      </button>
-      <button
-        class="rounded-full bg-destructive p-3 text-white transition-colors hover:bg-destructive/90"
-        onclick={leaveRoom}
-      >
-        {#if isConnected}
-          <LogOut size={16} />
-        {:else}
-          <LogIn size={16} />
-        {/if}
-      </button>
+    <div class="flex flex-col gap-1 py-2">
+      {#if isConnected}
+        <div class="videos-grid-min">
+          {#each videoTiles as tile (tile.id)}
+            <div class="video-tile-min">
+              <div class="video-container" data-participant={tile.id}></div>
+              <span class="video-label-min">
+                {tile.isLocal ? 'You' : tile.id}
+              </span>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
+      <div class="flex justify-center gap-2">
+        <button
+          class="rounded-full p-2 transition-colors {isSelfMuted
+            ? 'bg-destructive text-white hover:bg-destructive/90'
+            : 'bg-secondary hover:bg-secondary/80'}"
+          onclick={toggleSelfMute}
+          disabled={!isConnected}
+        >
+          {#if isSelfMuted}
+            <MicOff size={16} />
+          {:else}
+            <Mic size={16} />
+          {/if}
+        </button>
+        <button
+          class="rounded-full bg-destructive p-3 text-white transition-colors hover:bg-destructive/90"
+          onclick={leaveRoom}
+        >
+          {#if isConnected}
+            <LogOut size={16} />
+          {:else}
+            <LogIn size={16} />
+          {/if}
+        </button>
+      </div>
     </div>
   {/if}
 
-  {#if !isMinimized && !isFullscreen}
+  {#if viewMode === 'normal'}
     <div
       class="absolute right-0 bottom-0 h-4 w-4 cursor-se-resize"
       onmousedown={(e) => {
@@ -722,8 +704,111 @@
 </div>
 
 <style>
-  .aspect-video {
-    aspect-ratio: 16 / 9;
+  .videos-grid {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    padding: 8px;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+    align-items: stretch;
+    justify-items: stretch;
+  }
+
+  .videos-grid-fullscreen {
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  }
+
+  .video-tile {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+  }
+
+  .video-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #000;
+  }
+
+  .video-element {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .video-label {
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    pointer-events: none;
+  }
+
+  .video-overlay {
+    position: absolute;
+    inset: 0;
+  }
+
+  .volume-popover {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    padding: 4px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    width: 96px;
+  }
+
+  .volume-range {
+    width: 100%;
+    cursor: pointer;
+    accent-color: currentColor;
+  }
+
+  .volume-value {
+    display: block;
+    margin-top: 2px;
+    text-align: center;
+    font-size: 10px;
+  }
+
+  .videos-grid-min {
+    display: grid;
+    width: 100%;
+    padding: 4px;
+    gap: 4px;
+    grid-template-columns: repeat(auto-fit, minmax(min(64px, 100%), 1fr));
+  }
+
+  .video-tile-min {
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #000;
+    min-height: 40px;
+  }
+
+  .video-label-min {
+    position: absolute;
+    left: 3px;
+    bottom: 3px;
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-size: 9px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
   }
 
   input[type='range']::-webkit-slider-thumb {
@@ -743,5 +828,11 @@
     background: currentColor;
     cursor: pointer;
     border: none;
+  }
+
+  @media (max-width: 600px) {
+    .videos-grid {
+      grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+    }
   }
 </style>
