@@ -7,7 +7,8 @@
     RemoteParticipant,
     RemoteTrack,
     RemoteTrackPublication,
-    LocalTrack
+    LocalTrack,
+    LocalVideoTrack
   } from 'livekit-client';
   import {
     Mic,
@@ -46,6 +47,7 @@
   let volumes = $state<Record<string, number>>({});
   let audioElements = new SvelteMap<string, HTMLAudioElement>();
   let localVideoEl = $state<HTMLVideoElement | null>(null);
+  let localVideoTrack = $state<LocalVideoTrack | null>(null);
 
   let isDragging = false;
   let isResizing = false;
@@ -57,7 +59,7 @@
   let initialHeight = 420;
 
   let position = $state({ x: 32, y: 80 });
-  let dimensions = $state({ width: 420, height: 520 }); // немного больше дефолт
+  let dimensions = $state({ width: 420, height: 520 });
 
   let showVolumeSliderFor = $state<Record<string, boolean>>({});
   let volumeDisplayFor = $state<
@@ -65,7 +67,6 @@
   >({});
 
   const isBrowser = typeof document !== 'undefined';
-  let pendingLocalVideoTrack: LocalTrack | null = null;
 
   type VideoTile = {
     id: string;
@@ -198,8 +199,21 @@
 
   async function toggleSelfVideo() {
     if (!room || !hasCamera) return;
-    isSelfVideoEnabled = !isSelfVideoEnabled;
-    await room.localParticipant.setCameraEnabled(isSelfVideoEnabled);
+    const next = !isSelfVideoEnabled;
+    isSelfVideoEnabled = next;
+    await room.localParticipant.setCameraEnabled(next);
+
+    if (next) {
+      const iter = room.localParticipant.videoTrackPublications.values().next();
+      const pub = iter.value as RemoteTrackPublication | undefined;
+      const track = pub?.track as LocalVideoTrack | undefined;
+      if (track) {
+        localVideoTrack = track;
+        if (localVideoEl) {
+          track.attach(localVideoEl);
+        }
+      }
+    }
   }
 
   function setViewMode(next: ViewMode) {
@@ -380,9 +394,11 @@
         if (tracks.length > 0) {
           await Promise.all(tracks.map((track) => room!.localParticipant.publishTrack(track)));
 
-          const videoTrack = tracks.find((track) => track.kind === 'video');
+          const videoTrack = tracks.find((track) => track.kind === 'video') as
+            | LocalVideoTrack
+            | undefined;
           if (videoTrack) {
-            pendingLocalVideoTrack = videoTrack;
+            localVideoTrack = videoTrack;
             if (localVideoEl) {
               videoTrack.attach(localVideoEl);
             }
@@ -430,7 +446,7 @@
       localVideoEl.srcObject = null;
       localVideoEl.load();
     }
-    pendingLocalVideoTrack = null;
+    localVideoTrack = null;
 
     isConnected = false;
     isSelfMuted = false;
@@ -464,9 +480,8 @@
   });
 
   $effect(() => {
-    if (localVideoEl && pendingLocalVideoTrack) {
-      pendingLocalVideoTrack.attach(localVideoEl);
-      pendingLocalVideoTrack = null;
+    if (localVideoEl && localVideoTrack) {
+      localVideoTrack.attach(localVideoEl);
     }
   });
 
@@ -557,8 +572,6 @@
       {/if}
     </div>
   </div>
-
-  <!-- error используется как источник для toast-а, здесь не показываем -->
 
   {#if !isMinimized}
     <div class="flex h-[calc(100%-60px)] flex-col">
