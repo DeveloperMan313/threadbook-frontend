@@ -25,7 +25,8 @@
   import { ThreadApi } from '$lib/api';
 
   let isConnected = $state(false);
-  let error = $state(''); // используйте для тостов, не рендерим текстом
+  let error = $state(''); // текст для тоста
+  let showError = $state(false); // флаг показа тоста
   let room = $state<Room | null>(null);
 
   let isSelfMuted = $state(false);
@@ -396,7 +397,12 @@
         }
         if (!hasMic) isSelfMuted = true;
         if (!hasCamera) isSelfVideoEnabled = false;
-        error = 'Не удалось получить доступ к устройствам. Вы подключены как слушатель.';
+
+        error = 'Не удалось получить доступ к устройствам';
+        showError = true;
+        setTimeout(() => {
+          showError = false;
+        }, 2000);
       }
 
       isConnected = true;
@@ -564,13 +570,19 @@
                 <div class="video-inner">
                   <div class="video-container" data-participant={tile.id}>
                     {#if tile.isLocal}
-                      <video
-                        bind:this={localVideoEl}
-                        autoplay
-                        playsinline
-                        muted
-                        class="video-element"
-                      ></video>
+                      {#if hasCamera && isSelfVideoEnabled}
+                        <video
+                          bind:this={localVideoEl}
+                          autoplay
+                          playsinline
+                          muted
+                          class="video-element"
+                        ></video>
+                      {:else}
+                        <div class="video-placeholder">
+                          <VideoOff size={32} />
+                        </div>
+                      {/if}
                     {/if}
                   </div>
 
