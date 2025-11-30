@@ -405,7 +405,10 @@
               if (!dfnProcessor) {
                 dfnProcessor = new DeepFilterNoiseFilterProcessor({
                   sampleRate: 48000,
-                  noiseReductionLevel: 80
+                  noiseReductionLevel: 80,
+                  assetConfig: {
+                    cdnUrl: 'https://threadbook.ru/deepfilternet3'
+                  }
                 });
                 await dfnProcessor.initialize();
               }
