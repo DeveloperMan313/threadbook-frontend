@@ -25,12 +25,15 @@
   import { ThreadApi } from '$lib/api';
 
   let isConnected = $state(false);
-  let error = $state('');
+  let error = $state(''); // используйте для тостов, не рендерим текстом
   let room = $state<Room | null>(null);
 
   let isSelfMuted = $state(false);
   let isOthersMuted = $state(false);
   let isSelfVideoEnabled = $state(true);
+
+  let hasMic = $state(true);
+  let hasCamera = $state(true);
 
   type ViewMode = 'normal' | 'fullscreen' | 'minimized';
   let viewMode = $state<ViewMode>('normal');
@@ -52,8 +55,8 @@
   let initialWidth = 360;
   let initialHeight = 420;
 
-  let position = $state({ x: 0, y: 0 });
-  let dimensions = $state({ width: 360, height: 420 });
+  let position = $state({ x: 32, y: 80 });
+  let dimensions = $state({ width: 420, height: 520 }); // немного больше дефолт
 
   let showVolumeSliderFor = $state<Record<string, boolean>>({});
   let volumeDisplayFor = $state<
@@ -91,7 +94,10 @@
 
   function setDefaultPosition() {
     if (isBrowser) {
-      position.x = window.innerWidth - dimensions.width - 16;
+      const w = 420;
+      const h = 520;
+      dimensions = { width: w, height: h };
+      position.x = window.innerWidth - w - 24;
       position.y = 80;
     }
   }
@@ -134,6 +140,7 @@
         element.classList.add('video-element');
         container.appendChild(element);
       } else {
+        if (!room) return;
         setTimeout(tryAttach, 100);
       }
     };
@@ -178,7 +185,7 @@
   }
 
   async function toggleSelfMute() {
-    if (!room) return;
+    if (!room || !hasMic) return;
     isSelfMuted = !isSelfMuted;
     await room.localParticipant.setMicrophoneEnabled(!isSelfMuted);
   }
@@ -189,14 +196,13 @@
   }
 
   async function toggleSelfVideo() {
-    if (!room) return;
+    if (!room || !hasCamera) return;
     isSelfVideoEnabled = !isSelfVideoEnabled;
     await room.localParticipant.setCameraEnabled(isSelfVideoEnabled);
   }
 
   function setViewMode(next: ViewMode) {
-    if (next === 'normal') {
-      dimensions = { width: 360, height: 420 };
+    if (next === 'normal' && isBrowser) {
       setDefaultPosition();
     }
     viewMode = next;
@@ -286,14 +292,28 @@
     if (!isResizing) return;
     const deltaX = e.clientX - dragStartX;
     const deltaY = e.clientY - dragStartY;
-    dimensions.width = Math.max(280, Math.min(800, initialWidth + deltaX));
-    dimensions.height = Math.max(200, Math.min(800, initialHeight + deltaY));
+    const nextW = Math.max(380, Math.min(900, initialWidth + deltaX));
+    const nextH = Math.max(340, Math.min(900, initialHeight + deltaY));
+    dimensions.width = nextW;
+    dimensions.height = nextH;
     position.x = Math.min(position.x, window.innerWidth - dimensions.width);
     position.y = Math.min(position.y, window.innerHeight - dimensions.height);
   }
 
   function stopResize() {
     isResizing = false;
+  }
+
+  function classifyMediaError(err: unknown): 'none' | 'mic' | 'camera' | 'both' {
+    const msg = (err as Error)?.message || '';
+    if (!msg) return 'none';
+    const lower = msg.toLowerCase();
+    const noDevices =
+      lower.includes('notfounderror') ||
+      lower.includes('requested device not found') ||
+      lower.includes('no devices found');
+    if (noDevices) return 'both';
+    return 'none';
   }
 
   async function joinRoom(roomThreadId: number) {
@@ -339,7 +359,9 @@
         rtcConfig: { iceServers }
       });
 
-      // Пытаемся создать локальные треки, но не считаем ошибку критичной
+      hasMic = true;
+      hasCamera = true;
+
       try {
         const tracks = await room.localParticipant.createTracks({
           audio: isSelfMuted
@@ -367,12 +389,17 @@
         }
       } catch (mediaErr) {
         console.warn('Media devices error:', mediaErr);
-        // Не выкидываем из комнаты, просто показываем сообщение
-        error = 'Не удалось получить доступ к камере или микрофону. Вы подключены как слушатель.';
+        const kind = classifyMediaError(mediaErr);
+        if (kind === 'both') {
+          hasMic = false;
+          hasCamera = false;
+        }
+        if (!hasMic) isSelfMuted = true;
+        if (!hasCamera) isSelfVideoEnabled = false;
+        error = 'Не удалось получить доступ к устройствам. Вы подключены как слушатель.';
       }
 
       isConnected = true;
-      if (!error) error = '';
       recomputeVideoTiles();
     } catch (err) {
       error = (err as Error).message || 'Connection failed';
@@ -403,6 +430,8 @@
     isSelfMuted = false;
     isOthersMuted = false;
     isSelfVideoEnabled = true;
+    hasMic = true;
+    hasCamera = true;
     volumes = {};
     showVolumeSliderFor = {};
     volumeDisplayFor = {};
@@ -410,7 +439,6 @@
 
     stateVoiceThreadId.id = null;
     viewMode = 'normal';
-    dimensions = { width: 360, height: 420 };
     setDefaultPosition();
   }
 
@@ -524,72 +552,79 @@
     </div>
   </div>
 
-  {#if error}
-    <p class="p-2 text-sm text-destructive">{error}</p>
-  {/if}
+  <!-- error используется как источник для toast-а, здесь не показываем -->
 
   {#if !isMinimized}
-    <div class="flex flex-col" style="height: calc(100% - 60px);">
+    <div class="flex h-[calc(100%-60px)] flex-col">
       {#if isConnected}
-        <div class="videos-grid {isFullscreen ? 'videos-grid-fullscreen' : ''}">
-          {#each videoTiles as tile (tile.id)}
-            <div class="video-tile">
-              <div class="video-container" data-participant={tile.id}>
-                {#if tile.isLocal}
-                  <video bind:this={localVideoEl} autoplay playsinline muted class="video-element"
-                  ></video>
-                {/if}
-              </div>
-
-              <span class="video-label">
-                {tile.isLocal ? 'You' : tile.id}
-              </span>
-
-              {#if !tile.isLocal}
-                <div
-                  class="video-overlay"
-                  oncontextmenu={(e) => {
-                    e.preventDefault();
-                    toggleVolumeSlider(tile.id);
-                  }}
-                ></div>
-
-                {#if showVolumeSliderFor[tile.id]}
-                  <div class="volume-popover">
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      class="volume-range"
-                      value={volumes[tile.id] ?? 1}
-                      oninput={(e) => {
-                        const val = parseFloat((e.target as HTMLInputElement).value);
-                        updateVolume(tile.id, val);
-                      }}
-                    />
-                    {#if volumeDisplayFor[tile.id]?.value}
-                      <span class="volume-value">
-                        {volumeDisplayFor[tile.id].value}
-                      </span>
+        <div class="flex-1 overflow-y-auto px-2 py-2">
+          <div class="videos-grid {isFullscreen ? 'videos-grid-fullscreen' : ''}">
+            {#each videoTiles as tile (tile.id)}
+              <div class="video-tile">
+                <div class="video-inner">
+                  <div class="video-container" data-participant={tile.id}>
+                    {#if tile.isLocal}
+                      <video
+                        bind:this={localVideoEl}
+                        autoplay
+                        playsinline
+                        muted
+                        class="video-element"
+                      ></video>
                     {/if}
                   </div>
-                {/if}
-              {/if}
-            </div>
-          {/each}
+
+                  <span class="video-label">
+                    {tile.isLocal ? 'You' : tile.id}
+                  </span>
+
+                  {#if !tile.isLocal}
+                    <div
+                      class="video-overlay"
+                      oncontextmenu={(e) => {
+                        e.preventDefault();
+                        toggleVolumeSlider(tile.id);
+                      }}
+                    ></div>
+
+                    {#if showVolumeSliderFor[tile.id]}
+                      <div class="volume-popover">
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          class="volume-range"
+                          value={volumes[tile.id] ?? 1}
+                          oninput={(e) => {
+                            const val = parseFloat((e.target as HTMLInputElement).value);
+                            updateVolume(tile.id, val);
+                          }}
+                        />
+                        {#if volumeDisplayFor[tile.id]?.value}
+                          <span class="volume-value">
+                            {volumeDisplayFor[tile.id].value}
+                          </span>
+                        {/if}
+                      </div>
+                    {/if}
+                  {/if}
+                </div>
+              </div>
+            {/each}
+          </div>
         </div>
       {/if}
 
-      <div class="mt-auto flex flex-wrap justify-center gap-3 border-t border-border py-2">
+      <div class="mt-auto flex flex-wrap justify-center gap-3 border-t border-border px-3 py-2">
         <button
-          class="rounded-full p-3 transition-colors {isSelfMuted
+          class="rounded-full p-3 transition-colors {isSelfMuted || !hasMic
             ? 'bg-destructive text-white hover:bg-destructive/90'
-            : 'bg-secondary hover:bg-secondary/80'}"
+            : 'bg-secondary hover:bg-secondary/80'} disabled:opacity-50"
           onclick={toggleSelfMute}
-          disabled={!isConnected}
+          disabled={!isConnected || !hasMic}
         >
-          {#if isSelfMuted}
+          {#if isSelfMuted || !hasMic}
             <MicOff size={20} />
           {:else}
             <Mic size={20} />
@@ -611,16 +646,16 @@
         </button>
 
         <button
-          class="rounded-full p-3 transition-colors {!isSelfVideoEnabled
+          class="rounded-full p-3 transition-colors {!isSelfVideoEnabled || !hasCamera
             ? 'bg-destructive text-white hover:bg-destructive/90'
-            : 'bg-secondary hover:bg-secondary/80'}"
+            : 'bg-secondary hover:bg-secondary/80'} disabled:opacity-50"
           onclick={toggleSelfVideo}
-          disabled={!isConnected}
+          disabled={!isConnected || !hasCamera}
         >
-          {#if isSelfVideoEnabled}
-            <Video size={20} />
-          {:else}
+          {#if !isSelfVideoEnabled || !hasCamera}
             <VideoOff size={20} />
+          {:else}
+            <Video size={20} />
           {/if}
         </button>
 
@@ -642,31 +677,32 @@
         <div class="videos-grid-min">
           {#each videoTiles as tile (tile.id)}
             <div class="video-tile-min">
-              <div class="video-container" data-participant={tile.id}></div>
-              <span class="video-label-min">
-                {tile.isLocal ? 'You' : tile.id}
-              </span>
+              <div class="video-inner-min">
+                <span class="video-label-min">
+                  {tile.isLocal ? 'You' : tile.id}
+                </span>
+              </div>
             </div>
           {/each}
         </div>
       {/if}
 
-      <div class="flex justify-center gap-2">
+      <div class="flex justify-center gap-2 pb-1">
         <button
-          class="rounded-full p-2 transition-colors {isSelfMuted
+          class="rounded-full p-2 transition-colors {isSelfMuted || !hasMic
             ? 'bg-destructive text-white hover:bg-destructive/90'
-            : 'bg-secondary hover:bg-secondary/80'}"
+            : 'bg-secondary hover:bg-secondary/80'} disabled:opacity-50"
           onclick={toggleSelfMute}
-          disabled={!isConnected}
+          disabled={!isConnected || !hasMic}
         >
-          {#if isSelfMuted}
+          {#if isSelfMuted || !hasMic}
             <MicOff size={16} />
           {:else}
             <Mic size={16} />
           {/if}
         </button>
         <button
-          class="rounded-full bg-destructive p-3 text-white transition-colors hover:bg-destructive/90"
+          class="rounded-full bg-destructive p-2 text-white transition-colors hover:bg-destructive/90"
           onclick={leaveRoom}
         >
           {#if isConnected}
@@ -708,30 +744,46 @@
     display: grid;
     width: 100%;
     height: 100%;
-    padding: 8px;
     gap: 8px;
-    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
-    align-items: stretch;
-    justify-items: stretch;
+    place-items: center;
+    justify-content: center;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
 
   .videos-grid-fullscreen {
-    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
 
   .video-tile {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .video-inner {
     position: relative;
+    width: 100%;
+    max-width: 420px;
+    aspect-ratio: 16 / 9;
     border-radius: 8px;
     overflow: hidden;
     background: #000;
     display: flex;
-    align-items: stretch;
+  }
+
+  .video-placeholder {
+    width: 100%;
+    height: 100%;
+    background: #222;
+    color: #888;
+    display: flex;
+    align-items: center;
     justify-content: center;
   }
 
   .video-container {
     position: relative;
-    width: 100%;
+    flex: 1;
     height: 100%;
     background: #000;
   }
@@ -785,19 +837,28 @@
   }
 
   .videos-grid-min {
-    display: grid;
-    width: 100%;
-    padding: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 4px;
-    grid-template-columns: repeat(auto-fit, minmax(min(64px, 100%), 1fr));
+    padding: 4px 6px;
   }
 
   .video-tile-min {
-    position: relative;
+    width: 72px;
+    height: 40px;
     border-radius: 6px;
     overflow: hidden;
     background: #000;
-    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .video-inner-min {
+    position: relative;
+    width: 100%;
+    height: 100%;
   }
 
   .video-label-min {
@@ -832,7 +893,7 @@
 
   @media (max-width: 600px) {
     .videos-grid {
-      grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     }
   }
 </style>
