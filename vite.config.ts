@@ -17,7 +17,6 @@ export default defineConfig(({ mode }) => {
     ],
     build: {
       rollupOptions: {
-        external: ['deepfilternet3-noise-filter']
       }
     },
     server: {
