@@ -44,6 +44,7 @@
 
   $effect(() => {
     threadsAreLoading = true;
+    currentThreadId = null;
     data.threads.then((resolvedThreads) => {
       if (resolvedThreads?.length > 0 && resolvedThreads[0].spool_id != data.spoolId) return; // HOTFIX, need to cache
       threads = resolvedThreads || [];

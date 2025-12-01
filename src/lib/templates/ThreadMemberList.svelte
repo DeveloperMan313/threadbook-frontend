@@ -26,13 +26,18 @@
   });
 
   $effect(() => {
+    // TEMP need to move threads to global state and cache them
+    const threadId = getCurrentThreadId(); // TEMP capture
     if (mode === 'private') {
-      ThreadApi.getMembers({ thread_id: getCurrentThreadId()! }).then((members) => {
+      ThreadApi.getMembers({ thread_id: threadId! }).then((members) => {
+        if (getCurrentThreadId() !== threadId) return; // TEMP
         usernames = members.map((m) => m.username);
         cacheProfilesFromUsernames(usernames);
       });
+      return;
     }
     SpoolApi.getMembers({ spool_id: spoolId }).then((response) => {
+      if (getCurrentThreadId() !== threadId) return; // TEMP
       usernames = response.members.map((m) => m.username);
       cacheProfilesFromUsernames(usernames);
     });
