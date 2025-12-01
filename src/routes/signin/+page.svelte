@@ -40,7 +40,7 @@
         password: passwordValue
       });
 
-      goto(resolve('/spools'));
+      goto(resolve('/spools', {}));
     } catch (error) {
       if (!(error instanceof Error)) return;
       if (error.message == 'invalid credentials') {
@@ -103,6 +103,6 @@
     </div>
     {#if errorMsg}<p class="mb-4 text-center text-sm text-destructive">{errorMsg}</p>{/if}
     <p class="mb-1 text-center text-sm">Don't have an account?</p>
-    <p class="text-center text-sm underline"><a href={resolve('/signup')}>sign up</a></p>
+    <p class="text-center text-sm underline"><a href={resolve('/signup', {})}>sign up</a></p>
   </div>
 </div>

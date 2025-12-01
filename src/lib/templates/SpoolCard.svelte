@@ -11,7 +11,7 @@
 
 <a
   class="group h-80 w-64 overflow-hidden rounded-2xl bg-background no-underline shadow-md transition-shadow hover:shadow-xl"
-  href={resolve(`/spools/${id}`)}
+  href={resolve(`/spools/${id}`, {})}
 >
   {#if banner_link}
     <img class="size-64 bg-accent" src={ImageApi.getSpoolBannerURL(banner_link)} alt={name} />

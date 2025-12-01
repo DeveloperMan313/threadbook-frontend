@@ -15,7 +15,7 @@ export const tryGetUserProfile = async (): Promise<boolean> => {
     return true;
   } catch (error) {
     if (error instanceof Error && error.message == 'unouthorized') {
-      goto(resolve('/signin'));
+      goto(resolve('/signin', {}));
     }
   }
   stateProfile.profile = null;

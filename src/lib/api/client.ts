@@ -28,7 +28,7 @@ export const ApiClient = {
     const response = await svelteFetch(PUBLIC_API_ORIGIN + inputRelative, init);
 
     if (response.status == 401) {
-      goto(resolve('/signin'));
+      goto(resolve('/signin', {}));
       throw Error('unauthorized');
     }
 

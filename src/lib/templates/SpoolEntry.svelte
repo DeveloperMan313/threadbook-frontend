@@ -19,7 +19,7 @@
 
 <ContextMenu.Root>
   <ContextMenu.Trigger>
-    <a href={resolve(`/spools/${id}`)}>
+    <a href={resolve(`/spools/${id}`, {})}>
       <Avatar.Root
         class={`size-12 rounded-2xl ring-muted-foreground transition-shadow ${id === currentSpoolId ? 'ring-4' : 'hover:ring-2'}`}
       >

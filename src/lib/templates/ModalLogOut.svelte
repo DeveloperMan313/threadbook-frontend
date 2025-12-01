@@ -13,7 +13,7 @@
     isOpen = false;
     try {
       AuthApi.logOut();
-      goto(resolve('/signin'));
+      goto(resolve('/signin', {}));
     } catch (error) {
       console.error('Failed to log out:', error);
     }

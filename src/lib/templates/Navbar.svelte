@@ -16,7 +16,7 @@
 <div
   class="fixed top-0 z-10 flex h-16 w-full items-center justify-between border-2 border-border bg-background px-6"
 >
-  <a class="flex items-center gap-2 text-inherit no-underline" href={resolve('/spools')}>
+  <a class="flex items-center gap-2 text-inherit no-underline" href={resolve('/spools', {})}>
     <img class="h-12 w-12" src={logo} alt="logo" />
     <h1 class="text-4xl font-normal">ThreadBook</h1>
   </a>
@@ -39,7 +39,7 @@
       </div>
     </button>
   {:else}
-    <Button class="cursor-pointer" href={resolve('/signin')}>Sign in</Button>
+    <Button class="cursor-pointer" href={resolve('/signin', {})}>Sign in</Button>
   {/if}
 </div>
 

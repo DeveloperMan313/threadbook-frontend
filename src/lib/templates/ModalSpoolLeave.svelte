@@ -18,7 +18,7 @@
       if (currentPath.startsWith('/spools/')) {
         const currentSpoolId = currentPath.split('/')[2];
         if (currentSpoolId && parseInt(currentSpoolId) == spoolId) {
-          goto(resolve('/spools'));
+          goto(resolve('/spools', {}));
         }
       }
     } catch (error) {
