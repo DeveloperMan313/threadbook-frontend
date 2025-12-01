@@ -46,6 +46,7 @@
   let isMinimized = $derived(viewMode === 'minimized');
 
   let participants = $state<RemoteParticipant[]>([]);
+
   let volumes = $state<Record<string, number>>({});
   let audioElements = new SvelteMap<string, HTMLAudioElement>();
   let localVideoEl = $state<HTMLVideoElement | null>(null);
@@ -54,7 +55,8 @@
   let dfnProcessor: DeepFilterNoiseFilterProcessor | null = null;
 
   let audioContext: AudioContext | null = null;
-  let gainNodes = new SvelteMap<string, GainNode>();
+
+  let audioNodes = new SvelteMap<string, { source: MediaElementAudioSourceNode; gain: GainNode }>();
 
   let isDragging = false;
   let isResizing = false;
@@ -133,17 +135,23 @@
     ensureAudioContext();
     if (!audioContext) return;
 
-    const audioTrack = track as RemoteAudioTrack;
+    const element = track.attach() as HTMLAudioElement;
+    element.autoplay = true;
+    element.muted = isOthersMuted;
+    element.volume = 1.0;
+    element.style.display = 'none';
+    element.dataset.participant = participantSid;
+    document.body.appendChild(element);
+    audioElements.set(participantSid, element);
 
-    audioTrack.setAudioContext(audioContext);
-
-    const gainNode = audioContext.createGain();
+    const source = audioContext.createMediaElementSource(element);
+    const gain = audioContext.createGain();
     const volPercent = volumes[participantSid] ?? 100;
-    gainNode.gain.value = volPercent / 100;
+    gain.gain.value = volPercent / 100;
 
-    audioTrack.setWebAudioPlugins([gainNode]);
+    source.connect(gain).connect(audioContext.destination);
 
-    gainNodes.set(participantSid, gainNode);
+    audioNodes.set(participantSid, { source, gain });
   }
 
   function attachVideoTrack(track: RemoteTrack, participantSid: string) {
@@ -183,10 +191,15 @@
       audioElements.delete(participantSid);
     }
 
-    const gainNode = gainNodes.get(participantSid);
-    if (gainNode) {
-      gainNode.disconnect();
-      gainNodes.delete(participantSid);
+    const nodes = audioNodes.get(participantSid);
+    if (nodes) {
+      try {
+        nodes.source.disconnect();
+      } catch {}
+      try {
+        nodes.gain.disconnect();
+      } catch {}
+      audioNodes.delete(participantSid);
     }
 
     const container = document.querySelector(
@@ -199,9 +212,9 @@
     const clamped = Math.max(0, Math.min(200, volPercent));
     volumes = { ...volumes, [id]: clamped };
 
-    const gainNode = gainNodes.get(id);
-    if (gainNode && audioContext) {
-      gainNode.gain.setValueAtTime(clamped / 100, audioContext.currentTime);
+    const nodes = audioNodes.get(id);
+    if (nodes && audioContext) {
+      nodes.gain.gain.setValueAtTime(clamped / 100, audioContext.currentTime);
     }
 
     if (volumeDisplayFor[id]?.timeout) clearTimeout(volumeDisplayFor[id].timeout);
@@ -444,14 +457,20 @@
     audioElements.forEach((el) => el.remove());
     audioElements.clear();
 
-    gainNodes.forEach((g) => g.disconnect());
-    gainNodes.clear();
+    audioNodes.forEach(({ source, gain }) => {
+      try {
+        source.disconnect();
+      } catch {}
+      try {
+        gain.disconnect();
+      } catch {}
+    });
+    audioNodes.clear();
+
     if (audioContext) {
       try {
         await audioContext.close();
-      } catch {
-        // ignore
-      }
+      } catch {}
       audioContext = null;
     }
 
