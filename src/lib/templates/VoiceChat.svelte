@@ -7,6 +7,7 @@
     RemoteParticipant,
     RemoteTrack,
     RemoteTrackPublication,
+    RemoteAudioTrack,
     LocalAudioTrack,
     LocalVideoTrack
   } from 'livekit-client';
@@ -132,25 +133,15 @@
     ensureAudioContext();
     if (!audioContext) return;
 
-    const element = track.attach() as HTMLAudioElement;
-    element.dataset.participant = participantSid;
-    element.autoplay = true;
-    element.muted = isOthersMuted;
+    const audioTrack = track as RemoteAudioTrack;
 
-    element.volume = 1.0;
+    audioTrack.setAudioContext(audioContext);
 
-    element.style.display = 'none';
-    document.body.appendChild(element);
-    audioElements.set(participantSid, element);
-
-    const source = audioContext.createMediaElementSource(element);
     const gainNode = audioContext.createGain();
-
     const volPercent = volumes[participantSid] ?? 100;
     gainNode.gain.value = volPercent / 100;
 
-    source.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+    audioTrack.setWebAudioPlugins([gainNode]);
 
     gainNodes.set(participantSid, gainNode);
   }
@@ -185,6 +176,7 @@
 
   function detachTrack(participantSid: string) {
     if (!isBrowser) return;
+
     const audioEl = audioElements.get(participantSid);
     if (audioEl) {
       audioEl.remove();
@@ -208,8 +200,8 @@
     volumes = { ...volumes, [id]: clamped };
 
     const gainNode = gainNodes.get(id);
-    if (gainNode) {
-      gainNode.gain.value = clamped / 100;
+    if (gainNode && audioContext) {
+      gainNode.gain.setValueAtTime(clamped / 100, audioContext.currentTime);
     }
 
     if (volumeDisplayFor[id]?.timeout) clearTimeout(volumeDisplayFor[id].timeout);
