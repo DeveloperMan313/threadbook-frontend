@@ -52,19 +52,17 @@
 
   let dfnProcessor: DeepFilterNoiseFilterProcessor | null = null;
 
-  let x = $state(32);
-  let y = $state(80);
-  let width = $state(420);
-  let height = $state(520);
-
   let isDragging = false;
   let isResizing = false;
   let dragStartX = 0;
   let dragStartY = 0;
-  let startX = 0;
-  let startY = 0;
-  let startW = 0;
-  let startH = 0;
+  let initialX = 0;
+  let initialY = 0;
+  let initialWidth = 360;
+  let initialHeight = 420;
+
+  let position = $state({ x: 32, y: 80 });
+  let dimensions = $state({ width: 420, height: 520 });
 
   let showVolumeSliderFor = $state<Record<string, boolean>>({});
   let volumeDisplayFor = $state<
@@ -100,20 +98,17 @@
     if (!isBrowser) return;
     const w = 420;
     const h = 520;
-    width = w;
-    height = h;
-    x = window.innerWidth - w - 24;
-    y = 80;
+    dimensions = { width: w, height: h };
+    position.x = window.innerWidth - w - 24;
+    position.y = 80;
   }
 
   if (isBrowser) setDefaultPosition();
 
   $effect(() => {
     if (isFullscreen && isBrowser) {
-      x = 0;
-      y = 0;
-      width = window.innerWidth;
-      height = window.innerHeight;
+      position = { x: 0, y: 0 };
+      dimensions = { width: window.innerWidth, height: window.innerHeight };
     }
   });
 
@@ -273,54 +268,52 @@
     }
   }
 
-  function onToolbarPointerDown(e: PointerEvent) {
+  function startDrag(e: MouseEvent) {
     if (viewMode !== 'normal') return;
-    if (!isBrowser) return;
     isDragging = true;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
     dragStartX = e.clientX;
     dragStartY = e.clientY;
-    startX = x;
-    startY = y;
+    initialX = position.x;
+    initialY = position.y;
+    e.preventDefault();
   }
 
-  function onResizeHandlePointerDown(e: PointerEvent) {
+  function handleDrag(e: MouseEvent) {
+    if (!isDragging) return;
+    const deltaX = e.clientX - dragStartX;
+    const deltaY = e.clientY - dragStartY;
+    position.x = Math.max(0, Math.min(window.innerWidth - dimensions.width, initialX + deltaX));
+    position.y = Math.max(0, Math.min(window.innerHeight - dimensions.height, initialY + deltaY));
+  }
+
+  function stopDrag() {
+    isDragging = false;
+  }
+
+  function startResize(e: MouseEvent) {
     if (viewMode !== 'normal') return;
-    if (!isBrowser) return;
     isResizing = true;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
     dragStartX = e.clientX;
     dragStartY = e.clientY;
-    startW = width;
-    startH = height;
+    initialWidth = dimensions.width;
+    initialHeight = dimensions.height;
+    e.preventDefault();
     e.stopPropagation();
   }
 
-  function onWindowPointerMove(e: PointerEvent) {
-    if (!isBrowser) return;
-    if (isDragging) {
-      const dx = e.clientX - dragStartX;
-      const dy = e.clientY - dragStartY;
-      const maxX = window.innerWidth - width;
-      const maxY = window.innerHeight - height;
-      x = Math.max(0, Math.min(maxX, startX + dx));
-      y = Math.max(0, Math.min(maxY, startY + dy));
-    } else if (isResizing) {
-      const dx = e.clientX - dragStartX;
-      const dy = e.clientY - dragStartY;
-      const nextW = Math.max(380, Math.min(900, startW + dx));
-      const nextH = Math.max(340, Math.min(900, startH + dy));
-      width = nextW;
-      height = nextH;
-      const maxX = Math.max(0, window.innerWidth - width);
-      const maxY = Math.max(0, window.innerHeight - height);
-      x = Math.min(x, maxX);
-      y = Math.min(y, maxY);
-    }
+  function handleResize(e: MouseEvent) {
+    if (!isResizing) return;
+    const deltaX = e.clientX - dragStartX;
+    const deltaY = e.clientY - dragStartY;
+    const nextW = Math.max(380, Math.min(900, initialWidth + deltaX));
+    const nextH = Math.max(340, Math.min(900, initialHeight + deltaY));
+    dimensions.width = nextW;
+    dimensions.height = nextH;
+    position.x = Math.min(position.x, window.innerWidth - dimensions.width);
+    position.y = Math.min(position.y, window.innerHeight - dimensions.height);
   }
 
-  function onWindowPointerUp() {
-    isDragging = false;
+  function stopResize() {
     isResizing = false;
   }
 
@@ -541,286 +534,274 @@
 </script>
 
 <svelte:window
-  onpointermove={onWindowPointerMove}
-  onpointerup={onWindowPointerUp}
-  onpointercancel={onWindowPointerUp}
+  onmousemove={(e) => {
+    if (isDragging) handleDrag(e);
+    if (isResizing) handleResize(e);
+  }}
+  onmouseup={() => {
+    if (isDragging) stopDrag();
+    if (isResizing) stopResize();
+  }}
 />
 
 <div
-  class="voicechat-root fixed overflow-hidden rounded-xl border border-border bg-background text-sm shadow-xl transition-[width,height] duration-150"
+  class="fixed overflow-hidden rounded-xl border border-border bg-background text-sm shadow-xl transition-all duration-300"
   style="
-    width: {isFullscreen ? '100vw' : `${width}px`};
-    height: {isMinimized ? 'auto' : isFullscreen ? '100vh' : `${height}px`};
-    transform: translate({isFullscreen ? 0 : x}px, {isFullscreen ? 0 : y}px);
+    left: {position.x}px;
+    top: {position.y}px;
+    width: {dimensions.width}px;
+    height: {isMinimized ? 'auto' : isFullscreen ? '100vh' : `${dimensions.height}px`};
+    z-index: 100;
   "
   class:invisible={stateVoiceThreadId.id === null}
 >
-  <div class="voicechat-card">
-    <div
-      role="toolbar"
-      class="flex cursor-move items-center justify-between border-b border-border px-3 py-2 select-none"
-      onpointerdown={onToolbarPointerDown}
-    >
-      <h3 class="text-lg font-semibold">Voice Chat</h3>
-      <div class="flex items-center gap-1">
-        {#if viewMode === 'normal'}
-          <button
-            class="rounded p-1 hover:bg-accent"
-            onclick={(e) => {
-              e.stopPropagation();
-              setViewMode('fullscreen');
-            }}
-            title="Fullscreen"
-          >
-            <Maximize2 size={18} />
-          </button>
-          <button
-            class="rounded p-1 hover:bg-accent"
-            onclick={(e) => {
-              e.stopPropagation();
-              setViewMode('minimized');
-            }}
-            title="Minimize"
-          >
-            <Minimize2 size={18} />
-          </button>
-        {:else if viewMode === 'fullscreen'}
-          <button
-            class="rounded p-1 hover:bg-accent"
-            onclick={(e) => {
-              e.stopPropagation();
-              setViewMode('normal');
-            }}
-            title="Exit fullscreen"
-          >
-            <Minimize2 size={18} />
-          </button>
-        {:else}
-          <button
-            class="rounded p-1 hover:bg-accent"
-            onclick={(e) => {
-              e.stopPropagation();
-              setViewMode('normal');
-            }}
-            title="Expand"
-          >
-            <Maximize2 size={18} />
-          </button>
-        {/if}
-      </div>
+  <div
+    role="toolbar"
+    class="flex cursor-move items-center justify-between border-b border-border px-3 py-2 select-none"
+    onmousedown={startDrag}
+  >
+    <h3 class="text-lg font-semibold">Voice Chat</h3>
+    <div class="flex items-center gap-1">
+      {#if viewMode === 'normal'}
+        <button
+          class="rounded p-1 hover:bg-accent"
+          onclick={(e) => {
+            e.stopPropagation();
+            setViewMode('fullscreen');
+          }}
+          title="Fullscreen"
+        >
+          <Maximize2 size={18} />
+        </button>
+        <button
+          class="rounded p-1 hover:bg-accent"
+          onclick={(e) => {
+            e.stopPropagation();
+            setViewMode('minimized');
+          }}
+          title="Minimize"
+        >
+          <Minimize2 size={18} />
+        </button>
+      {:else if viewMode === 'fullscreen'}
+        <button
+          class="rounded p-1 hover:bg-accent"
+          onclick={(e) => {
+            e.stopPropagation();
+            setViewMode('normal');
+          }}
+          title="Exit fullscreen"
+        >
+          <Minimize2 size={18} />
+        </button>
+      {:else}
+        <button
+          class="rounded p-1 hover:bg-accent"
+          onclick={(e) => {
+            e.stopPropagation();
+            setViewMode('normal');
+          }}
+          title="Expand"
+        >
+          <Maximize2 size={18} />
+        </button>
+      {/if}
     </div>
+  </div>
 
-    {#if !isMinimized}
-      <div class="flex h-[calc(100%-60px)] flex-col">
-        {#if isConnected}
-          <div class="flex-1 overflow-y-auto px-2 py-2">
-            <div class="videos-grid {isFullscreen ? 'videos-grid-fullscreen' : ''}">
-              {#each videoTiles as tile (tile.id)}
-                <div class="video-tile">
-                  <div class="video-inner">
-                    <div class="video-container" data-participant={tile.id}>
-                      {#if tile.isLocal}
-                        {#if hasCamera && isSelfVideoEnabled}
-                          <video
-                            bind:this={localVideoEl}
-                            autoplay
-                            playsinline
-                            muted
-                            class="video-element"
-                          ></video>
-                        {:else}
-                          <div class="video-placeholder">
-                            <VideoOff size={32} />
-                          </div>
-                        {/if}
-                      {/if}
-                    </div>
-
-                    <span class="video-label">
-                      {tile.isLocal ? 'You' : tile.id}
-                    </span>
-
-                    {#if !tile.isLocal}
-                      <div
-                        class="video-overlay"
-                        role="button"
-                        tabindex="0"
-                        aria-label="Настройка громкости участника {tile.id}"
-                        oncontextmenu={(e) => {
-                          e.preventDefault();
-                          toggleVolumeSlider(tile.id);
-                        }}
-                        onkeydown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            toggleVolumeSlider(tile.id);
-                          }
-                        }}
-                      ></div>
-
-                      {#if showVolumeSliderFor[tile.id]}
-                        <div class="volume-popover">
-                          <input
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            class="volume-range"
-                            value={volumes[tile.id] ?? 1}
-                            oninput={(e) => {
-                              const val = parseFloat((e.target as HTMLInputElement).value);
-                              updateVolume(tile.id, val);
-                            }}
-                          />
-                          {#if volumeDisplayFor[tile.id]?.value}
-                            <span class="volume-value">
-                              {volumeDisplayFor[tile.id].value}
-                            </span>
-                          {/if}
+  {#if !isMinimized}
+    <div class="flex h-[calc(100%-60px)] flex-col">
+      {#if isConnected}
+        <div class="flex-1 overflow-y-auto px-2 py-2">
+          <div class="videos-grid {isFullscreen ? 'videos-grid-fullscreen' : ''}">
+            {#each videoTiles as tile (tile.id)}
+              <div class="video-tile">
+                <div class="video-inner">
+                  <div class="video-container" data-participant={tile.id}>
+                    {#if tile.isLocal}
+                      {#if hasCamera && isSelfVideoEnabled}
+                        <video
+                          bind:this={localVideoEl}
+                          autoplay
+                          playsinline
+                          muted
+                          class="video-element"
+                        ></video>
+                      {:else}
+                        <div class="video-placeholder">
+                          <VideoOff size={32} />
                         </div>
                       {/if}
                     {/if}
                   </div>
-                </div>
-              {/each}
-            </div>
-          </div>
-        {/if}
 
-        <div class="mt-auto flex flex-wrap justify-center gap-3 border-t border-border px-3 py-2">
-          <button
-            class="rounded-full p-3 transition-colors {isSelfMuted || !hasMic
-              ? 'bg-destructive text-white hover:bg-destructive/90'
-              : 'bg-secondary hover:bg-secondary/80'} disabled:opacity-50"
-            onclick={toggleSelfMute}
-            disabled={!isConnected || !hasMic}
-          >
-            {#if isSelfMuted || !hasMic}
-              <MicOff size={20} />
-            {:else}
-              <Mic size={20} />
-            {/if}
-          </button>
-
-          <button
-            class="rounded-full p-3 transition-colors {isOthersMuted
-              ? 'bg-destructive text-white hover:bg-destructive/90'
-              : 'bg-secondary hover:bg-secondary/80'}"
-            onclick={toggleOthersMute}
-            disabled={!isConnected}
-          >
-            {#if isOthersMuted}
-              <VolumeX size={20} />
-            {:else}
-              <Volume2 size={20} />
-            {/if}
-          </button>
-
-          <button
-            class="rounded-full p-3 transition-colors {!isSelfVideoEnabled || !hasCamera
-              ? 'bg-destructive text-white hover:bg-destructive/90'
-              : 'bg-secondary hover:bg-secondary/80'} disabled:opacity-50"
-            onclick={toggleSelfVideo}
-            disabled={!isConnected || !hasCamera}
-          >
-            {#if !isSelfVideoEnabled || !hasCamera}
-              <VideoOff size={20} />
-            {:else}
-              <Video size={20} />
-            {/if}
-          </button>
-
-          <button
-            class="rounded-full bg-destructive p-3 text-white transition-colors hover:bg-destructive/90"
-            onclick={leaveRoom}
-          >
-            {#if isConnected}
-              <LogOut size={20} />
-            {:else}
-              <LogIn size={20} />
-            {/if}
-          </button>
-        </div>
-      </div>
-    {:else}
-      <div class="flex flex-col gap-1 py-2">
-        {#if isConnected}
-          <div class="videos-grid-min">
-            {#each videoTiles as tile (tile.id)}
-              <div class="video-tile-min">
-                <div class="video-inner-min">
-                  <div class="video-container" data-participant={tile.id}></div>
-                  <span class="video-label-min">
+                  <span class="video-label">
                     {tile.isLocal ? 'You' : tile.id}
                   </span>
+
+                  {#if !tile.isLocal}
+                    <div
+                      class="video-overlay"
+                      oncontextmenu={(e) => {
+                        e.preventDefault();
+                        toggleVolumeSlider(tile.id);
+                      }}
+                    ></div>
+
+                    {#if showVolumeSliderFor[tile.id]}
+                      <div class="volume-popover">
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          class="volume-range"
+                          value={volumes[tile.id] ?? 1}
+                          oninput={(e) => {
+                            const val = parseFloat((e.target as HTMLInputElement).value);
+                            updateVolume(tile.id, val);
+                          }}
+                        />
+                        {#if volumeDisplayFor[tile.id]?.value}
+                          <span class="volume-value">
+                            {volumeDisplayFor[tile.id].value}
+                          </span>
+                        {/if}
+                      </div>
+                    {/if}
+                  {/if}
                 </div>
               </div>
             {/each}
           </div>
-        {/if}
-
-        <div class="flex justify-center gap-2 pb-1">
-          <button
-            class="rounded-full p-2 transition-colors {isSelfMuted || !hasMic
-              ? 'bg-destructive text-white hover:bg-destructive/90'
-              : 'bg-secondary hover:bg-secondary/80'} disabled:opacity-50"
-            onclick={toggleSelfMute}
-            disabled={!isConnected || !hasMic}
-          >
-            {#if isSelfMuted || !hasMic}
-              <MicOff size={16} />
-            {:else}
-              <Mic size={16} />
-            {/if}
-          </button>
-          <button
-            class="rounded-full bg-destructive p-2 text-white transition-colors hover:bg-destructive/90"
-            onclick={leaveRoom}
-          >
-            {#if isConnected}
-              <LogOut size={16} />
-            {:else}
-              <LogIn size={16} />
-            {/if}
-          </button>
         </div>
-      </div>
-    {/if}
+      {/if}
 
-    {#if viewMode === 'normal'}
-      <div
-        class="resize-handle absolute right-0 bottom-0 h-4 w-4 cursor-se-resize"
-        onpointerdown={onResizeHandlePointerDown}
-        title="Drag to resize"
-      >
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          class="text-muted-foreground"
+      <div class="mt-auto flex flex-wrap justify-center gap-3 border-t border-border px-3 py-2">
+        <button
+          class="rounded-full p-3 transition-colors {isSelfMuted || !hasMic
+            ? 'bg-destructive text-white hover:bg-destructive/90'
+            : 'bg-secondary hover:bg-secondary/80'} disabled:opacity-50"
+          onclick={toggleSelfMute}
+          disabled={!isConnected || !hasMic}
         >
-          <path d="m21 11-8-8-8 8" />
-          <path d="M21 21h-8a8 8 0 0 1-8-8v0" />
-        </svg>
+          {#if isSelfMuted || !hasMic}
+            <MicOff size={20} />
+          {:else}
+            <Mic size={20} />
+          {/if}
+        </button>
+
+        <button
+          class="rounded-full p-3 transition-colors {isOthersMuted
+            ? 'bg-destructive text-white hover:bg-destructive/90'
+            : 'bg-secondary hover:bg-secondary/80'}"
+          onclick={toggleOthersMute}
+          disabled={!isConnected}
+        >
+          {#if isOthersMuted}
+            <VolumeX size={20} />
+          {:else}
+            <Volume2 size={20} />
+          {/if}
+        </button>
+
+        <button
+          class="rounded-full p-3 transition-colors {!isSelfVideoEnabled || !hasCamera
+            ? 'bg-destructive text-white hover:bg-destructive/90'
+            : 'bg-secondary hover:bg-secondary/80'} disabled:opacity-50"
+          onclick={toggleSelfVideo}
+          disabled={!isConnected || !hasCamera}
+        >
+          {#if !isSelfVideoEnabled || !hasCamera}
+            <VideoOff size={20} />
+          {:else}
+            <Video size={20} />
+          {/if}
+        </button>
+
+        <button
+          class="rounded-full bg-destructive p-3 text-white transition-colors hover:bg-destructive/90"
+          onclick={leaveRoom}
+        >
+          {#if isConnected}
+            <LogOut size={20} />
+          {:else}
+            <LogIn size={20} />
+          {/if}
+        </button>
       </div>
-    {/if}
-  </div>
+    </div>
+  {:else}
+    <div class="flex flex-col gap-1 py-2">
+      {#if isConnected}
+        <div class="videos-grid-min">
+          {#each videoTiles as tile (tile.id)}
+            <div class="video-tile-min">
+              <div class="video-inner-min">
+                <div class="video-container" data-participant={tile.id}></div>
+                <span class="video-label-min">
+                  {tile.isLocal ? 'You' : tile.id}
+                </span>
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
+      <div class="flex justify-center gap-2 pb-1">
+        <button
+          class="rounded-full p-2 transition-colors {isSelfMuted || !hasMic
+            ? 'bg-destructive text-white hover:bg-destructive/90'
+            : 'bg-secondary hover:bg-secondary/80'} disabled:opacity-50"
+          onclick={toggleSelfMute}
+          disabled={!isConnected || !hasMic}
+        >
+          {#if isSelfMuted || !hasMic}
+            <MicOff size={16} />
+          {:else}
+            <Mic size={16} />
+          {/if}
+        </button>
+        <button
+          class="rounded-full bg-destructive p-2 text-white transition-colors hover:bg-destructive/90"
+          onclick={leaveRoom}
+        >
+          {#if isConnected}
+            <LogOut size={16} />
+          {:else}
+            <LogIn size={16} />
+          {/if}
+        </button>
+      </div>
+    </div>
+  {/if}
+
+  {#if viewMode === 'normal'}
+    <div
+      class="absolute right-0 bottom-0 h-4 w-4 cursor-se-resize"
+      onmousedown={(e) => {
+        e.stopPropagation();
+        startResize(e);
+      }}
+      title="Drag to resize"
+    >
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        class="text-muted-foreground"
+      >
+        <path d="m21 11-8-8-8 8" />
+        <path d="M21 21h-8a8 8 0 0 1-8-8v0" />
+      </svg>
+    </div>
+  {/if}
 </div>
 
 <style>
-  .voicechat-root {
-    inset: 0;
-    pointer-events: none;
-    will-change: transform;
-  }
-  .voicechat-card {
-    width: 100%;
-    height: 100%;
-    pointer-events: auto;
-  }
-
   .videos-grid {
     display: grid;
     width: 100%;
