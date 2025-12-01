@@ -2,12 +2,12 @@
   import { onDestroy, untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
-  import { Room, RoomEvent } from 'livekit-client';
+  import { Room, RoomEvent, Track } from 'livekit-client';
   import type {
     RemoteParticipant,
     RemoteTrack,
     RemoteTrackPublication,
-    LocalTrack,
+    LocalAudioTrack,
     LocalVideoTrack
   } from 'livekit-client';
   import {
@@ -72,7 +72,8 @@
   const isBrowser = typeof document !== 'undefined';
 
   type VideoTile = {
-    id: string;
+    sid: string;
+    identity: string;
     isLocal: boolean;
   };
 
@@ -84,13 +85,18 @@
       return;
     }
     const tiles: VideoTile[] = [];
-    const localId = room.localParticipant.identity;
-    if (localId) {
-      tiles.push({ id: localId, isLocal: true });
+
+    const local = room.localParticipant;
+    if (local.sid) {
+      tiles.push({ sid: local.sid, identity: local.identity, isLocal: true });
     }
+
     participants.forEach((p) => {
-      tiles.push({ id: p.identity, isLocal: false });
+      if (p.sid) {
+        tiles.push({ sid: p.sid, identity: p.identity, isLocal: false });
+      }
     });
+
     videoTiles = tiles;
   }
 
@@ -112,51 +118,55 @@
     }
   });
 
-  function attachAudioTrack(track: RemoteTrack, participantId: string) {
+  function attachAudioTrack(track: RemoteTrack, participantSid: string) {
     if (!isBrowser) return;
     const element = track.attach() as HTMLAudioElement;
-    element.dataset.participant = participantId;
+    element.dataset.participant = participantSid;
     element.autoplay = true;
     element.muted = isOthersMuted;
-    element.volume = volumes[participantId] ?? 1;
+    element.volume = volumes[participantSid] ?? 1;
     element.style.display = 'none';
     document.body.appendChild(element);
-    audioElements.set(participantId, element);
+    audioElements.set(participantSid, element);
   }
 
-  function attachVideoTrack(track: RemoteTrack, participantId: string) {
+  function attachVideoTrack(track: RemoteTrack, participantSid: string) {
     if (!isBrowser) return;
-    if (room && participantId === room.localParticipant.identity) return;
+
     const element = track.attach() as HTMLVideoElement;
     element.autoplay = true;
     element.playsInline = true;
     element.muted = false;
 
+    let attempts = 0;
+
     const tryAttach = () => {
       const container = document.querySelector(
-        `.video-container[data-participant="${participantId}"]`
+        `.video-container[data-participant="${participantSid}"]`
       ) as HTMLElement | null;
+
       if (container) {
         container.innerHTML = '';
         element.classList.add('video-element');
         container.appendChild(element);
-      } else {
-        if (!room) return;
+      } else if (attempts < 20) {
+        attempts += 1;
         setTimeout(tryAttach, 100);
       }
     };
+
     tryAttach();
   }
 
-  function detachTrack(participantId: string) {
+  function detachTrack(participantSid: string) {
     if (!isBrowser) return;
-    const audioEl = audioElements.get(participantId);
+    const audioEl = audioElements.get(participantSid);
     if (audioEl) {
       audioEl.remove();
-      audioElements.delete(participantId);
+      audioElements.delete(participantSid);
     }
     const container = document.querySelector(
-      `.video-container[data-participant="${participantId}"]`
+      `.video-container[data-participant="${participantSid}"]`
     );
     if (container) (container as HTMLElement).innerHTML = '';
   }
@@ -186,9 +196,12 @@
   }
 
   async function toggleSelfMute() {
-    if (!room || !hasMic) return;
-    isSelfMuted = !isSelfMuted;
-    await room.localParticipant.setMicrophoneEnabled(!isSelfMuted);
+    if (!room) return;
+    if (!hasMic) return;
+
+    const next = !isSelfMuted;
+    isSelfMuted = next;
+    await room.localParticipant.setMicrophoneEnabled(!next);
   }
 
   function toggleOthersMute() {
@@ -197,21 +210,16 @@
   }
 
   async function toggleSelfVideo() {
-    if (!room || !hasCamera) return;
+    if (!room) return;
+    if (!hasCamera) return;
+
     const next = !isSelfVideoEnabled;
     isSelfVideoEnabled = next;
-    await room.localParticipant.setCameraEnabled(next);
-
-    if (next) {
-      const iter = room.localParticipant.videoTrackPublications.values().next();
-      const pub = iter.value as RemoteTrackPublication | undefined;
-      const track = pub?.track as LocalVideoTrack | undefined;
-      if (track) {
-        localVideoTrack = track;
-        if (localVideoEl) {
-          track.attach(localVideoEl);
-        }
-      }
+    const pub = await room.localParticipant.setCameraEnabled(next);
+    const track = (pub?.track as LocalVideoTrack | undefined) ?? null;
+    localVideoTrack = track;
+    if (localVideoEl && track) {
+      track.attach(localVideoEl);
     }
   }
 
@@ -271,18 +279,6 @@
     isResizing = false;
   }
 
-  function classifyMediaError(err: unknown): 'none' | 'mic' | 'camera' | 'both' {
-    const msg = (err as Error)?.message || '';
-    if (!msg) return 'none';
-    const lower = msg.toLowerCase();
-    const noDevices =
-      lower.includes('notfounderror') ||
-      lower.includes('requested device not found') ||
-      lower.includes('no devices found');
-    if (noDevices) return 'both';
-    return 'none';
-  }
-
   async function joinRoom(roomThreadId: number) {
     if (!isBrowser) return;
 
@@ -292,133 +288,113 @@
 
       room = new Room();
 
-      room.on(RoomEvent.TrackSubscribed, (track, pub, participant) => {
-        if (track.kind === 'audio') {
-          attachAudioTrack(track, participant.identity);
-        } else if (track.kind === 'video') {
-          attachVideoTrack(track, participant.identity);
-        }
-        if (!participants.some((p) => p.identity === participant.identity)) {
+      room.on(RoomEvent.ParticipantConnected, (participant) => {
+        if (!participants.some((p) => p.sid === participant.sid)) {
           participants = [...participants, participant as RemoteParticipant];
           recomputeVideoTiles();
         }
       });
 
-      room.on(RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
-        detachTrack(participant.identity);
+      room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+        detachTrack(participant.sid);
+        participants = participants.filter((p) => p.sid !== participant.sid);
+        recomputeVideoTiles();
       });
 
-      room.on(RoomEvent.ParticipantDisconnected, (participant) => {
-        detachTrack(participant.identity);
-        participants = participants.filter((p) => p.identity !== participant.identity);
-        recomputeVideoTiles();
+      room.on(RoomEvent.TrackSubscribed, (track, pub, participant) => {
+        if (track.kind === 'audio') {
+          attachAudioTrack(track, participant.sid);
+        } else if (track.kind === 'video' && pub.source === Track.Source.Camera) {
+          attachVideoTrack(track, participant.sid);
+        }
+      });
+
+      room.on(RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
+        detachTrack(participant.sid);
       });
 
       room.on(RoomEvent.Disconnected, () => {
         leaveRoom();
       });
-      /*
-      const iceServers: RTCIceServer[] = [
-        { urls: 'stun:stun.relay.metered.ca:80' },
-        {
-          urls: 'turn:global.relay.metered.ca:80',
-          username: '37ebc4871938d82ad6c3541f',
-          credential: 'KOD6ysg3FCeJfvkS'
-        },
-        {
-          urls: 'turn:global.relay.metered.ca:80?transport=tcp',
-          username: '37ebc4871938d82ad6c3541f',
-          credential: 'KOD6ysg3FCeJfvkS'
-        },
-        {
-          urls: 'turn:global.relay.metered.ca:443',
-          username: '37ebc4871938d82ad6c3541f',
-          credential: 'KOD6ysg3FCeJfvkS'
-        },
-        {
-          urls: 'turns:global.relay.metered.ca:443?transport=tcp',
-          username: '37ebc4871938d82ad6c3541f',
-          credential: 'KOD6ysg3FCeJfvkS'
-        }
-      ];
-      */
 
       await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
       hasMic = true;
       hasCamera = true;
 
+      const p = room.localParticipant;
+
+      participants = Array.from(room.remoteParticipants.values()) as RemoteParticipant[];
+      recomputeVideoTiles();
+
       try {
-        const tracks = await room.localParticipant.createTracks({
-          audio: isSelfMuted
-            ? false
-            : {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                sampleRate: 48000,
-                channelCount: 1
-              },
-          video: isSelfVideoEnabled ? true : false
-        });
+        if (isSelfVideoEnabled) {
+          await p.setCameraEnabled(true);
+        } else {
+          await p.setCameraEnabled(false);
+        }
+        hasCamera = p.isCameraEnabled ?? false;
+      } catch (e) {
+        console.warn('Camera enable failed:', e);
+        hasCamera = false;
+        isSelfVideoEnabled = false;
+      }
 
-        if (tracks.length > 0) {
-          await Promise.all(tracks.map((track) => room!.localParticipant.publishTrack(track)));
+      try {
+        if (!isSelfMuted) {
+          await p.setMicrophoneEnabled(true);
+        } else {
+          await p.setMicrophoneEnabled(false);
+        }
+        hasMic = p.isMicrophoneEnabled ?? false;
+      } catch (e) {
+        console.warn('Mic enable failed:', e);
+        hasMic = false;
+        isSelfMuted = true;
+      }
 
-          const audioTrack = tracks.find((t) => t.kind === 'audio') as LocalTrack | undefined;
-          if (audioTrack) {
-            try {
-              if (!dfnProcessor) {
-                dfnProcessor = new DeepFilterNoiseFilterProcessor({
-                  sampleRate: 48000,
-                  noiseReductionLevel: 80,
-                  assetConfig: {
-                    cdnUrl: 'https://threadbook.ru/deepfilternet3'
-                  }
-                });
-                await dfnProcessor.initialize();
-              }
-              if ((audioTrack as any).setProcessor) {
-                await (audioTrack as any).setProcessor(dfnProcessor);
-              }
-            } catch (e) {
-              console.warn('DFN3 init/setProcessor failed, falling back to plain audio', e);
-              if (dfnProcessor && typeof dfnProcessor.destroy === 'function') {
-                try {
-                  await dfnProcessor.destroy();
-                } catch {
-                  // TODO
-                }
-              }
-              dfnProcessor = null;
-            }
-          }
-
-          const videoTrack = tracks.find((track) => track.kind === 'video') as
-            | LocalVideoTrack
+      if (hasMic) {
+        try {
+          const micPub = p.getTrackPublication('microphone' as any) as
+            | RemoteTrackPublication
             | undefined;
-          if (videoTrack) {
-            localVideoTrack = videoTrack;
-            if (localVideoEl) {
-              videoTrack.attach(localVideoEl);
+          const audioTrack = micPub?.track as LocalAudioTrack | undefined;
+
+          if (audioTrack) {
+            if (!dfnProcessor) {
+              dfnProcessor = new DeepFilterNoiseFilterProcessor({
+                sampleRate: 48000,
+                noiseReductionLevel: 80,
+                assetConfig: {
+                  cdnUrl: 'https://threadbook.ru/deepfilternet3'
+                }
+              });
+              await dfnProcessor.initialize();
+            }
+            if ((audioTrack as any).setProcessor) {
+              await (audioTrack as any).setProcessor(dfnProcessor);
             }
           }
+        } catch (e) {
+          console.warn('DFN3 init/setProcessor failed, falling back to plain audio', e);
+          if (dfnProcessor && typeof dfnProcessor.destroy === 'function') {
+            try {
+              await dfnProcessor.destroy();
+            } catch {
+              // ignore
+            }
+          }
+          dfnProcessor = null;
         }
-      } catch (mediaErr) {
-        console.warn('Media devices error:', mediaErr);
-        const kind = classifyMediaError(mediaErr);
-        if (kind === 'both') {
-          hasMic = false;
-          hasCamera = false;
-        }
-        if (!hasMic) isSelfMuted = true;
-        if (!hasCamera) isSelfVideoEnabled = false;
+      }
 
-        error = 'Не удалось получить доступ к устройствам';
-        showError = true;
-        setTimeout(() => {
-          showError = false;
-        }, 2000);
+      const camPub = p.getTrackPublication('camera' as any) as RemoteTrackPublication | undefined;
+      const camTrack = camPub?.track as LocalVideoTrack | undefined;
+      if (camTrack) {
+        localVideoTrack = camTrack;
+        if (localVideoEl) {
+          camTrack.attach(localVideoEl);
+        }
       }
 
       isConnected = true;
@@ -528,6 +504,7 @@
   "
   class:invisible={stateVoiceThreadId.id === null}
 >
+  <!-- svelte-ignore a11y_interactive_supports_focus -->
   <div
     role="toolbar"
     class="flex cursor-move items-center justify-between border-b border-border px-3 py-2 select-none"
@@ -586,11 +563,11 @@
     <div class="flex h-[calc(100%-60px)] flex-col">
       {#if isConnected}
         <div class="flex-1 overflow-y-auto px-2 py-2">
-          <div class="videos-grid {isFullscreen ? 'videos-grid-fullscreen' : ''}">
-            {#each videoTiles as tile (tile.id)}
+          <div class="videos-grid" class:videos-grid-fullscreen={isFullscreen}>
+            {#each videoTiles as tile (tile.sid)}
               <div class="video-tile">
                 <div class="video-inner">
-                  <div class="video-container" data-participant={tile.id}>
+                  <div class="video-container" data-participant={tile.sid}>
                     {#if tile.isLocal}
                       {#if hasCamera && isSelfVideoEnabled}
                         <video
@@ -602,26 +579,31 @@
                         ></video>
                       {:else}
                         <div class="video-placeholder">
-                          <VideoOff size={32} />
+                          <VideoOff size={64} />
                         </div>
                       {/if}
+                    {:else}
+                      <div class="video-placeholder">
+                        <VideoOff size={64} />
+                      </div>
                     {/if}
                   </div>
 
                   <span class="video-label">
-                    {tile.isLocal ? 'You' : tile.id}
+                    {tile.isLocal ? 'You' : tile.identity}
                   </span>
 
                   {#if !tile.isLocal}
+                    <!-- svelte-ignore a11y_no_static_element_interactions -->
                     <div
                       class="video-overlay"
                       oncontextmenu={(e) => {
                         e.preventDefault();
-                        toggleVolumeSlider(tile.id);
+                        toggleVolumeSlider(tile.sid);
                       }}
                     ></div>
 
-                    {#if showVolumeSliderFor[tile.id]}
+                    {#if showVolumeSliderFor[tile.sid]}
                       <div class="volume-popover">
                         <input
                           type="range"
@@ -629,15 +611,15 @@
                           max="1"
                           step="0.01"
                           class="volume-range"
-                          value={volumes[tile.id] ?? 1}
+                          value={volumes[tile.sid] ?? 1}
                           oninput={(e) => {
                             const val = parseFloat((e.target as HTMLInputElement).value);
-                            updateVolume(tile.id, val);
+                            updateVolume(tile.sid, val);
                           }}
                         />
-                        {#if volumeDisplayFor[tile.id]?.value}
+                        {#if volumeDisplayFor[tile.sid]?.value}
                           <span class="volume-value">
-                            {volumeDisplayFor[tile.id].value}
+                            {volumeDisplayFor[tile.sid].value}
                           </span>
                         {/if}
                       </div>
@@ -709,12 +691,12 @@
     <div class="flex flex-col gap-1 py-2">
       {#if isConnected}
         <div class="videos-grid-min">
-          {#each videoTiles as tile (tile.id)}
+          {#each videoTiles as tile (tile.sid)}
             <div class="video-tile-min">
               <div class="video-inner-min">
-                <div class="video-container" data-participant={tile.id}></div>
+                <div class="video-container" data-participant={tile.sid}></div>
                 <span class="video-label-min">
-                  {tile.isLocal ? 'You' : tile.id}
+                  {tile.isLocal ? 'You' : tile.identity}
                 </span>
               </div>
             </div>
@@ -751,6 +733,7 @@
   {/if}
 
   {#if viewMode === 'normal'}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="absolute right-0 bottom-0 h-4 w-4 cursor-se-resize"
       onmousedown={(e) => {
@@ -768,7 +751,7 @@
         class="text-muted-foreground"
       >
         <path d="m21 11-8-8-8 8" />
-        <path d="M21 21h-8a8 8 0 0 1-8-8v0" />
+        <path d="M21 21h-8a 8 8 0 0 1-8-8v0" />
       </svg>
     </div>
   {/if}
@@ -809,7 +792,7 @@
   .video-placeholder {
     width: 100%;
     height: 100%;
-    background: #222;
+    background: #000;
     color: #888;
     display: flex;
     align-items: center;
@@ -821,6 +804,7 @@
     flex: 1;
     height: 100%;
     background: #000;
+    display: flex;
   }
 
   .video-element {
@@ -884,7 +868,7 @@
     height: 40px;
     border-radius: 6px;
     overflow: hidden;
-    background: #000;
+    background: #222;
     display: flex;
     align-items: center;
     justify-content: center;
