@@ -2,7 +2,7 @@
   import { onDestroy, untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
-  import { Room } from 'livekit-client';
+  import { Room, RoomEvent } from 'livekit-client';
   import type {
     RemoteParticipant,
     RemoteTrack,
@@ -116,6 +116,7 @@
     if (!isBrowser) return;
     const element = track.attach() as HTMLAudioElement;
     element.dataset.participant = participantId;
+    element.autoplay = true;
     element.muted = isOthersMuted;
     element.volume = volumes[participantId] ?? 1;
     element.style.display = 'none';
@@ -221,53 +222,6 @@
     viewMode = next;
   }
 
-  function handleParticipant(participant: RemoteParticipant) {
-    participant.on('trackPublished', (pub: RemoteTrackPublication) => {
-      const onSubscribed = (track: RemoteTrack) => {
-        if (track.kind === 'audio') {
-          attachAudioTrack(track, participant.identity);
-        } else if (track.kind === 'video') {
-          attachVideoTrack(track, participant.identity);
-        }
-        pub.off('subscribed', onSubscribed);
-      };
-
-      if (pub.isSubscribed && pub.track) {
-        onSubscribed(pub.track);
-      } else {
-        pub.on('subscribed', onSubscribed);
-        pub.setSubscribed(true);
-      }
-
-      pub.on('unsubscribed', () => {
-        detachTrack(participant.identity);
-      });
-    });
-
-    participant.trackPublications.forEach((pub) => {
-      const onSubscribed = (track: RemoteTrack) => {
-        if (track.kind === 'audio') {
-          attachAudioTrack(track, participant.identity);
-        } else if (track.kind === 'video') {
-          attachVideoTrack(track, participant.identity);
-        }
-        pub.off('subscribed', onSubscribed);
-      };
-
-      if (pub.isSubscribed && pub.track) {
-        onSubscribed(pub.track);
-      } else {
-        pub.on('subscribed', onSubscribed);
-        pub.setSubscribed(true);
-      }
-    });
-
-    if (!participants.some((p) => p.identity === participant.identity)) {
-      participants = [...participants, participant];
-      recomputeVideoTiles();
-    }
-  }
-
   function startDrag(e: MouseEvent) {
     if (viewMode !== 'normal') return;
     isDragging = true;
@@ -338,22 +292,59 @@
 
       room = new Room();
 
-      room.on('participantConnected', (p) => handleParticipant(p));
-      room.on('participantDisconnected', (p) => {
-        participants = participants.filter((part) => part.identity !== p.identity);
-        detachTrack(p.identity);
-        delete showVolumeSliderFor[p.identity];
-        delete volumeDisplayFor[p.identity];
-        delete volumes[p.identity];
-        recomputeVideoTiles();
+      room.on(RoomEvent.TrackSubscribed, (track, pub, participant) => {
+        if (track.kind === 'audio') {
+          attachAudioTrack(track, participant.identity);
+        } else if (track.kind === 'video') {
+          attachVideoTrack(track, participant.identity);
+        }
+        if (!participants.some((p) => p.identity === participant.identity)) {
+          participants = [...participants, participant as RemoteParticipant];
+          recomputeVideoTiles();
+        }
       });
-      room.on('connected', () => {
-        room!.remoteParticipants.forEach((p) => handleParticipant(p));
-        recomputeVideoTiles();
-      });
-      room.on('disconnected', leaveRoom);
 
-      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
+      room.on(RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
+        detachTrack(participant.identity);
+      });
+
+      room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+        detachTrack(participant.identity);
+        participants = participants.filter((p) => p.identity !== participant.identity);
+        recomputeVideoTiles();
+      });
+
+      room.on(RoomEvent.Disconnected, () => {
+        leaveRoom();
+      });
+
+      const iceServers: RTCIceServer[] = [
+        { urls: 'stun:stun.relay.metered.ca:80' },
+        {
+          urls: 'turn:global.relay.metered.ca:80',
+          username: '37ebc4871938d82ad6c3541f',
+          credential: 'KOD6ysg3FCeJfvkS'
+        },
+        {
+          urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+          username: '37ebc4871938d82ad6c3541f',
+          credential: 'KOD6ysg3FCeJfvkS'
+        },
+        {
+          urls: 'turn:global.relay.metered.ca:443',
+          username: '37ebc4871938d82ad6c3541f',
+          credential: 'KOD6ysg3FCeJfvkS'
+        },
+        {
+          urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+          username: '37ebc4871938d82ad6c3541f',
+          credential: 'KOD6ysg3FCeJfvkS'
+        }
+      ];
+
+      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token, {
+        rtcConfig: { iceServers }
+      });
 
       hasMic = true;
       hasCamera = true;
@@ -397,7 +388,7 @@
                 try {
                   await dfnProcessor.destroy();
                 } catch {
-                  // ignore
+                  // TODO
                 }
               }
               dfnProcessor = null;
