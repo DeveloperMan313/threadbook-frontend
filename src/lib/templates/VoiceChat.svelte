@@ -353,24 +353,7 @@
       });
       room.on('disconnected', leaveRoom);
 
-      const iceServers: RTCIceServer[] = [{ urls: ['stun:stun.l.google.com:19302'] }];
-
-      if (
-        resp.turn_urls &&
-        resp.turn_urls.length > 0 &&
-        resp.turn_username &&
-        resp.turn_credential
-      ) {
-        iceServers.push({
-          urls: resp.turn_urls,
-          username: resp.turn_username,
-          credential: resp.turn_credential
-        });
-      }
-
-      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token, {
-        rtcConfig: { iceServers }
-      });
+      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
       hasMic = true;
       hasCamera = true;
