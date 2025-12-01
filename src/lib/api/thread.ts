@@ -13,7 +13,9 @@ import type {
   CreateInviteLinkRequest,
   CreateInviteLinkResponse,
   JoinByThreadInviteLinkRequest,
-  JoinByThreadInviteLinkResponse
+  JoinByThreadInviteLinkResponse,
+  GetThreadMembersRequest,
+  GetThreadMembersResponse
 } from '$lib/types';
 
 const MockGetSpoolThreads: Array<ThreadProps> = [
@@ -179,8 +181,21 @@ export const ThreadApi = {
    * Join thread by invite link
    * @param {JoinByThreadInviteLinkRequest} request - request object
    */
-  async joinInviteLink(request: JoinByThreadInviteLinkRequest): Promise<JoinByThreadInviteLinkResponse> {
+  async joinInviteLink(
+    request: JoinByThreadInviteLinkRequest
+  ): Promise<JoinByThreadInviteLinkResponse> {
     return ApiClient.fetchJSON(`/thread/invite-link/join/${request.link_id}`, {
+      method: 'GET',
+      headers: {}
+    });
+  },
+
+  /**
+   * Get thread members
+   * @param {GetThreadMembersRequest} request - request object
+   */
+  async getMembers(request: GetThreadMembersRequest): Promise<GetThreadMembersResponse> {
+    return ApiClient.fetchJSON(`/thread/${request.thread_id}`, {
       method: 'GET',
       headers: {}
     });

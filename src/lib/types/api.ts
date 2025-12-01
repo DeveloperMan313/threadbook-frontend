@@ -1,5 +1,7 @@
 import type { ThreadType } from './components';
 
+export type AccessLevel = 0 | 1 | 2 | 3;
+
 /**
  * API request and response interfaces
  */
@@ -58,6 +60,19 @@ export interface InviteUsersToSpoolRequest {
   member_usernames: Array<string>;
 }
 
+export interface GetSpoolMembersRequest {
+  spool_id: number;
+}
+
+export interface GetSpoolMembersResponse {
+  members: [
+    {
+      username: string;
+      access_level: AccessLevel;
+    }
+  ];
+}
+
 export interface InviteUsersToThreadRequest {
   thread_id: number;
   invitee_usernames: Array<string>;
@@ -87,6 +102,12 @@ export interface JoinByThreadInviteLinkRequest {
 export interface JoinByThreadInviteLinkResponse {
   status: string;
 }
+
+export interface GetThreadMembersRequest {
+  thread_id: number;
+}
+
+export type GetThreadMembersResponse = UserProfilePublic[];
 
 export interface CloseThreadRequest {
   id: number;

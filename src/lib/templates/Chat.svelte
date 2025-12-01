@@ -15,8 +15,8 @@
     getThreads: () => ThreadProps[];
   };
 
-  const { cacheProfilesFromMessages } = getContext('userProfiles') as {
-    cacheProfilesFromMessages: (messages: Array<MessageProps>) => Promise<void>;
+  const { cacheProfilesFromUsernames } = getContext('userProfiles') as {
+    cacheProfilesFromUsernames: (usernames: string[]) => Promise<void>;
   };
 
   // Use captured threadId instead of currentThread.id to avoid race condition
@@ -54,7 +54,7 @@
 
     MessageApi.getThreadMessages({ thread_id: thread.id, limit: messageLoadLimit }).then(
       async (messages) => {
-        cacheProfilesFromMessages(messages);
+        cacheProfilesFromUsernames(messages.map((m) => m.username));
         threadChats.set(thread.id, {
           thread: thread,
           messages: messages,
@@ -71,7 +71,7 @@
 
     centrifugeClient.onThread(thread.id, 'message.created', (payload: WsMessageCreated) => {
       const mine = payload.username == stateProfile.profile!.username;
-      cacheProfilesFromMessages([payload]);
+      cacheProfilesFromUsernames([payload.username]);
       payload.created_at *= 1000; // convert s to ms
       renderMessage(thread.id, payload, mine);
     });
@@ -140,7 +140,7 @@
         const scrollTopBefore = messagesContainer.scrollTop;
         const scrollHeightBefore = messagesContainer.scrollHeight;
         // cache and render new messages
-        cacheProfilesFromMessages(msgs);
+        cacheProfilesFromUsernames(msgs.map((m) => m.username));
         threadChats.set(thread.id, {
           ...chat,
           messages: [...fetchedMessages, ...chat.messages],

@@ -134,3 +134,11 @@ export interface UserAvatarProps {
   avatarSrc?: string;
   class?: string;
 }
+
+export interface UserBarProps {
+  username: string;
+}
+
+export interface ThreadMemberListProps {
+  spoolId: number;
+}

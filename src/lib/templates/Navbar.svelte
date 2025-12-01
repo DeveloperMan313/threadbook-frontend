@@ -34,7 +34,7 @@
         class="size-12"
       />
       <div class="text-left" title="profile">
-        <p class="text-lg leading-none font-normal">{profile.nickname}</p>
+        <p class="text-lg leading-none font-normal">{profile.nickname || profile.username}</p>
         <p class="text-sm text-gray-600">@{profile.username}</p>
       </div>
     </button>

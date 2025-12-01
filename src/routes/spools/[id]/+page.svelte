@@ -8,7 +8,6 @@
   import { centrifugeClient, ProfileApi, ThreadApi } from '$lib/api';
   import type {
     ChatState,
-    MessageProps,
     ThreadProps,
     ThreadType,
     UserProfilePublic,
@@ -25,6 +24,7 @@
   import { stateSpools } from '$lib/states';
   import ModalSpoolLeave from '$lib/templates/ModalSpoolLeave.svelte';
   import ModalSpoolEdit from '$lib/templates/ModalSpoolEdit.svelte';
+  import ThreadMemberList from '$lib/templates/ThreadMemberList.svelte';
 
   let { data } = $props();
 
@@ -85,15 +85,13 @@
   const userProfiles = new SvelteMap<string, UserProfilePublic>();
 
   setContext('userProfiles', {
-    cacheProfilesFromMessages: async (messages: Array<MessageProps>): Promise<void> => {
-      const unknownUsernames = messages
-        .map((m) => m.username)
-        .reduce((unique, username) => {
-          if (!unique.includes(username) && !userProfiles.has(username)) {
-            unique.push(username);
-          }
-          return unique;
-        }, [] as Array<string>);
+    cacheProfilesFromUsernames: async (usernames: string[]): Promise<void> => {
+      const unknownUsernames = usernames.reduce((unique, username) => {
+        if (!unique.includes(username) && !userProfiles.has(username)) {
+          unique.push(username);
+        }
+        return unique;
+      }, [] as Array<string>);
       if (unknownUsernames.length == 0) return;
       const fetchedProfiles = await ProfileApi.getProfiles({ usernames: unknownUsernames });
       fetchedProfiles.profiles.forEach((profile) => {
@@ -159,7 +157,7 @@
 <Navbar />
 <div class="fixed inset-0 top-16 flex flex-row overflow-x-scroll">
   <SpoolDock />
-  <div class="flex w-72 flex-shrink-0 flex-col gap-6 p-4 pt-3 pr-3">
+  <div class="flex w-72 flex-shrink-0 flex-col gap-6 bg-primary-foreground p-4 pt-3 pr-3">
     <div class="flex items-start justify-between">
       <h2 class="w-full scroll-m-20 truncate border-b pb-2 text-3xl">{spoolName}</h2>
       <DropdownMenu.Root>
@@ -221,6 +219,9 @@
         Select a thread to start chatting
       </div>
     {/if}
+  </div>
+  <div class="w-64 flex-none">
+    <ThreadMemberList spoolId={data.spoolId} />
   </div>
 </div>
 <ModalInviteUsersToSpool spoolId={data.spoolId} bind:isOpen={isInviteUsersToSpoolModalOpen} />

@@ -7,7 +7,9 @@ import type {
   InviteUsersToSpoolRequest,
   CreateSpoolResponse,
   UpdateSpoolRequest,
-  UpdateSpoolResponse
+  UpdateSpoolResponse,
+  GetSpoolMembersRequest,
+  GetSpoolMembersResponse
 } from '$lib/types';
 
 const MockGetUserSpoolList: SpoolProps[] = {
@@ -134,6 +136,18 @@ export const SpoolApi = {
     return ApiClient.fetch('/spool/invite', {
       method: 'POST',
       body: JSON.stringify(request)
+    });
+  },
+
+  /**
+   * Get spool members
+   * @param {GetSpoolMembersRequest} request - request object
+   * @returns {Promise<GetSpoolMembersResponse>} - API response
+   */
+  async getMembers(request: GetSpoolMembersRequest): Promise<GetSpoolMembersResponse> {
+    return ApiClient.fetchJSON(`/spool/${request.spool_id}/members`, {
+      method: 'GET',
+      headers: {}
     });
   }
 };
