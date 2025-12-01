@@ -52,6 +52,9 @@
 
   let dfnProcessor: DeepFilterNoiseFilterProcessor | null = null;
 
+  let audioContext: AudioContext | null = null;
+  let gainNodes = new SvelteMap<string, GainNode>();
+
   let isDragging = false;
   let isResizing = false;
   let dragStartX = 0;
@@ -118,16 +121,38 @@
     }
   });
 
+  function ensureAudioContext() {
+    if (!audioContext && isBrowser) {
+      audioContext = new AudioContext();
+    }
+  }
+
   function attachAudioTrack(track: RemoteTrack, participantSid: string) {
     if (!isBrowser) return;
+    ensureAudioContext();
+    if (!audioContext) return;
+
     const element = track.attach() as HTMLAudioElement;
     element.dataset.participant = participantSid;
     element.autoplay = true;
     element.muted = isOthersMuted;
-    element.volume = volumes[participantSid] ?? 1;
+
+    element.volume = 1.0;
+
     element.style.display = 'none';
     document.body.appendChild(element);
     audioElements.set(participantSid, element);
+
+    const source = audioContext.createMediaElementSource(element);
+    const gainNode = audioContext.createGain();
+
+    const volPercent = volumes[participantSid] ?? 100;
+    gainNode.gain.value = volPercent / 100;
+
+    source.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    gainNodes.set(participantSid, gainNode);
   }
 
   function attachVideoTrack(track: RemoteTrack, participantSid: string) {
@@ -165,20 +190,31 @@
       audioEl.remove();
       audioElements.delete(participantSid);
     }
+
+    const gainNode = gainNodes.get(participantSid);
+    if (gainNode) {
+      gainNode.disconnect();
+      gainNodes.delete(participantSid);
+    }
+
     const container = document.querySelector(
       `.video-container[data-participant="${participantSid}"]`
     );
     if (container) (container as HTMLElement).innerHTML = '';
   }
 
-  function updateVolume(id: string, vol: number) {
-    volumes = { ...volumes, [id]: vol };
-    const el = audioElements.get(id);
-    if (el) el.volume = vol;
+  function updateVolume(id: string, volPercent: number) {
+    const clamped = Math.max(0, Math.min(200, volPercent));
+    volumes = { ...volumes, [id]: clamped };
+
+    const gainNode = gainNodes.get(id);
+    if (gainNode) {
+      gainNode.gain.value = clamped / 100;
+    }
 
     if (volumeDisplayFor[id]?.timeout) clearTimeout(volumeDisplayFor[id].timeout);
     volumeDisplayFor[id] = {
-      value: `${Math.round(vol * 100)}%`,
+      value: `${Math.round(clamped)}%`,
       timeout: setTimeout(() => {
         volumeDisplayFor = {
           ...volumeDisplayFor,
@@ -415,6 +451,18 @@
     participants = [];
     audioElements.forEach((el) => el.remove());
     audioElements.clear();
+
+    gainNodes.forEach((g) => g.disconnect());
+    gainNodes.clear();
+    if (audioContext) {
+      try {
+        await audioContext.close();
+      } catch {
+        // ignore
+      }
+      audioContext = null;
+    }
+
     document.querySelectorAll('.video-container').forEach((el) => {
       (el as HTMLElement).innerHTML = '';
     });
@@ -608,15 +656,16 @@
                         <input
                           type="range"
                           min="0"
-                          max="1"
-                          step="0.01"
+                          max="200"
+                          step="1"
                           class="volume-range"
-                          value={volumes[tile.sid] ?? 1}
+                          value={volumes[tile.sid] ?? 100}
                           oninput={(e) => {
                             const val = parseFloat((e.target as HTMLInputElement).value);
                             updateVolume(tile.sid, val);
                           }}
                         />
+
                         {#if volumeDisplayFor[tile.sid]?.value}
                           <span class="volume-value">
                             {volumeDisplayFor[tile.sid].value}
