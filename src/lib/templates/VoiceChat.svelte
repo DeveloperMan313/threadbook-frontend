@@ -317,7 +317,7 @@
       room.on(RoomEvent.Disconnected, () => {
         leaveRoom();
       });
-
+      /*
       const iceServers: RTCIceServer[] = [
         { urls: 'stun:stun.relay.metered.ca:80' },
         {
@@ -341,10 +341,9 @@
           credential: 'KOD6ysg3FCeJfvkS'
         }
       ];
+      */
 
-      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token, {
-        rtcConfig: { iceServers }
-      });
+      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
       hasMic = true;
       hasCamera = true;
