@@ -14,6 +14,7 @@ import type {
   WsThreadInvited,
   WsThreadUpdated
 } from '$lib/types';
+import { stateSpools } from '$lib/states';
 
 type WsMsgHandler<T> = (payload: T) => void;
 
@@ -58,7 +59,7 @@ const routeUserPublication = (ctx: PublicationContext) => {
 
 let centrifuge: Centrifuge | undefined = undefined;
 let tokens: GetCentrifugeTokensResponse | undefined = undefined;
-let userChannel: string | undefined = undefined;
+let subbedToChannels: string[] = [];
 
 export const centrifugeClient = {
   async connect(): Promise<void> {
@@ -71,8 +72,19 @@ export const centrifugeClient = {
     centrifuge = new Centrifuge(PUBLIC_CENTRIFUGE_ORIGIN, {
       token: tokens!.ConnectToken,
       getToken: async () => {
-        const fetchedTokens = await ThreadApi.getCentrifugeTokens({});
-        return fetchedTokens.ConnectToken;
+        await this.getTokens(stateSpools.currentSpoolId);
+        const oldSubbedToChannels = subbedToChannels;
+        this.unsubFromUser();
+        this.unsubFromThreads();
+        subbedToChannels = oldSubbedToChannels;
+        subbedToChannels.forEach((chan) => {
+          if (chan.startsWith('user')) {
+            this.subToUser();
+            return;
+          }
+          this.subToThread(Number(chan.split('#')[1]));
+        }, this);
+        return tokens!.ConnectToken;
       }
     });
 
@@ -89,6 +101,8 @@ export const centrifugeClient = {
     centrifuge.disconnect();
 
     centrifuge = undefined;
+    tokens = undefined;
+    subbedToChannels = [];
 
     idToThreadHandlers = {};
     userHandlers = {};
@@ -122,7 +136,7 @@ export const centrifugeClient = {
 
     const channelToken = Object.entries(tokens.ChannelTokens).find(
       ([channel]) => channel == `thread#${thread_id}`
-    ) as [string, string];
+    );
 
     if (!channelToken) {
       throw Error('thread token not found');
@@ -138,7 +152,9 @@ export const centrifugeClient = {
 
     sub.subscribe();
 
-    idToThreadHandlers[thread_id] = {};
+    idToThreadHandlers[thread_id] ||= {};
+
+    subbedToChannels.push(`thread#${thread_id}`);
   },
 
   unsubFromThreads(): void {
@@ -150,14 +166,15 @@ export const centrifugeClient = {
       throw Error('no tokens');
     }
 
-    Object.entries(tokens.ChannelTokens).forEach(([channel]) => {
-      if (channel.startsWith('user')) return;
-      const sub = centrifuge!.getSubscription(channel);
-      if (!sub) return;
+    subbedToChannels.forEach((chan) => {
+      if (chan.startsWith('user')) return;
+      const sub = centrifuge!.getSubscription(chan)!;
       sub.unsubscribe();
       sub.removeAllListeners();
       centrifuge!.removeSubscription(sub);
     }, this);
+
+    subbedToChannels = subbedToChannels.filter((channel) => !channel.startsWith('thread'));
   },
 
   onThread<T extends keyof ThreadHandlers>(
@@ -192,14 +209,13 @@ export const centrifugeClient = {
 
     const channelToken = Object.entries(tokens.ChannelTokens).find(([channel]) =>
       channel.startsWith('user')
-    ) as [string, string];
+    );
 
     if (!channelToken) {
       throw Error('user token not found');
     }
 
     const [channel, token] = channelToken;
-    userChannel = channel;
 
     const sub = centrifuge.newSubscription(channel, { token });
 
@@ -208,6 +224,8 @@ export const centrifugeClient = {
     });
 
     sub.subscribe();
+
+    subbedToChannels.push(channel);
   },
 
   unsubFromUser(): void {
@@ -215,15 +233,20 @@ export const centrifugeClient = {
       throw Error('not connected');
     }
 
-    if (!userChannel) {
-      throw Error('not subscribed to user');
+    if (!tokens) {
+      throw Error('no tokens');
     }
+
+    const userChannel = subbedToChannels.find((channel) => channel.startsWith('user'));
+    if (!userChannel) return;
 
     const sub = centrifuge.getSubscription(userChannel)!;
 
     sub.unsubscribe();
     sub.removeAllListeners();
     centrifuge.removeSubscription(sub);
+
+    subbedToChannels = subbedToChannels.filter((channel) => !channel.startsWith('user'));
   },
 
   onUser<T extends keyof UserHandlers>(event: T, handler: UserHandlers[T]) {
