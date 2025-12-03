@@ -27,6 +27,8 @@ export const stateSpoolCreate = async (name: string, banner?: File) => {
   const newSpool = {
     id: response.spool_id,
     name: response.name,
+    is_creator: true,
+    access_level: 3,
     banner_link: response.banner_link,
     description: '',
     members: 0,
