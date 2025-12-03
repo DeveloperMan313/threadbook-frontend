@@ -69,7 +69,11 @@ export const centrifugeClient = {
     await this.getTokens();
 
     centrifuge = new Centrifuge(PUBLIC_CENTRIFUGE_ORIGIN, {
-      token: tokens!.ConnectToken
+      token: tokens!.ConnectToken,
+      getToken: async () => {
+        const fetchedTokens = await ThreadApi.getCentrifugeTokens({});
+        return fetchedTokens.ConnectToken;
+      }
     });
 
     centrifuge.on('error', (err) => console.log(`Centrifuge Error: ${JSON.stringify(err)}`));
