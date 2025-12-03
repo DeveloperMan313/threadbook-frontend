@@ -59,10 +59,12 @@ export const SpoolApi = {
   async getUserSpoolList(): Promise<GetUserSpoolListResponse> {
     // await new Promise((r) => setTimeout(r, 1500)); // emulate API delay
     // return MockGetUserSpoolList;
-    return ApiClient.fetchJSON('/spool/user', {
+    const response = (await ApiClient.fetchJSON('/spool/user', {
       method: 'GET',
       headers: {}
-    });
+    })) as GetUserSpoolListResponse;
+    response.spools ||= []; // PATCH ugly ugly patch but ok ig
+    return response;
   },
 
   /**
