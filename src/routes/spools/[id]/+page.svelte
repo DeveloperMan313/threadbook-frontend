@@ -21,7 +21,11 @@
   import ModalInviteUsersToSpool from '$lib/templates/ModalInviteUsersToSpool.svelte';
   import { EllipsisVertical } from '@lucide/svelte';
   import Spinner from '$lib/components/ui/spinner/spinner.svelte';
-  import { stateSpools } from '$lib/states';
+  import {
+    stateSpools,
+    stateSpoolsGetCurrentAccessLevel,
+    stateSpoolsSetCurrentSpoolId
+  } from '$lib/states';
   import ModalSpoolLeave from '$lib/templates/ModalSpoolLeave.svelte';
   import ModalSpoolEdit from '$lib/templates/ModalSpoolEdit.svelte';
   import ThreadMemberList from '$lib/templates/ThreadMemberList.svelte';
@@ -41,6 +45,12 @@
   const spoolName = $derived(
     stateSpools.spools.find((spool) => spool.id == data.spoolId)?.name as string
   );
+
+  const userAccessLevel = $derived(stateSpoolsGetCurrentAccessLevel());
+
+  $effect(() => {
+    stateSpoolsSetCurrentSpoolId(data.spoolId);
+  });
 
   $effect(() => {
     threadsAreLoading = true;
@@ -183,23 +193,27 @@
           >
             Invite users</DropdownMenu.Item
           >
-          <DropdownMenu.Item
-            class="cursor-pointer"
-            onclick={() => {
-              isSpoolEditModalOpen = true;
-            }}
-          >
-            Edit</DropdownMenu.Item
-          >
-          <DropdownMenu.Item
-            class="cursor-pointer"
-            variant="destructive"
-            onclick={() => {
-              isSpoolLeaveModalOpen = true;
-            }}
-          >
-            Leave</DropdownMenu.Item
-          >
+          {#if userAccessLevel === 3}
+            <DropdownMenu.Item
+              class="cursor-pointer"
+              onclick={() => {
+                isSpoolEditModalOpen = true;
+              }}
+            >
+              Edit</DropdownMenu.Item
+            >
+          {:else}
+            <!-- TODO think of leave access -->
+            <DropdownMenu.Item
+              class="cursor-pointer"
+              variant="destructive"
+              onclick={() => {
+                isSpoolLeaveModalOpen = true;
+              }}
+            >
+              Leave</DropdownMenu.Item
+            >
+          {/if}
         </DropdownMenu.Content>
       </DropdownMenu.Root>
     </div>

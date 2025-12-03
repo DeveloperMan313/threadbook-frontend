@@ -9,7 +9,7 @@
   import ModalSpoolEdit from './ModalSpoolEdit.svelte';
   import ModalInviteUsersToSpool from './ModalInviteUsersToSpool.svelte';
 
-  const { id, name, banner_link }: SpoolProps = $props();
+  const { id, name, access_level, banner_link }: SpoolProps = $props();
   const currentSpoolId = $derived<number>(page.data.spoolId);
 
   let isInviteUsersToSpoolModalOpen = $state(false);
@@ -38,20 +38,24 @@
         isInviteUsersToSpoolModalOpen = true;
       }}>Invite users</ContextMenu.Item
     >
-    <ContextMenu.Item
-      class="cursor-pointer"
-      variant="default"
-      onclick={() => {
-        isSpoolUpdateModalOpen = true;
-      }}>Edit</ContextMenu.Item
-    >
-    <ContextMenu.Item
-      class="cursor-pointer"
-      variant="destructive"
-      onclick={() => {
-        isSpoolLeaveModalOpen = true;
-      }}>Leave</ContextMenu.Item
-    >
+    {#if access_level === 3}
+      <ContextMenu.Item
+        class="cursor-pointer"
+        variant="default"
+        onclick={() => {
+          isSpoolUpdateModalOpen = true;
+        }}>Edit</ContextMenu.Item
+      >
+    {:else}
+      <!-- TODO think of leave access -->
+      <ContextMenu.Item
+        class="cursor-pointer"
+        variant="destructive"
+        onclick={() => {
+          isSpoolLeaveModalOpen = true;
+        }}>Leave</ContextMenu.Item
+      >
+    {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>
 <ModalInviteUsersToSpool spoolId={id} bind:isOpen={isInviteUsersToSpoolModalOpen} />

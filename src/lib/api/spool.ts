@@ -9,7 +9,8 @@ import type {
   UpdateSpoolRequest,
   UpdateSpoolResponse,
   GetSpoolMembersRequest,
-  GetSpoolMembersResponse
+  GetSpoolMembersResponse,
+  GetUserSpoolListResponse
 } from '$lib/types';
 
 const MockGetUserSpoolList: SpoolProps[] = {
@@ -53,16 +54,15 @@ const MockGetSpoolInfoRes: SpoolProps = {
 export const SpoolApi = {
   /**
    * Get spools which user is a member of
-   * @returns {Promise<Array<SpoolProps>>} - API response
+   * @returns {GetUserSpoolListResponse} - API response
    */
-  async getUserSpoolList(): Promise<Array<SpoolProps>> {
+  async getUserSpoolList(): Promise<GetUserSpoolListResponse> {
     // await new Promise((r) => setTimeout(r, 1500)); // emulate API delay
     // return MockGetUserSpoolList;
-    const response = (await ApiClient.fetchJSON('/spool/user', {
+    return ApiClient.fetchJSON('/spool/user', {
       method: 'GET',
       headers: {}
-    })) as { spools: Array<SpoolProps> };
-    return response.spools;
+    });
   },
 
   /**

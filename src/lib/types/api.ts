@@ -1,4 +1,4 @@
-import type { ThreadType } from './components';
+import type { SpoolProps, ThreadType } from './components';
 
 export type AccessLevel = 0 | 1 | 2 | 3;
 
@@ -156,6 +156,10 @@ export interface GetSFUTokenResponse {
   turn_username?: string; // username для TURN
   turn_credential?: string; // credential (password) для TURN
   turn_ttl_seconds?: number; // время жизни creds в секундах (TTL)
+}
+
+export interface GetUserSpoolListResponse {
+  spools: SpoolProps[];
 }
 
 export interface CreateSpoolRequest {

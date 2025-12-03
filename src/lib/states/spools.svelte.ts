@@ -1,10 +1,25 @@
 import { centrifugeClient, SpoolApi } from '$lib/api';
-import type { SpoolProps, WsSpoolDeleted, WsSpoolInvited, WsSpoolUpdated } from '$lib/types';
+import type {
+  AccessLevel,
+  SpoolProps,
+  WsSpoolDeleted,
+  WsSpoolInvited,
+  WsSpoolUpdated
+} from '$lib/types';
 
-export const stateSpools = $state<{ spools: SpoolProps[] }>({ spools: [] });
+export const stateSpools = $state<{ spools: SpoolProps[]; currentSpoolId: number }>({
+  spools: [],
+  currentSpoolId: 0
+});
+
+export const stateSpoolsGetCurrentAccessLevel = (): AccessLevel => {
+  return stateSpools.spools.find((s) => s.id === stateSpools.currentSpoolId)!.access_level;
+};
 
 export const stateSpoolsFetch = async () => {
-  stateSpools.spools = await SpoolApi.getUserSpoolList();
+  stateSpools.spools = (await SpoolApi.getUserSpoolList()).spools.map((s) => {
+    return { ...s, access_level: s.is_creator ? 3 : 0 }; // TEMP, API should return access_level, not is_creator
+  });
 };
 
 export const stateSpoolCreate = async (name: string, banner?: File) => {
@@ -34,6 +49,10 @@ export const stateSpoolLeave = async (spoolId: number) => {
   stateSpoolsDelete(spoolId);
 };
 
+export const stateSpoolsSetCurrentSpoolId = (spoolId: number) => {
+  stateSpools.currentSpoolId = spoolId;
+};
+
 const stateSpoolsAdd = (spool: SpoolProps) => {
   stateSpools.spools = [...stateSpools.spools, spool];
 };
@@ -51,6 +70,7 @@ export const subToSpoolEvents = () => {
     const newSpool: SpoolProps = {
       ...payload,
       is_creator: false,
+      access_level: 0,
       description: '',
       members: 0,
       threads: 0

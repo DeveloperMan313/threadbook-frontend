@@ -13,6 +13,6 @@ export const load: PageLoad = async ({ params, fetch }) => {
 
   return {
     spoolId: spool_id,
-    threads: threadsPromise,
+    threads: threadsPromise
   };
 };

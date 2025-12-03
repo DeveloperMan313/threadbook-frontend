@@ -8,15 +8,17 @@
   import Button from '$lib/components/ui/button/button.svelte';
   import { EllipsisVertical, Phone } from '@lucide/svelte';
   import ModalInviteUsersToThread from './ModalInviteUsersToThread.svelte';
-  import { stateVoiceThreadId } from '$lib/states';
+  import { stateSpoolsGetCurrentAccessLevel, stateVoiceThreadId } from '$lib/states';
   import ModalThreadInviteLinkCreate from './ModalThreadInviteLinkCreate.svelte';
 
-  let { id, title, type, unreadCnt, mentionCnt }: ThreadProps = $props();
+  let { id, title, access_level, type, unreadCnt, mentionCnt }: ThreadProps = $props();
 
   const { setCurrentThreadId, getCurrentThreadId } = getContext('threads') as {
     setCurrentThreadId: { (id: number): void };
     getCurrentThreadId: () => number | null;
   };
+
+  const userAccessLevel = $derived(stateSpoolsGetCurrentAccessLevel());
 
   let isThreadRenameModalOpen = $state(false);
   let isThreadCloseModalOpen = $state(false);
@@ -81,23 +83,25 @@
                 Create invite link</DropdownMenu.Item
               >
             {/if}
-            <DropdownMenu.Item
-              class="cursor-pointer"
-              onclick={() => {
-                isThreadRenameModalOpen = true;
-              }}
-            >
-              Rename</DropdownMenu.Item
-            >
-            <DropdownMenu.Item
-              class="cursor-pointer"
-              variant="destructive"
-              onclick={() => {
-                isThreadCloseModalOpen = true;
-              }}
-            >
-              Close</DropdownMenu.Item
-            >
+            {#if userAccessLevel > access_level}
+              <DropdownMenu.Item
+                class="cursor-pointer"
+                onclick={() => {
+                  isThreadRenameModalOpen = true;
+                }}
+              >
+                Rename</DropdownMenu.Item
+              >
+              <DropdownMenu.Item
+                class="cursor-pointer"
+                variant="destructive"
+                onclick={() => {
+                  isThreadCloseModalOpen = true;
+                }}
+              >
+                Close</DropdownMenu.Item
+              >
+            {/if}
           </DropdownMenu.Content>
         </DropdownMenu.Root>
         <Button
@@ -129,20 +133,22 @@
         }}>Create invite link</ContextMenu.Item
       >
     {/if}
-    <ContextMenu.Item
-      class="cursor-pointer"
-      variant="default"
-      onclick={() => {
-        isThreadRenameModalOpen = true;
-      }}>Rename</ContextMenu.Item
-    >
-    <ContextMenu.Item
-      class="cursor-pointer"
-      variant="destructive"
-      onclick={() => {
-        isThreadCloseModalOpen = true;
-      }}>Close</ContextMenu.Item
-    >
+    {#if userAccessLevel > access_level}
+      <ContextMenu.Item
+        class="cursor-pointer"
+        variant="default"
+        onclick={() => {
+          isThreadRenameModalOpen = true;
+        }}>Rename</ContextMenu.Item
+      >
+      <ContextMenu.Item
+        class="cursor-pointer"
+        variant="destructive"
+        onclick={() => {
+          isThreadCloseModalOpen = true;
+        }}>Close</ContextMenu.Item
+      >
+    {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>
 <ModalInviteUsersToThread

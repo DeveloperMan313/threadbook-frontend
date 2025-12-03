@@ -4,12 +4,15 @@
   import Button from '$lib/components/ui/button/button.svelte';
   import { ChevronLeft, Plus } from '@lucide/svelte';
   import ModalThreadCreate from './ModalThreadCreate.svelte';
+  import { stateSpoolsGetCurrentAccessLevel } from '$lib/states';
 
   let { threads }: ThreadListProps = $props();
 
   let privateExpanded = $state(true);
   let publicExpanded = $state(true);
   let closedExpanded = $state(false);
+
+  const userAccessLevel = $derived(stateSpoolsGetCurrentAccessLevel());
 
   let isCreateThreadModalOpen = $state(false);
   let createThreadType = $state<ThreadType>('private');
@@ -20,17 +23,19 @@
     <div class="mb-2 flex items-center justify-between">
       <p class="text-sm font-medium text-muted-foreground">Private</p>
       <div class="flex items-center gap-1">
-        <Button
-          class="size-6 cursor-pointer rounded-full"
-          size="icon"
-          variant="ghost"
-          onclick={() => {
-            createThreadType = 'private';
-            isCreateThreadModalOpen = true;
-          }}
-        >
-          <Plus class="text-muted-foreground" />
-        </Button>
+        {#if userAccessLevel > 0}
+          <Button
+            class="size-6 cursor-pointer rounded-full"
+            size="icon"
+            variant="ghost"
+            onclick={() => {
+              createThreadType = 'private';
+              isCreateThreadModalOpen = true;
+            }}
+          >
+            <Plus class="text-muted-foreground" />
+          </Button>
+        {/if}
         <Button
           class="size-6 cursor-pointer rounded-full"
           size="icon"
@@ -60,17 +65,19 @@
     <div class="mb-2 flex items-center justify-between">
       <p class="text-sm font-medium text-muted-foreground">Public</p>
       <div class="flex items-center gap-1">
-        <Button
-          class="size-6 cursor-pointer rounded-full"
-          size="icon"
-          variant="ghost"
-          onclick={() => {
-            createThreadType = 'public';
-            isCreateThreadModalOpen = true;
-          }}
-        >
-          <Plus class="text-muted-foreground" />
-        </Button>
+        {#if userAccessLevel > 0}
+          <Button
+            class="size-6 cursor-pointer rounded-full"
+            size="icon"
+            variant="ghost"
+            onclick={() => {
+              createThreadType = 'public';
+              isCreateThreadModalOpen = true;
+            }}
+          >
+            <Plus class="text-muted-foreground" />
+          </Button>
+        {/if}
         <Button
           class="size-6 cursor-pointer rounded-full"
           size="icon"

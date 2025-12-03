@@ -2,6 +2,8 @@
  * Component properties interfaces
  */
 
+import type { AccessLevel } from './api';
+
 export interface ChatState {
   thread: ThreadProps;
   messages: Array<MessageProps>;
@@ -103,6 +105,7 @@ export interface SpoolProps {
   id: number;
   name: string;
   is_creator: boolean;
+  access_level: AccessLevel;
   banner_link?: string;
   description: string; // unimplemented
   members: number; // unimplemented
@@ -114,14 +117,15 @@ export type ThreadType = 'private' | 'public';
 export interface ThreadProps {
   id: number;
   spool_id: number;
+  access_level: AccessLevel;
   title: string;
   type: ThreadType;
   is_closed: boolean;
   is_creator: boolean;
   created_at: string;
   updated_at: string;
-  unreadCnt: number;
-  mentionCnt: number;
+  unreadCnt: number; // unimplemented
+  mentionCnt: number; // unimplemented
 }
 
 export interface ThreadListProps {
