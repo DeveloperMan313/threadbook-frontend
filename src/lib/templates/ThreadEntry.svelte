@@ -52,58 +52,60 @@
         {#if unreadCnt > 0}
           <p class="text-sm text-gray-600">{unreadCnt}</p>
         {/if}
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger>
-            {#snippet child({ props })}
-              <Button
-                {...props}
-                variant="ghost"
-                class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200"
-              >
-                <EllipsisVertical />
-              </Button>
-            {/snippet}
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content class="w-52" align="start">
-            {#if type === 'private'}
-              <DropdownMenu.Item
-                class="cursor-pointer"
-                onclick={() => {
-                  isInviteUsersToThreadModalOpen = true;
-                }}
-              >
-                Invite users</DropdownMenu.Item
-              >
-              <DropdownMenu.Item
-                class="cursor-pointer"
-                onclick={() => {
-                  isThreadInviteLinkCreateModalOpen = true;
-                }}
-              >
-                Create invite link</DropdownMenu.Item
-              >
-            {/if}
-            {#if userAccessLevel > access_level}
-              <DropdownMenu.Item
-                class="cursor-pointer"
-                onclick={() => {
-                  isThreadRenameModalOpen = true;
-                }}
-              >
-                Rename</DropdownMenu.Item
-              >
-              <DropdownMenu.Item
-                class="cursor-pointer"
-                variant="destructive"
-                onclick={() => {
-                  isThreadCloseModalOpen = true;
-                }}
-              >
-                Close</DropdownMenu.Item
-              >
-            {/if}
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
+        {#if type === 'private' || userAccessLevel > access_level}
+          <DropdownMenu.Root>
+            <DropdownMenu.Trigger>
+              {#snippet child({ props })}
+                <Button
+                  {...props}
+                  variant="ghost"
+                  class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200"
+                >
+                  <EllipsisVertical />
+                </Button>
+              {/snippet}
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content class="w-52" align="start">
+              {#if type === 'private'}
+                <DropdownMenu.Item
+                  class="cursor-pointer"
+                  onclick={() => {
+                    isInviteUsersToThreadModalOpen = true;
+                  }}
+                >
+                  Invite users</DropdownMenu.Item
+                >
+                <DropdownMenu.Item
+                  class="cursor-pointer"
+                  onclick={() => {
+                    isThreadInviteLinkCreateModalOpen = true;
+                  }}
+                >
+                  Create invite link</DropdownMenu.Item
+                >
+              {/if}
+              {#if userAccessLevel > access_level}
+                <DropdownMenu.Item
+                  class="cursor-pointer"
+                  onclick={() => {
+                    isThreadRenameModalOpen = true;
+                  }}
+                >
+                  Rename</DropdownMenu.Item
+                >
+                <DropdownMenu.Item
+                  class="cursor-pointer"
+                  variant="destructive"
+                  onclick={() => {
+                    isThreadCloseModalOpen = true;
+                  }}
+                >
+                  Close</DropdownMenu.Item
+                >
+              {/if}
+            </DropdownMenu.Content>
+          </DropdownMenu.Root>
+        {/if}
         <Button
           variant="ghost"
           class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200"
@@ -116,40 +118,42 @@
       </div>
     </div>
   </ContextMenu.Trigger>
-  <ContextMenu.Content class="w-52">
-    {#if type === 'private'}
-      <ContextMenu.Item
-        class="cursor-pointer"
-        variant="default"
-        onclick={() => {
-          isInviteUsersToThreadModalOpen = true;
-        }}>Invite users</ContextMenu.Item
-      >
-      <ContextMenu.Item
-        class="cursor-pointer"
-        variant="default"
-        onclick={() => {
-          isThreadInviteLinkCreateModalOpen = true;
-        }}>Create invite link</ContextMenu.Item
-      >
-    {/if}
-    {#if userAccessLevel > access_level}
-      <ContextMenu.Item
-        class="cursor-pointer"
-        variant="default"
-        onclick={() => {
-          isThreadRenameModalOpen = true;
-        }}>Rename</ContextMenu.Item
-      >
-      <ContextMenu.Item
-        class="cursor-pointer"
-        variant="destructive"
-        onclick={() => {
-          isThreadCloseModalOpen = true;
-        }}>Close</ContextMenu.Item
-      >
-    {/if}
-  </ContextMenu.Content>
+  {#if type === 'private' || userAccessLevel > access_level}
+    <ContextMenu.Content class="w-52">
+      {#if type === 'private'}
+        <ContextMenu.Item
+          class="cursor-pointer"
+          variant="default"
+          onclick={() => {
+            isInviteUsersToThreadModalOpen = true;
+          }}>Invite users</ContextMenu.Item
+        >
+        <ContextMenu.Item
+          class="cursor-pointer"
+          variant="default"
+          onclick={() => {
+            isThreadInviteLinkCreateModalOpen = true;
+          }}>Create invite link</ContextMenu.Item
+        >
+      {/if}
+      {#if userAccessLevel > access_level}
+        <ContextMenu.Item
+          class="cursor-pointer"
+          variant="default"
+          onclick={() => {
+            isThreadRenameModalOpen = true;
+          }}>Rename</ContextMenu.Item
+        >
+        <ContextMenu.Item
+          class="cursor-pointer"
+          variant="destructive"
+          onclick={() => {
+            isThreadCloseModalOpen = true;
+          }}>Close</ContextMenu.Item
+        >
+      {/if}
+    </ContextMenu.Content>
+  {/if}
 </ContextMenu.Root>
 <ModalInviteUsersToThread
   threadId={id}
