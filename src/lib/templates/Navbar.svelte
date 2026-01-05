@@ -18,7 +18,7 @@
 >
   <a class="flex items-center gap-2 text-inherit no-underline" href={resolve('/spools', {})}>
     <img class="h-12 w-12" src={logo} alt="logo" />
-    <h1 class="text-4xl font-normal">ThreadBook</h1>
+    <h1 class="text-4xl font-normal max-[30rem]:hidden">ThreadBook</h1>
   </a>
   {#if profile}
     <button

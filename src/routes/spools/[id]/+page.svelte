@@ -1,10 +1,11 @@
 <script lang="ts">
+  import { useSwipe, type SwipeCustomEvent, type GestureCustomEvent } from 'svelte-gestures';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
   import Navbar from '$lib/templates/Navbar.svelte';
   import SpoolDock from '$lib/templates/SpoolDock.svelte';
   import ThreadList from '$lib/templates/ThreadList.svelte';
-  import { onDestroy, setContext } from 'svelte';
+  import { onDestroy, setContext, untrack } from 'svelte';
   import { centrifugeClient, ProfileApi, ThreadApi } from '$lib/api';
   import type {
     ChatState,
@@ -160,15 +161,63 @@
     centrifugeClient.clearUser('thread.invited');
   });
 
+  let isSpoolPanelExpanded = $state(true);
+  let isThreadMemberListExpanded = $state(true);
+
+  let isMaxLg = $state(window.innerWidth < 1024); // tailwind max-lg
+  let isMaxMd = $state(window.innerWidth < 768); // tailwind max-md
+
+  const windowResizeListener = () => {
+    isMaxLg = window.innerWidth < 1024;
+    isMaxMd = window.innerWidth < 768;
+  };
+
+  $effect(() => {
+    window.addEventListener('resize', windowResizeListener);
+    return () => {
+      window.removeEventListener('resize', windowResizeListener);
+    };
+  });
+
+  $effect(() => {
+    // toggle ThreadMemberList on window resize
+    isThreadMemberListExpanded = !isMaxLg; // TODO add-user set default
+  });
+
+  $effect(() => {
+    // toggle spool panel on viewport resize / thread select
+    if (isMaxMd) {
+      isSpoolPanelExpanded = currentThreadId === null;
+    }
+    if (!isMaxMd) {
+      isSpoolPanelExpanded = true; // TODO add user-set default
+    }
+  });
+
+  const swipeHandler = (event: SwipeCustomEvent) => {
+    if (!isMaxMd) return;
+    if (event.detail.direction === 'right') {
+      isSpoolPanelExpanded = true;
+    }
+    if (event.detail.direction === 'left') {
+      isSpoolPanelExpanded = false;
+    }
+  };
+
   let isInviteUsersToSpoolModalOpen = $state(false);
   let isSpoolLeaveModalOpen = $state(false);
   let isSpoolEditModalOpen = $state(false);
 </script>
 
 <Navbar />
-<div class="fixed inset-0 top-16 flex flex-row overflow-x-scroll">
+<div
+  {...useSwipe(swipeHandler, () => ({ timeframe: 300, minSwipeDistance: 50, touchAction: 'none' }))}
+  class="fixed inset-0 top-16 flex flex-row overflow-hidden"
+>
   <SpoolDock />
-  <div class="flex w-72 flex-shrink-0 flex-col gap-6 bg-primary-foreground p-4 pt-3 pr-3">
+  <div
+    class={`flex w-[calc(100%-4rem)] min-[30rem]:w-72 ${isSpoolPanelExpanded ? '' : 'max-[30rem]:ml-[calc(4rem-100%)] min-[30rem]:-ml-72'} -z-10 flex-shrink-0 flex-col gap-6 bg-primary-foreground p-4 pt-3 pr-3`}
+  >
     <div class="flex items-start justify-between">
       <h2 class="w-full scroll-m-20 truncate border-b pb-2 text-3xl">{spoolName}</h2>
       <DropdownMenu.Root>
@@ -226,16 +275,18 @@
       <ThreadList {threads} />
     {/if}
   </div>
-  <div class="flex w-full min-w-96 flex-col overflow-hidden bg-white">
+  <div class="flex w-full flex-col overflow-hidden bg-white">
     {#if currentThreadId}
-      <Chat />
+      <div class="h-full min-w-72">
+        <Chat />
+      </div>
     {:else}
-      <div class="flex h-full items-center justify-center text-gray-500">
+      <div class="flex h-full items-center justify-center text-center text-gray-500">
         Select a thread to start chatting
       </div>
     {/if}
   </div>
-  <div class="w-64 flex-none">
+  <div class={`w-64 ${isThreadMemberListExpanded ? '' : '-mr-64'} flex-none`}>
     <ThreadMemberList spoolId={data.spoolId} />
   </div>
 </div>
