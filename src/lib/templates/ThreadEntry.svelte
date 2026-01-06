@@ -36,7 +36,7 @@
         class={`absolute h-full w-full cursor-pointer p-0 ${id === getCurrentThreadId() ? 'bg-accent' : ''}`}
         onclick={() => setCurrentThreadId(id)}
         ><p
-          class={`w-full truncate ps-3 text-start text-base ${type === 'private' ? 'group-hover:pe-16' : 'group-hover:pe-8'}`}
+          class={`w-full truncate ps-3 text-start text-base ${type === 'private' ? 'group-hover:pe-16 [@media(hover:none)]:pe-16' : 'group-hover:pe-8 [@media(hover:none)]:pe-8'}`}
         >
           {title}
         </p></Button
