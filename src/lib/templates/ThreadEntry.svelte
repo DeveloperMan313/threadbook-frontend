@@ -59,7 +59,7 @@
                 <Button
                   {...props}
                   variant="ghost"
-                  class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200"
+                  class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200 [@media(hover:none)]:opacity-100"
                 >
                   <EllipsisVertical />
                 </Button>
@@ -108,7 +108,7 @@
         {/if}
         <Button
           variant="ghost"
-          class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200"
+          class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200 [@media(hover:none)]:opacity-100"
           onclick={() => {
             stateVoiceThreadId.id = id;
           }}
