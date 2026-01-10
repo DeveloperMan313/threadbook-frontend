@@ -27,5 +27,14 @@ export const ImageApi = {
    */
   getSpoolBannerURL(filename: string): string | undefined {
     return getImageURL('spools', filename);
+  },
+
+  /**
+   * Get message attachment URL
+   * @param {string} filename - attachment filename
+   * @returns {string?} - attachment URL or undefined if filename is empty
+   */
+  getMessageAttachmentURL(filename: string): string | undefined {
+    return getImageURL('files', filename);
   }
 };

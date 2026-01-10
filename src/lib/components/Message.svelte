@@ -4,8 +4,9 @@
   import { ImageApi } from '$lib/api';
   import type { SvelteMap } from 'svelte/reactivity';
   import UserAvatar from './UserAvatar.svelte';
+  import { Button } from './ui/button';
 
-  const { username, content, created_at, index, thread_id }: MessageProps = $props();
+  const { username, content, payloads, created_at, index, thread_id }: MessageProps = $props();
 
   const { threadChats } = getContext('threads') as {
     threadChats: SvelteMap<number, ChatState>;
@@ -50,5 +51,18 @@
       </div>
     {/if}
     <p class="w-full overflow-hidden wrap-break-word">{content}</p>
+    {#if payloads}
+      <div class="mt-2 max-w-96 space-y-2">
+        {#each payloads as filename (filename)}
+          <!-- eslint-disable svelte/no-navigation-without-resolve -->
+          <Button
+            variant="outline"
+            class="w-full shadow-none"
+            href={ImageApi.getMessageAttachmentURL(filename)}
+            download={filename}><p class="w-full truncate">{filename}</p></Button
+          >
+        {/each}
+      </div>
+    {/if}
   </div>
 </div>

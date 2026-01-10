@@ -8,6 +8,7 @@
   import { centrifugeClient, MessageApi } from '$lib/api';
   import { stateProfile } from '$lib/states';
   import Spinner from '$lib/components/ui/spinner/spinner.svelte';
+  import { Paperclip } from '@lucide/svelte';
 
   const { threadChats, getCurrentThreadId, getThreads } = getContext('threads') as {
     threadChats: SvelteMap<number, ChatState>;
@@ -158,6 +159,7 @@
     }
   });
 
+  let fileInput: HTMLInputElement;
   let isSendingMessage = $state(false);
 
   const sendMessage = async () => {
@@ -176,9 +178,10 @@
 
     isSendingMessage = true;
     try {
-      await MessageApi.sendThreadMessages({
+      await MessageApi.sendThreadMessage({
         thread_id: currentThread.id,
-        content: message.content
+        content: message.content,
+        files: fileInput.files
       });
       const currentChat = threadChats.get(currentThread.id) as ChatState;
       threadChats.set(currentThread.id, {
@@ -187,6 +190,7 @@
       });
     } finally {
       isSendingMessage = false;
+      fileInput.value = '';
     }
   };
 
@@ -231,6 +235,17 @@
   </div>
   <div class="border-t border-gray-200 p-4">
     <div class="flex gap-2">
+      <input type="file" id="fileInput" accept="*" multiple hidden bind:this={fileInput} />
+      <Button
+        onclick={() => {
+          fileInput.click();
+        }}
+        class="cursor-pointer"
+        variant="ghost"
+        size="icon"
+      >
+        <Paperclip />
+      </Button>
       <Input
         bind:value={messageText}
         oninput={() => {
