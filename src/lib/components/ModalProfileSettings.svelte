@@ -4,9 +4,9 @@
   import Input from '$lib/components/ui/input/input.svelte';
   import Label from '$lib/components/ui/label/label.svelte';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
-  import InputField from '$lib/templates/InputField.svelte';
-  import ModalLogOut from '$lib/templates/ModalLogOut.svelte';
-  import UserAvatar from '$lib/templates/UserAvatar.svelte';
+  import InputField from '$lib/components/InputField.svelte';
+  import ModalLogOut from '$lib/components/ModalLogOut.svelte';
+  import UserAvatar from '$lib/components/UserAvatar.svelte';
   import type { ModalProfileSettingsProps, UserProfileFull } from '$lib/types';
   import { stateProfile } from '$lib/states';
   import { nicknameGetError } from '$lib/validation';

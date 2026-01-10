@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InputField from '$lib/templates/InputField.svelte';
+  import InputField from '$lib/components/InputField.svelte';
   import {
     signupUsernameGetError,
     signupPasswordGetError,

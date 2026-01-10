@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InputField from '$lib/templates/InputField.svelte';
+  import InputField from '$lib/components/InputField.svelte';
   import { emailGetError, signinPasswordGetError } from '$lib/validation';
   import { AuthApi } from '$lib/api';
   import { Button } from '$lib/components/ui/button/index.js';

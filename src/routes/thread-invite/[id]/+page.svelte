@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import ModalThreadInviteLinkJoin from '$lib/templates/ModalThreadInviteLinkJoin.svelte';
-  import Navbar from '$lib/templates/Navbar.svelte';
+  import ModalThreadInviteLinkJoin from '$lib/components/ModalThreadInviteLinkJoin.svelte';
+  import Navbar from '$lib/components/Navbar.svelte';
 
   const { data } = $props();
 

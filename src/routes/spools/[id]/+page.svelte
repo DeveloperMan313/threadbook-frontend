@@ -2,9 +2,9 @@
   import { useSwipe, type SwipeCustomEvent, type GestureCustomEvent } from 'svelte-gestures';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-  import Navbar from '$lib/templates/Navbar.svelte';
-  import SpoolDock from '$lib/templates/SpoolDock.svelte';
-  import ThreadList from '$lib/templates/ThreadList.svelte';
+  import Navbar from '$lib/components/Navbar.svelte';
+  import SpoolDock from '$lib/components/SpoolDock.svelte';
+  import ThreadList from '$lib/components/ThreadList.svelte';
   import { onDestroy, setContext, untrack } from 'svelte';
   import { centrifugeClient, ProfileApi, ThreadApi } from '$lib/api';
   import type {
@@ -17,9 +17,9 @@
     WsThreadInvited,
     WsThreadUpdated
   } from '$lib/types';
-  import Chat from '$lib/templates/Chat.svelte';
+  import Chat from '$lib/components/Chat.svelte';
   import { SvelteMap } from 'svelte/reactivity';
-  import ModalInviteUsersToSpool from '$lib/templates/ModalInviteUsersToSpool.svelte';
+  import ModalInviteUsersToSpool from '$lib/components/ModalInviteUsersToSpool.svelte';
   import { EllipsisVertical } from '@lucide/svelte';
   import Spinner from '$lib/components/ui/spinner/spinner.svelte';
   import {
@@ -27,9 +27,9 @@
     stateSpoolsGetCurrentAccessLevel,
     stateSpoolsSetCurrentSpoolId
   } from '$lib/states';
-  import ModalSpoolLeave from '$lib/templates/ModalSpoolLeave.svelte';
-  import ModalSpoolEdit from '$lib/templates/ModalSpoolEdit.svelte';
-  import ThreadMemberList from '$lib/templates/ThreadMemberList.svelte';
+  import ModalSpoolLeave from '$lib/components/ModalSpoolLeave.svelte';
+  import ModalSpoolEdit from '$lib/components/ModalSpoolEdit.svelte';
+  import ThreadMemberList from '$lib/components/ThreadMemberList.svelte';
 
   let { data } = $props();
 

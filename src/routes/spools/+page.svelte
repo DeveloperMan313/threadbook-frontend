@@ -1,8 +1,8 @@
 <script lang="ts">
   import { Plus } from '@lucide/svelte';
-  import ModalSpoolCreate from '$lib/templates/ModalSpoolCreate.svelte';
-  import Navbar from '$lib/templates/Navbar.svelte';
-  import SpoolCard from '$lib/templates/SpoolCard.svelte';
+  import ModalSpoolCreate from '$lib/components/ModalSpoolCreate.svelte';
+  import Navbar from '$lib/components/Navbar.svelte';
+  import SpoolCard from '$lib/components/SpoolCard.svelte';
   import { stateSpools } from '$lib/states';
 
   let { data } = $props();
