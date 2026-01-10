@@ -135,7 +135,7 @@ export interface GetThreadMessagesRequest {
 export interface SendThreadMessageRequest {
   thread_id: number;
   content: string;
-  files: FileList | null;
+  files: FileList;
 }
 
 export interface GetCentrifugeTokensRequest {

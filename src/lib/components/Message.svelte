@@ -50,14 +50,16 @@
         </p>
       </div>
     {/if}
-    <p class="w-full overflow-hidden wrap-break-word">{content}</p>
+    {#if content.length > 0}
+      <p class="w-full overflow-hidden wrap-break-word">{content}</p>
+    {/if}
     {#if payloads}
-      <div class="mt-2 max-w-96 space-y-2">
+      <div class="mt-2 mb-2 max-w-96">
         {#each payloads as filename (filename)}
           <!-- eslint-disable svelte/no-navigation-without-resolve -->
           <Button
             variant="outline"
-            class="w-full shadow-none"
+            class="w-full rounded-none shadow-none first:rounded-t-md last:rounded-b-md"
             href={ImageApi.getMessageAttachmentURL(filename)}
             download={filename}><p class="w-full truncate">{filename}</p></Button
           >

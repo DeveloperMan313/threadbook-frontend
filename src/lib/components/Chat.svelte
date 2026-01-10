@@ -8,7 +8,7 @@
   import { centrifugeClient, MessageApi } from '$lib/api';
   import { stateProfile } from '$lib/states';
   import Spinner from '$lib/components/ui/spinner/spinner.svelte';
-  import { Paperclip } from '@lucide/svelte';
+  import { Paperclip, X } from '@lucide/svelte';
 
   const { threadChats, getCurrentThreadId, getThreads } = getContext('threads') as {
     threadChats: SvelteMap<number, ChatState>;
@@ -160,12 +160,37 @@
   });
 
   let fileInput: HTMLInputElement;
+  let selectedFilesDT = new DataTransfer();
+  let selectedFilenames = $state<string[]>([]);
   let isSendingMessage = $state(false);
+
+  const onFileInputChange = () => {
+    const newSelectedFilenames = selectedFilenames;
+    if (fileInput.files === null) {
+      return;
+    }
+    for (const file of fileInput.files) {
+      selectedFilesDT.items.add(file);
+      newSelectedFilenames.push(file.name);
+    }
+    selectedFilenames = newSelectedFilenames;
+    tick().then(() => {
+      if (isAtBottom) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+    });
+    fileInput.value = '';
+  };
+
+  const deleteSelectedFileByIdx = (idx: number) => {
+    selectedFilesDT.items.remove(idx);
+    selectedFilenames = selectedFilenames.filter((_, i) => i !== idx);
+  };
 
   const sendMessage = async () => {
     if (!currentThread || isSendingMessage) return;
 
-    if (messageText.trim() === '') return;
+    if (messageText.trim() === '' && selectedFilenames.length === 0) return;
 
     const message: MessageProps = {
       id: 0,
@@ -181,7 +206,7 @@
       await MessageApi.sendThreadMessage({
         thread_id: currentThread.id,
         content: message.content,
-        files: fileInput.files
+        files: selectedFilesDT.files
       });
       const currentChat = threadChats.get(currentThread.id) as ChatState;
       threadChats.set(currentThread.id, {
@@ -190,7 +215,8 @@
       });
     } finally {
       isSendingMessage = false;
-      fileInput.value = '';
+      selectedFilesDT.items.clear();
+      selectedFilenames = [];
     }
   };
 
@@ -233,9 +259,39 @@
       </div>
     {/if}
   </div>
-  <div class="border-t border-gray-200 p-4">
+  <div class="border-t border-gray-200 p-4 pt-2">
+    {#if selectedFilenames.length > 0}
+      <div class="flex w-full flex-row gap-2 overflow-x-scroll pb-3">
+        {#each selectedFilenames as filename, i (i)}
+          <!-- eslint-disable svelte/no-navigation-without-resolve -->
+          <div
+            class="flex w-32 flex-row items-center justify-between gap-1 rounded-md border-1 border-border bg-background"
+          >
+            <p class="w-full truncate pl-4">{filename}</p>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              class="cursor-pointer"
+              onclick={() => {
+                deleteSelectedFileByIdx(i);
+              }}
+            >
+              <X />
+            </Button>
+          </div>
+        {/each}
+      </div>
+    {/if}
     <div class="flex gap-2">
-      <input type="file" id="fileInput" accept="*" multiple hidden bind:this={fileInput} />
+      <input
+        type="file"
+        id="fileInput"
+        accept=".jpg,.jpeg,image/jpeg,.png,image/png,.webp,image/webp,.mp4,video/mp4"
+        multiple
+        hidden
+        bind:this={fileInput}
+        onchange={onFileInputChange}
+      />
       <Button
         onclick={() => {
           fileInput.click();
@@ -264,7 +320,7 @@
       <Button
         class="cursor-pointer"
         onclick={sendMessage}
-        disabled={messageText.trim() === '' || isSendingMessage}
+        disabled={(messageText.trim() === '' && selectedFilenames.length === 0) || isSendingMessage}
       >
         Send
       </Button>

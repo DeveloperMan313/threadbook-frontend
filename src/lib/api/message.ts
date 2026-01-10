@@ -42,13 +42,8 @@ export const MessageApi = {
   async sendThreadMessage(request: SendThreadMessageRequest) {
     const formData = new FormData();
     formData.append('content', request.content);
-    if (request.files === null) {
-      formData.append('files', '');
-    }
-    if (request.files !== null) {
-      for (const file of request.files) {
-        formData.append('files', file);
-      }
+    for (const file of request.files) {
+      formData.append('files', file);
     }
 
     return ApiClient.fetchJSON(`/thread/${request.thread_id}/messages`, {
