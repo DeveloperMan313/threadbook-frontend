@@ -7,6 +7,7 @@
   import type { ModalSpoolCreateProps } from '$lib/types';
   import Input from '$lib/components/ui/input/input.svelte';
   import { stateSpoolCreate } from '$lib/states';
+  import * as m from '$lib/paraglide/messages';
 
   let { isOpen = $bindable(false) }: ModalSpoolCreateProps = $props();
 
@@ -52,19 +53,19 @@
 <Dialog.Root bind:open={isOpen}>
   <Dialog.Content class="sm:max-w-[425px]">
     <Dialog.Header>
-      <Dialog.Title>New spool</Dialog.Title>
-      <Dialog.Description>Create a new spool.</Dialog.Description>
+      <Dialog.Title>{m.new_spool()}</Dialog.Title>
+      <Dialog.Description>{m.create_a_new_spool()}</Dialog.Description>
     </Dialog.Header>
     <InputField
       type="text"
       getError={spoolNameGetError}
       bind:value={spoolName}
       bind:isValid={nameIsValid}
-      label="Spool name"
-      placeholder="Enter spool name"
+      label={m.spool_name()}
+      placeholder={m.enter_spool_name()}
     />
     <div class="flex w-full max-w-sm flex-col gap-1.5">
-      <Label for="banner" class="text-right">Banner image</Label>
+      <Label for="banner" class="text-right">{m.banner_image()}</Label>
       <Input
         class="cursor-pointer"
         id="banner"
@@ -75,13 +76,13 @@
     </div>
     <Dialog.Footer>
       <Button variant="outline" class="cursor-pointer" onclick={onCancel} disabled={isLoading}>
-        Cancel
+        {m.cancel()}
       </Button>
       <Button class="cursor-pointer" onclick={onCreateClick} disabled={!nameIsValid || isLoading}>
         {#if isLoading}
-          Creating...
+          {m.creating()}
         {:else}
-          Create
+          {m.create()}
         {/if}
       </Button>
     </Dialog.Footer>

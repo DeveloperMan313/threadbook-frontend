@@ -8,6 +8,7 @@
   import { page } from '$app/state';
   import ModalSpoolEdit from './ModalSpoolEdit.svelte';
   import ModalInviteUsersToSpool from './ModalInviteUsersToSpool.svelte';
+  import * as m from '$lib/paraglide/messages';
 
   const { id, name, access_level, banner_link }: SpoolProps = $props();
   const currentSpoolId = $derived<number>(page.data.spoolId);
@@ -36,7 +37,7 @@
       variant="default"
       onclick={() => {
         isInviteUsersToSpoolModalOpen = true;
-      }}>Invite users</ContextMenu.Item
+      }}>{m.invite_users()}</ContextMenu.Item
     >
     {#if access_level === 3}
       <ContextMenu.Item
@@ -44,7 +45,7 @@
         variant="default"
         onclick={() => {
           isSpoolUpdateModalOpen = true;
-        }}>Edit</ContextMenu.Item
+        }}>{m.edit()}</ContextMenu.Item
       >
     {:else}
       <!-- TODO think of leave access -->
@@ -53,7 +54,7 @@
         variant="destructive"
         onclick={() => {
           isSpoolLeaveModalOpen = true;
-        }}>Leave</ContextMenu.Item
+        }}>{m.leave()}</ContextMenu.Item
       >
     {/if}
   </ContextMenu.Content>

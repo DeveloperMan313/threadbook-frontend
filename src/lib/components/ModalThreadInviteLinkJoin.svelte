@@ -5,6 +5,7 @@
   import { ThreadApi } from '$lib/api';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
+  import * as m from '$lib/paraglide/messages';
 
   let { isOpen = $bindable(), linkId }: ModalThreadInviteLinkJoinProps = $props();
 
@@ -31,13 +32,13 @@
 <Dialog.Root bind:open={isOpen}>
   <Dialog.Content class="sm:max-w-[425px]">
     <Dialog.Header>
-      <Dialog.Title>Join invite link</Dialog.Title>
-      <Dialog.Description>Join invite link for mysterious thread :3 ?</Dialog.Description>
+      <Dialog.Title>{m.join_invite_link()}</Dialog.Title>
+      <Dialog.Description>{m.join_invite_link_for_thread()}</Dialog.Description>
     </Dialog.Header>
     <Dialog.Footer>
-      <Button variant="outline" class="cursor-pointer" onclick={onCancel}>Cancel</Button>
+      <Button variant="outline" class="cursor-pointer" onclick={onCancel}>{m.cancel()}</Button>
       <Button variant="default" class="cursor-pointer" onclick={onJoinClick} disabled={isLoading}
-        >{isLoading ? 'Joining...' : 'Join'}</Button
+        >{isLoading ? m.joining() : m.join()}</Button
       >
     </Dialog.Footer>
   </Dialog.Content>

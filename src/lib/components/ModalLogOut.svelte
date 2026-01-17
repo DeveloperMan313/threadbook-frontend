@@ -6,6 +6,7 @@
   import { stateProfile } from '$lib/states';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
+  import * as m from '$lib/paraglide/messages';
 
   let { isOpen = $bindable() }: ModalLogOutProps = $props();
 
@@ -27,14 +28,16 @@
 <Dialog.Root bind:open={isOpen}>
   <Dialog.Content class="sm:max-w-[425px]">
     <Dialog.Header>
-      <Dialog.Title>Log out</Dialog.Title>
+      <Dialog.Title>{m.log_out()}</Dialog.Title>
       <Dialog.Description>
-        Are you sure you want to log out of your account "{stateProfile.profile!.email}"?
+        {m.are_you_sure_log_out({ account: stateProfile.profile!.email })}
       </Dialog.Description>
     </Dialog.Header>
     <Dialog.Footer>
-      <Button variant="outline" class="cursor-pointer" onclick={onCancel}>Cancel</Button>
-      <Button variant="destructive" class="cursor-pointer" onclick={onLeaveClick}>Log out</Button>
+      <Button variant="outline" class="cursor-pointer" onclick={onCancel}>{m.cancel()}</Button>
+      <Button variant="destructive" class="cursor-pointer" onclick={onLeaveClick}
+        >{m.cancel()}</Button
+      >
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

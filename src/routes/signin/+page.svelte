@@ -7,6 +7,7 @@
   import { resolve } from '$app/paths';
   import { ChevronLeft } from '@lucide/svelte';
   import { untrack } from 'svelte';
+  import * as m from '$lib/paraglide/messages';
 
   let emailValue = $state('');
   let emailIsValid = $state(false);
@@ -44,10 +45,10 @@
     } catch (error) {
       if (!(error instanceof Error)) return;
       if (error.message == 'invalid credentials') {
-        errorMsg = 'Incorrect email or password';
+        errorMsg = m.incorrect_email_or_password();
         return;
       }
-      errorMsg = 'Could not sign you in, retry later';
+      errorMsg = m.could_not_sign_you_in();
     }
   };
 </script>
@@ -64,7 +65,7 @@
       >
         <ChevronLeft />
       </Button>
-      <h2 class="m-auto w-fit text-center text-3xl select-text">Sign in</h2>
+      <h2 class="m-auto w-fit text-center text-3xl select-text">{m.sign_in()}</h2>
     </div>
     <div class="flex w-full flex-row">
       <div
@@ -76,12 +77,14 @@
           getError={emailGetError}
           bind:value={emailValue}
           bind:isValid={emailIsValid}
-          label="Email"
-          placeholder="Enter email"
+          label={m.email()}
+          placeholder={m.enter_email()}
           noSpaces={true}
           tabindex={-1}
         />
-        <Button class="cursor-pointer" onclick={advanceStage} disabled={!emailIsValid}>Next</Button>
+        <Button class="cursor-pointer" onclick={advanceStage} disabled={!emailIsValid}
+          >{m.next()}</Button
+        >
       </div>
       <div class="flex w-full flex-shrink-0 flex-col gap-4 p-6">
         <InputField
@@ -89,20 +92,22 @@
           getError={signinPasswordGetError}
           bind:value={passwordValue}
           bind:isValid={passwordIsValid}
-          label="Password"
-          placeholder="Enter password"
+          label={m.password()}
+          placeholder={m.enter_password()}
           noSpaces={true}
           tabindex={-1}
         />
         <Button
           class="cursor-pointer"
           onclick={makeRequest}
-          disabled={!passwordIsValid || errorMsg != ''}>Sign in</Button
+          disabled={!passwordIsValid || errorMsg != ''}>{m.sign_in()}</Button
         >
       </div>
     </div>
     {#if errorMsg}<p class="mb-4 text-center text-sm text-destructive">{errorMsg}</p>{/if}
-    <p class="mb-1 text-center text-sm">Don't have an account?</p>
-    <p class="text-center text-sm underline"><a href={resolve('/signup', {})}>sign up</a></p>
+    <p class="mb-1 text-center text-sm">{m.dont_have_an_account()}</p>
+    <p class="text-center text-sm underline">
+      <a href={resolve('/signup', {})}>{m.sign_up_suggestion()}</a>
+    </p>
   </div>
 </div>

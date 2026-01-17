@@ -6,6 +6,7 @@
   import { SpoolApi } from '$lib/api';
   import { inviteUsernamesGetError } from '$lib/validation';
   import { stateSpools } from '$lib/states';
+  import * as m from '$lib/paraglide/messages';
 
   let { spoolId, isOpen = $bindable() }: ModalInviteUsersToSpool = $props();
 
@@ -36,9 +37,9 @@
 <Dialog.Root bind:open={isOpen}>
   <Dialog.Content class="sm:max-w-[425px]">
     <Dialog.Header>
-      <Dialog.Title>Invite users</Dialog.Title>
+      <Dialog.Title>{m.invite_users()}</Dialog.Title>
       <Dialog.Description>
-        Invite users to spool "{spoolName}".
+        {m.invite_users_to_spool({ spoolName })}
       </Dialog.Description>
     </Dialog.Header>
     <!-- TODO username hints and errors -->
@@ -47,16 +48,16 @@
       getError={inviteUsernamesGetError}
       bind:value={usernames}
       bind:isValid={usernamesAreValid}
-      label="Usernames"
+      label={m.usernames()}
       placeholder="user1 user2 ..."
     />
     <Dialog.Footer>
-      <Button variant="outline" class="cursor-pointer" onclick={onCancel}>Cancel</Button>
+      <Button variant="outline" class="cursor-pointer" onclick={onCancel}>{m.cancel()}</Button>
       <Button
         variant="default"
         class="cursor-pointer"
         onclick={onInviteClick}
-        disabled={!usernamesAreValid || !usernames.trim() || isLoading}>Invite</Button
+        disabled={!usernamesAreValid || !usernames.trim() || isLoading}>{m.invite()}</Button
       >
     </Dialog.Footer>
   </Dialog.Content>

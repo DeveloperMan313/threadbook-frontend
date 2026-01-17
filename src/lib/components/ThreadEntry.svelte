@@ -10,6 +10,7 @@
   import ModalInviteUsersToThread from './ModalInviteUsersToThread.svelte';
   import { stateSpoolsGetCurrentAccessLevel, stateVoiceThreadId } from '$lib/states';
   import ModalThreadInviteLinkCreate from './ModalThreadInviteLinkCreate.svelte';
+  import * as m from '$lib/paraglide/messages';
 
   let { id, title, access_level, type, unreadCnt, mentionCnt }: ThreadProps = $props();
 
@@ -73,7 +74,7 @@
                     isInviteUsersToThreadModalOpen = true;
                   }}
                 >
-                  Invite users</DropdownMenu.Item
+                  {m.invite_users()}</DropdownMenu.Item
                 >
                 <DropdownMenu.Item
                   class="cursor-pointer"
@@ -81,7 +82,7 @@
                     isThreadInviteLinkCreateModalOpen = true;
                   }}
                 >
-                  Create invite link</DropdownMenu.Item
+                  {m.create_invite_link()}</DropdownMenu.Item
                 >
               {/if}
               {#if userAccessLevel > access_level}
@@ -91,7 +92,7 @@
                     isThreadRenameModalOpen = true;
                   }}
                 >
-                  Rename</DropdownMenu.Item
+                  {m.rename()}</DropdownMenu.Item
                 >
                 <DropdownMenu.Item
                   class="cursor-pointer"
@@ -100,7 +101,7 @@
                     isThreadCloseModalOpen = true;
                   }}
                 >
-                  Close</DropdownMenu.Item
+                  {m.close()}</DropdownMenu.Item
                 >
               {/if}
             </DropdownMenu.Content>
@@ -126,14 +127,14 @@
           variant="default"
           onclick={() => {
             isInviteUsersToThreadModalOpen = true;
-          }}>Invite users</ContextMenu.Item
+          }}>{m.invite_users()}</ContextMenu.Item
         >
         <ContextMenu.Item
           class="cursor-pointer"
           variant="default"
           onclick={() => {
             isThreadInviteLinkCreateModalOpen = true;
-          }}>Create invite link</ContextMenu.Item
+          }}>{m.create_invite_link()}</ContextMenu.Item
         >
       {/if}
       {#if userAccessLevel > access_level}
@@ -142,14 +143,14 @@
           variant="default"
           onclick={() => {
             isThreadRenameModalOpen = true;
-          }}>Rename</ContextMenu.Item
+          }}>{m.rename()}</ContextMenu.Item
         >
         <ContextMenu.Item
           class="cursor-pointer"
           variant="destructive"
           onclick={() => {
             isThreadCloseModalOpen = true;
-          }}>Close</ContextMenu.Item
+          }}>{m.close()}</ContextMenu.Item
         >
       {/if}
     </ContextMenu.Content>

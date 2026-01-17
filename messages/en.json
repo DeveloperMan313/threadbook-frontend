@@ -1,4 +1,110 @@
 {
-	"$schema": "https://inlang.com/schema/inlang-message-format",
-	"hello_world": "Hello, {name} from en!"
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+
+  "no_messages_yet": "No messages yet",
+  "start_a_conversation": "Start a conversation!",
+  "thread_start": "Thread start",
+  "type_a_message": "Type a message...",
+  "send": "Send",
+
+  "invite_users_to_spool": "Invite users to spool \"{spoolName}\".",
+  "usernames": "Usernames",
+  "cancel": "Cancel",
+  "invite": "Invite",
+
+  "invite_users_to_thread": "Invite users to thread \"{threadTitle}\".",
+
+  "log_out": "Log out",
+  "are_you_sure_log_out": "Are you sure you want to log out of your account \"{account}\"?",
+
+  "profile_settings": "Profile settings",
+  "profile_picture": "Profile picture",
+  "nickname": "Nickname",
+  "updating": "Updating...",
+  "update_profile": "Update profile",
+
+  "new_spool": "New spool",
+  "create_a_new_spool": "Create a new spool.",
+  "spool_name": "Spool name",
+  "enter_spool_name": "Enter spool name",
+  "banner_image": "Banner image",
+  "creating": "Creating...",
+  "create": "Create",
+
+  "edit_spool": "Edit spool",
+  "change_name_or_banner": "Change name or banner of spool \"{spoolName}\".",
+  "saving": "Saving...",
+  "save": "Save",
+
+  "leave_spool": "Leave spool",
+  "are_you_sure_leave_spool": "Are you sure you want to leave from spool \"{spoolName}\"? You will not be able to return without an invite.",
+
+  "close_thread": "Close thread",
+  "are_you_sure_close_thread": "Are you sure you want to close \"{threadTitle}\"? This action cannot be undone.",
+  "close": "Close",
+
+  "new_thread": "New {threadType} thread",
+  "create_a_new_thread": "Create a new {threadType} thread in this spool.",
+  "thread_title": "Thread title",
+  "enter_thread_title": "Enter thread title",
+
+  "create_invite_link": "Create invite link",
+  "create_invite_link_for_thread": "Create invite link for thread \"{threadTitle}\".",
+  "copy": "Copy",
+
+  "join_invite_link": "Join invite link",
+  "join_invite_link_for_thread": "Join invite link for mysterious thread :3 ?",
+  "joining": "Joining...",
+  "join": "Join",
+
+  "rename_thread": "Rename thread",
+  "enter_new_thread_title": "Enter a new title for this thread.",
+  "enter_new_title": "Enter new title",
+
+  "rename": "Rename",
+
+  "private": "Private",
+  "no_threads": "No threads",
+  "public": "Public",
+  "closed": "Closed",
+
+  "thread_members": "Thread members",
+  "spool_members": "Spool members",
+
+  "voice_chat": "Voice Chat",
+  "fullscreen": "Fullscreen",
+  "minimize": "Minimize",
+  "exit_fullscreen": "Exit fullscreen",
+  "expand": "Expand",
+  "you": "You",
+  "drag_to_resize": "Drag to resize",
+
+  "incorrect_email_or_password": "Incorrect email or password",
+  "could_not_sign_you_in": "Could not sign you in, retry later",
+  "sign_in": "Sign in",
+  "email": "Email",
+  "enter_email": "Enter email",
+  "next": "Next",
+  "password": "Password",
+  "enter_password": "Enter password",
+  "dont_have_an_account": "Don't have an account?",
+  "sign_up_suggestion": "sign up",
+
+  "user_already_exists": "User already exists",
+  "could_not_sign_you_up": "Could not sign you up, retry later",
+  "sign_up": "Sign up",
+  "checking": "Checking...",
+  "username": "Username",
+  "repeat_password": "Repeat password",
+  "already_have_an_account": "Already have an account?",
+  "sign_in_suggestion": "sign in",
+
+  "invite_users": "Invite users",
+  "edit": "Edit",
+  "leave": "Leave",
+  "loading_threads": "Loading threads...",
+  "select_a_thread": "Select a thread to start chatting",
+
+  "my_spools": "My spools",
+  "create_spool": "Create spool"
 }

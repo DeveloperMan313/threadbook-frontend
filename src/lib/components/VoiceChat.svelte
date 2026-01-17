@@ -26,6 +26,7 @@
   import { stateVoiceThreadId } from '$lib/states';
   import { ThreadApi } from '$lib/api';
   import { DeepFilterNet3Processor as DeepFilterNoiseFilterProcessor } from 'deepfilternet3-noise-filter';
+  import * as m from '$lib/paraglide/messages';
 
   let isConnected = $state(false);
   let error = $state('');
@@ -569,7 +570,7 @@
     class="flex cursor-move items-center justify-between border-b border-border px-3 py-2 select-none"
     onmousedown={startDrag}
   >
-    <h3 class="text-lg font-semibold">Voice Chat</h3>
+    <h3 class="text-lg font-semibold">{m.voice_chat()}</h3>
     <div class="flex items-center gap-1">
       {#if viewMode === 'normal'}
         <button
@@ -578,7 +579,7 @@
             e.stopPropagation();
             setViewMode('fullscreen');
           }}
-          title="Fullscreen"
+          title={m.fullscreen()}
         >
           <Maximize2 size={18} />
         </button>
@@ -588,7 +589,7 @@
             e.stopPropagation();
             setViewMode('minimized');
           }}
-          title="Minimize"
+          title={m.minimize()}
         >
           <Minimize2 size={18} />
         </button>
@@ -599,7 +600,7 @@
             e.stopPropagation();
             setViewMode('normal');
           }}
-          title="Exit fullscreen"
+          title={m.exit_fullscreen()}
         >
           <Minimize2 size={18} />
         </button>
@@ -610,7 +611,7 @@
             e.stopPropagation();
             setViewMode('normal');
           }}
-          title="Expand"
+          title={m.expand()}
         >
           <Maximize2 size={18} />
         </button>
@@ -649,7 +650,7 @@
                   </div>
 
                   <span class="video-label">
-                    {tile.isLocal ? 'You' : tile.identity}
+                    {tile.isLocal ? m.you() : tile.identity}
                   </span>
 
                   {#if !tile.isLocal}
@@ -756,7 +757,7 @@
               <div class="video-inner-min">
                 <div class="video-container" data-participant={tile.sid}></div>
                 <span class="video-label-min">
-                  {tile.isLocal ? 'You' : tile.identity}
+                  {tile.isLocal ? m.you() : tile.identity}
                 </span>
               </div>
             </div>
@@ -800,7 +801,7 @@
         e.stopPropagation();
         startResize(e);
       }}
-      title="Drag to resize"
+      title={m.drag_to_resize()}
     >
       <svg
         width="12"

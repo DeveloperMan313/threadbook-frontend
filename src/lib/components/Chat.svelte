@@ -9,6 +9,7 @@
   import { stateProfile } from '$lib/states';
   import Spinner from '$lib/components/ui/spinner/spinner.svelte';
   import { Paperclip, X } from '@lucide/svelte';
+  import * as m from '$lib/paraglide/messages';
 
   const { threadChats, getCurrentThreadId, getThreads } = getContext('threads') as {
     threadChats: SvelteMap<number, ChatState>;
@@ -238,15 +239,15 @@
     {:else if messages.length === 0}
       <div class="flex h-full items-center justify-center text-gray-500">
         <div class="text-center">
-          <p class="text-lg">No messages yet</p>
-          <p class="text-sm">Start a conversation!</p>
+          <p class="text-lg">{m.no_messages_yet()}</p>
+          <p class="text-sm">{m.start_a_conversation()}</p>
         </div>
       </div>
     {:else}
       <div>
         <div class="flex h-10 w-full items-center justify-center">
           {#if currentThread && threadChats.get(currentThread.id)?.firstMessageLoaded}
-            <p class="text-lg text-muted-foreground">Thread start</p>
+            <p class="text-lg text-muted-foreground">{m.thread_start()}</p>
           {:else}
             <Spinner
               class={`size-8 text-muted-foreground transition-opacity ${isAtTop ? '' : 'opacity-0'}`}
@@ -313,7 +314,7 @@
             }
           }
         }}
-        placeholder="Type a message..."
+        placeholder={m.type_a_message()}
         class="flex-1"
         onkeydown={handleKeyPress}
       />
@@ -322,7 +323,7 @@
         onclick={sendMessage}
         disabled={(messageText.trim() === '' && selectedFilenames.length === 0) || isSendingMessage}
       >
-        Send
+        {m.send()}
       </Button>
     </div>
   </div>

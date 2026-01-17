@@ -6,6 +6,7 @@
   import { page } from '$app/state';
   import { resolve } from '$app/paths';
   import { stateSpoolLeave, stateSpools } from '$lib/states';
+  import * as m from '$lib/paraglide/messages';
 
   let { spoolId, isOpen = $bindable() }: ModalSpoolLeaveProps = $props();
 
@@ -34,15 +35,16 @@
 <Dialog.Root bind:open={isOpen}>
   <Dialog.Content class="sm:max-w-[425px]">
     <Dialog.Header>
-      <Dialog.Title>Leave spool</Dialog.Title>
+      <Dialog.Title>{m.leave_spool()}</Dialog.Title>
       <Dialog.Description>
-        Are you sure you want to leave from spool "{spoolName}"? You will not be able to return
-        without an invite.
+        {m.are_you_sure_leave_spool({ spoolName })}
       </Dialog.Description>
     </Dialog.Header>
     <Dialog.Footer>
-      <Button variant="outline" class="cursor-pointer" onclick={onCancel}>Cancel</Button>
-      <Button variant="destructive" class="cursor-pointer" onclick={onLeaveClick}>Leave</Button>
+      <Button variant="outline" class="cursor-pointer" onclick={onCancel}>{m.cancel()}</Button>
+      <Button variant="destructive" class="cursor-pointer" onclick={onLeaveClick}
+        >{m.leave()}</Button
+      >
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

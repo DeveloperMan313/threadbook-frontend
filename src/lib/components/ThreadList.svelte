@@ -5,6 +5,7 @@
   import { ChevronLeft, Plus } from '@lucide/svelte';
   import ModalThreadCreate from './ModalThreadCreate.svelte';
   import { stateSpoolsGetCurrentAccessLevel } from '$lib/states';
+  import * as m from '$lib/paraglide/messages';
 
   let { threads }: ThreadListProps = $props();
 
@@ -21,7 +22,7 @@
 <div class="space-y-2">
   <div>
     <div class="mb-2 flex items-center justify-between">
-      <p class="text-sm font-medium text-muted-foreground">Private</p>
+      <p class="text-sm font-medium text-muted-foreground">{m.private()}</p>
       <div class="flex items-center gap-1">
         {#if userAccessLevel > 0}
           <Button
@@ -56,14 +57,14 @@
       {#each threads.filter((t) => !t.is_closed && t.type == 'private') as thread (thread.id)}
         <ThreadEntry {...thread} />
       {:else}
-        <p class="text-sm text-muted-foreground/70 ms-3">No threads</p>
+        <p class="text-sm text-muted-foreground/70 ms-3">{m.no_threads()}</p>
       {/each}
     </div>
   </div>
 
   <div>
     <div class="mb-2 flex items-center justify-between">
-      <p class="text-sm font-medium text-muted-foreground">Public</p>
+      <p class="text-sm font-medium text-muted-foreground">{m.public()}</p>
       <div class="flex items-center gap-1">
         {#if userAccessLevel > 0}
           <Button
@@ -98,14 +99,14 @@
       {#each threads.filter((t) => !t.is_closed && t.type == 'public') as thread (thread.id)}
         <ThreadEntry {...thread} />
       {:else}
-        <p class="text-sm text-muted-foreground/70 ms-3">No threads</p>
+        <p class="text-sm text-muted-foreground/70 ms-3">{m.no_threads()}</p>
       {/each}
     </div>
   </div>
 
   <div>
     <div class="mb-2 flex items-center justify-between">
-      <p class="text-sm font-medium text-muted-foreground">Closed</p>
+      <p class="text-sm font-medium text-muted-foreground">{m.closed()}</p>
       <Button
         class="size-6 cursor-pointer rounded-full"
         size="icon"
@@ -125,7 +126,7 @@
       {#each threads.filter((t) => t.is_closed) as thread (thread.id)}
         <ThreadEntry {...thread} />
       {:else}
-        <p class="text-sm text-muted-foreground/70 ms-3">No threads</p>
+        <p class="text-sm text-muted-foreground/70 ms-3">{m.no_threads()}</p>
       {/each}
     </div>
   </div>

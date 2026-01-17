@@ -5,6 +5,7 @@
   import InputField from './InputField.svelte';
   import { ThreadApi } from '$lib/api';
   import { inviteUsernamesGetError } from '$lib/validation';
+  import * as m from '$lib/paraglide/messages';
 
   let { threadId, threadTitle, isOpen = $bindable() }: ModalInviteUsersToThread = $props();
 
@@ -19,7 +20,7 @@
     try {
       ThreadApi.inviteUsersToThread({ invitee_usernames: usernameList, thread_id: threadId });
     } catch (error) {
-      console.error('Failed to invite users to spool:', error);
+      console.error('Failed to invite users to thread:', error);
     } finally {
       isLoading = false;
     }
@@ -33,9 +34,9 @@
 <Dialog.Root bind:open={isOpen}>
   <Dialog.Content class="sm:max-w-[425px]">
     <Dialog.Header>
-      <Dialog.Title>Invite users</Dialog.Title>
+      <Dialog.Title>{m.invite_users()}</Dialog.Title>
       <Dialog.Description>
-        Invite users to thread "{threadTitle}".
+        {m.invite_users_to_thread({ threadTitle })}
       </Dialog.Description>
     </Dialog.Header>
     <!-- TODO username hints and errors -->
@@ -44,16 +45,16 @@
       getError={inviteUsernamesGetError}
       bind:value={usernames}
       bind:isValid={usernamesAreValid}
-      label="Usernames"
+      label={m.usernames()}
       placeholder="user1 user2 ..."
     />
     <Dialog.Footer>
-      <Button variant="outline" class="cursor-pointer" onclick={onCancel}>Cancel</Button>
+      <Button variant="outline" class="cursor-pointer" onclick={onCancel}>{m.cancel()}</Button>
       <Button
         variant="default"
         class="cursor-pointer"
         onclick={onInviteClick}
-        disabled={!usernamesAreValid || !usernames.trim() || isLoading}>Invite</Button
+        disabled={!usernamesAreValid || !usernames.trim() || isLoading}>{m.invite()}</Button
       >
     </Dialog.Footer>
   </Dialog.Content>

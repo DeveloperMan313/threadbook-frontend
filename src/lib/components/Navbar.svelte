@@ -7,6 +7,7 @@
   import { stateProfile } from '$lib/states';
   import ModalProfileSettings from './ModalProfileSettings.svelte';
   import UserAvatar from './UserAvatar.svelte';
+  import * as m from '$lib/paraglide/messages';
 
   const profile = $derived(stateProfile.profile as UserProfileFull);
 
@@ -39,7 +40,7 @@
       </div>
     </button>
   {:else}
-    <Button class="cursor-pointer" href={resolve('/signin', {})}>Sign in</Button>
+    <Button class="cursor-pointer" href={resolve('/signin', {})}>{m.sign_in()}</Button>
   {/if}
 </div>
 

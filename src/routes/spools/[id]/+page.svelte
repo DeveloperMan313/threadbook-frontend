@@ -30,6 +30,7 @@
   import ModalSpoolLeave from '$lib/components/ModalSpoolLeave.svelte';
   import ModalSpoolEdit from '$lib/components/ModalSpoolEdit.svelte';
   import ThreadMemberList from '$lib/components/ThreadMemberList.svelte';
+  import * as m from '$lib/paraglide/messages';
 
   let { data } = $props();
 
@@ -240,7 +241,7 @@
               isInviteUsersToSpoolModalOpen = true;
             }}
           >
-            Invite users</DropdownMenu.Item
+            {m.invite_users()}</DropdownMenu.Item
           >
           {#if userAccessLevel === 3}
             <DropdownMenu.Item
@@ -249,7 +250,7 @@
                 isSpoolEditModalOpen = true;
               }}
             >
-              Edit</DropdownMenu.Item
+              {m.edit()}</DropdownMenu.Item
             >
           {:else}
             <!-- TODO think of leave access -->
@@ -260,7 +261,7 @@
                 isSpoolLeaveModalOpen = true;
               }}
             >
-              Leave</DropdownMenu.Item
+              {m.leave()}</DropdownMenu.Item
             >
           {/if}
         </DropdownMenu.Content>
@@ -269,7 +270,7 @@
     {#if threadsAreLoading}
       <div class="flex items-center justify-center gap-2">
         <Spinner class="size-6 text-muted-foreground" />
-        <p class="text-center text-sm text-muted-foreground">Loading threads...</p>
+        <p class="text-center text-sm text-muted-foreground">{m.loading_threads()}</p>
       </div>
     {:else}
       <ThreadList {threads} />
@@ -282,7 +283,7 @@
       </div>
     {:else}
       <div class="flex h-full items-center justify-center text-center text-gray-500">
-        Select a thread to start chatting
+        {m.select_a_thread()}
       </div>
     {/if}
   </div>

@@ -4,6 +4,7 @@
   import Navbar from '$lib/components/Navbar.svelte';
   import SpoolCard from '$lib/components/SpoolCard.svelte';
   import { stateSpools } from '$lib/states';
+  import * as m from '$lib/paraglide/messages';
 
   let { data } = $props();
 
@@ -15,7 +16,7 @@
 </script>
 
 <Navbar />
-<h1 class="ps-20 pt-28 text-4xl">My spools</h1>
+<h1 class="ps-20 pt-28 text-4xl">{m.my_spools()}</h1>
 <div class="mt-10 flex w-full flex-row flex-wrap content-start justify-start gap-4 px-20 pb-5">
   {#each stateSpools.spools as spool (spool.id)}
     <SpoolCard {...spool} />
@@ -28,7 +29,7 @@
   >
     <div class="flex flex-col items-center text-muted-foreground">
       <Plus class="size-16" />
-      <p>Create spool</p>
+      <p>{m.create_spool()}</p>
     </div>
   </button>
 </div>

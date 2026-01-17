@@ -4,6 +4,7 @@
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import { ThreadApi } from '$lib/api';
   import Input from '$lib/components/ui/input/input.svelte';
+  import * as m from '$lib/paraglide/messages';
 
   let { isOpen = $bindable(), threadId, threadTitle }: ModalThreadInviteLinkCreateProps = $props();
 
@@ -53,16 +54,16 @@
 <Dialog.Root bind:open={isOpen}>
   <Dialog.Content class="sm:max-w-[425px]">
     <Dialog.Header>
-      <Dialog.Title>Create invite link</Dialog.Title>
+      <Dialog.Title>{m.create_invite_link()}</Dialog.Title>
       <Dialog.Description>
-        Create invite link for thread "{threadTitle}".
+        {m.create_invite_link_for_thread({ threadTitle })}
       </Dialog.Description>
     </Dialog.Header>
     <Input type="text" placeholder={linkBase + 'your-new-invite-link'} value={link} readonly />
     <Dialog.Footer>
-      <Button variant="outline" class="cursor-pointer" onclick={onCancel}>Cancel</Button>
+      <Button variant="outline" class="cursor-pointer" onclick={onCancel}>{m.cancel()}</Button>
       <Button variant="default" class="cursor-pointer" onclick={onButtonClick} disabled={isLoading}
-        >{link ? 'Copy' : isLoading ? 'Creating...' : 'Create'}</Button
+        >{link ? m.copy() : isLoading ? m.creating() : m.create()}</Button
       >
     </Dialog.Footer>
   </Dialog.Content>

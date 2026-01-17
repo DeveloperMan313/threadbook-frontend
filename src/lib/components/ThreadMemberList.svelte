@@ -4,6 +4,7 @@
   import UserBar from './UserBar.svelte';
   import { SpoolApi, ThreadApi } from '$lib/api';
   import { Skeleton } from '$lib/components/ui/skeleton';
+  import * as m from '$lib/paraglide/messages';
 
   const { spoolId }: ThreadMemberListProps = $props();
 
@@ -50,7 +51,7 @@
 </script>
 
 <div class="flex h-full w-full flex-col bg-primary-foreground px-4 py-5">
-  <h3 class="pb-2 text-2xl">{mode === 'private' ? 'Thread members' : 'Spool members'}</h3>
+  <h3 class="pb-2 text-2xl">{mode === 'private' ? m.thread_members() : m.spool_members()}</h3>
   <div class="w-full flex-1 space-y-2 overflow-y-auto pl-2">
     {#if isLoading}
       {#each { length: 3 }}

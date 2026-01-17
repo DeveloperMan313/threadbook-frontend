@@ -10,6 +10,7 @@
   import type { ModalProfileSettingsProps, UserProfileFull } from '$lib/types';
   import { stateProfile } from '$lib/states';
   import { nicknameGetError } from '$lib/validation';
+  import * as m from '$lib/paraglide/messages';
 
   let { isOpen = $bindable() }: ModalProfileSettingsProps = $props();
 
@@ -58,7 +59,7 @@
 <Dialog.Root bind:open={isOpen}>
   <Dialog.Content class="sm:max-w-[425px]">
     <Dialog.Header>
-      <Dialog.Title>Profile settings</Dialog.Title>
+      <Dialog.Title>{m.profile_settings()}</Dialog.Title>
     </Dialog.Header>
     <Label class="contents cursor-pointer" for="avatar">
       <UserAvatar
@@ -69,7 +70,7 @@
       />
     </Label>
     <div class="flex w-full max-w-sm flex-col gap-1.5">
-      <Label for="avatar">Profile picture</Label>
+      <Label for="avatar">{m.profile_picture()}</Label>
       <Input
         class="cursor-pointer"
         id="avatar"
@@ -83,14 +84,14 @@
       getError={nicknameGetError}
       bind:value={nickname}
       bind:isValid={nicknameIsValid}
-      label="Nickname"
+      label={m.nickname()}
     />
     <InputField
       type="text"
       getError={() => null}
       value={profile.username}
       isValid={true}
-      label="Username"
+      label={m.username()}
       disabled={true}
     />
     <InputField
@@ -98,7 +99,7 @@
       getError={() => null}
       value={profile.email}
       isValid={true}
-      label="Email"
+      label={m.email()}
       disabled={true}
     />
     <Dialog.Footer>
@@ -109,7 +110,7 @@
           isLogOutModalOpen = true;
         }}
       >
-        Log out
+        {m.log_out()}
       </Button>
       <Button
         class="cursor-pointer"
@@ -117,9 +118,9 @@
         disabled={(nickname == profile.nickname && !avatar) || isLoading}
       >
         {#if isLoading}
-          Updating...
+          {m.updating()}
         {:else}
-          Update profile
+          {m.update_profile()}
         {/if}
       </Button>
     </Dialog.Footer>

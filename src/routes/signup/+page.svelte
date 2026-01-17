@@ -12,6 +12,7 @@
   import { resolve } from '$app/paths';
   import { ChevronLeft } from '@lucide/svelte';
   import { untrack } from 'svelte';
+  import * as m from '$lib/paraglide/messages';
 
   let usernameValue = $state('');
   let usernameIsValid = $state(false);
@@ -60,10 +61,10 @@
     } catch (error) {
       if (!(error instanceof Error)) return;
       if (error.message == 'user already exists') {
-        errorMsg = 'User already exists'; // TODO more detailed errors
+        errorMsg = m.user_already_exists(); // TODO more detailed errors
         return;
       }
-      errorMsg = 'Could not sign you up, retry later';
+      errorMsg = m.could_not_sign_you_up();
     }
   };
 
@@ -85,7 +86,7 @@
       >
         <ChevronLeft />
       </Button>
-      <h2 class="m-auto w-fit text-center text-3xl select-text">Sign up</h2>
+      <h2 class="m-auto w-fit text-center text-3xl select-text">{m.sign_up()}</h2>
     </div>
     <div class="flex w-full flex-row">
       <div
@@ -113,13 +114,13 @@
           }}
           bind:value={emailValue}
           bind:isValid={emailIsValid}
-          label="Email"
+          label={m.email()}
           placeholder="email@example.com"
           noSpaces={true}
           tabindex={-1}
         />
         <Button class="cursor-pointer" onclick={advanceStage} disabled={!emailIsValid || isChecking}
-          >{#if isChecking}Checking...{:else}Next{/if}</Button
+          >{#if isChecking}{m.checking()}{:else}{m.next()}{/if}</Button
         >
       </div>
       <div class="flex w-full flex-shrink-0 flex-col gap-4 p-6">
@@ -144,7 +145,7 @@
           }}
           bind:value={usernameValue}
           bind:isValid={usernameIsValid}
-          label="Username"
+          label={m.username()}
           placeholder="user123"
           noSpaces={true}
           tabindex={-1}
@@ -153,7 +154,7 @@
           class="cursor-pointer"
           onclick={advanceStage}
           disabled={!usernameIsValid || isChecking}
-          >{#if isChecking}Checking...{:else}Next{/if}</Button
+          >{#if isChecking}{m.checking()}{:else}{m.next()}{/if}</Button
         >
       </div>
       <div class="flex w-full flex-shrink-0 flex-col gap-4 p-6">
@@ -162,13 +163,13 @@
           getError={signupPasswordGetError}
           bind:value={passwordValue}
           bind:isValid={passwordIsValid}
-          label="Password"
-          placeholder="Enter password"
+          label={m.password()}
+          placeholder={m.enter_password()}
           noSpaces={true}
           tabindex={-1}
         />
         <Button class="cursor-pointer" onclick={advanceStage} disabled={!passwordIsValid}
-          >Next</Button
+          >{m.next()}</Button
         >
       </div>
       <div class="flex w-full flex-shrink-0 flex-col gap-4 p-6">
@@ -177,20 +178,22 @@
           getError={passwordRepeatedGetError}
           bind:value={passwordRepeatedValue}
           bind:isValid={passwordRepeatedIsValid}
-          label="Repeat password"
-          placeholder="Enter password"
+          label={m.repeat_password()}
+          placeholder={m.enter_password()}
           noSpaces={true}
           tabindex={-1}
         />
         <Button
           class="cursor-pointer"
           onclick={makeRequest}
-          disabled={!passwordRepeatedIsValid || errorMsg != ''}>Sign up</Button
+          disabled={!passwordRepeatedIsValid || errorMsg != ''}>{m.sign_up()}</Button
         >
       </div>
     </div>
     {#if errorMsg}<p class="mb-4 text-center text-sm text-destructive">{errorMsg}</p>{/if}
-    <p class="mb-1 text-center text-sm">Already have an account?</p>
-    <p class="text-center text-sm underline"><a href={resolve('/signin', {})}>sign in</a></p>
+    <p class="mb-1 text-center text-sm">{m.already_have_an_account()}</p>
+    <p class="text-center text-sm underline">
+      <a href={resolve('/signin', {})}>{m.sign_in_suggestion()}</a>
+    </p>
   </div>
 </div>
