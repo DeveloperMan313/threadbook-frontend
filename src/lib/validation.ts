@@ -1,5 +1,6 @@
 import { AuthApi } from './api';
 import { debounce } from './helpers';
+import * as m from '$lib/paraglide/messages';
 
 /**
  * Check if length is in bounds
@@ -25,9 +26,9 @@ export function lengthGetError(
   if (isValid) {
     return null;
   }
-  if (bounds.min && bounds.max) return `Between ${min} and ${max} symbols`;
-  if (bounds.min) return `At least ${min} symbols`;
-  return `No more than ${max} symbols`;
+  if (bounds.min && bounds.max) return m.between_min_and_max_symbols({ min, max });
+  if (bounds.min) return m.at_least_min_symbols({ min });
+  return m.no_more_than_max_symbols({ max });
 }
 
 const checkUsernameDebounced = debounce(AuthApi.checkUsername, 1000);
@@ -43,12 +44,12 @@ export async function signupUsernameGetError(value: string): Promise<string | nu
     return lengthError;
   }
   if (!/^[a-zA-Z0-9]+$/.test(value)) {
-    return 'Only letters and digits';
+    return m.only_letters_and_digits();
   }
   const checkUsernamePromise = checkUsernameDebounced({ username: value });
   if (!checkUsernamePromise) return null;
   const response = await checkUsernamePromise;
-  if (response.is_exist) return 'Username already taken';
+  if (response.is_exist) return m.username_already_taken();
   return null;
 }
 
@@ -72,12 +73,12 @@ export async function signupEmailGetError(value: string): Promise<string | null>
   const emailRegexp = /^[^@]+@[^@]+\.[^@]+$/;
   const isValid = emailRegexp.test(value);
   if (!isValid) {
-    return 'Invalid email';
+    return m.invalid_email();
   }
   const checkUsernamePromise = checkEmailDebounced({ email: value });
   if (!checkUsernamePromise) return null;
   const response = await checkUsernamePromise;
-  if (response.is_exist) return 'Email already taken';
+  if (response.is_exist) return m.email_already_taken();
   return null;
 }
 
@@ -92,7 +93,7 @@ export function emailGetError(value: string): string | null {
   if (isValid) {
     return null;
   }
-  return 'Invalid email';
+  return m.invalid_email();
 }
 
 /**
@@ -109,7 +110,7 @@ export function signupPasswordGetError(value: string): string | null {
   if (isValid) {
     return null;
   }
-  return `Capital and lowercase letters and digits`;
+  return m.capital_and_lowercase_letters_and_digits();
 }
 
 /**
@@ -122,7 +123,7 @@ export function signinPasswordGetError(value: string): string | null {
   if (isValid) {
     return null;
   }
-  return `Incorrect password`;
+  return m.incorrect_password();
 }
 
 /**
@@ -136,7 +137,7 @@ export function getPasswordRepeatGetError(passwordValue: string): (value: string
     if (!passwordValue || isValid) {
       return null;
     }
-    return 'Passwords do not match';
+    return m.passwords_do_not_match();
   };
 }
 
@@ -165,11 +166,11 @@ export function spoolNameGetError(value: string): string | null {
  */
 export function inviteUsernamesGetError(value: string): string | null {
   if (!value) {
-    return 'Input usernames';
+    return m.input_usernames();
   }
   const limit = 100;
   if (value.split(' ').length > limit) {
-    return `No more than ${limit} usernames`;
+    return m.no_more_than_limit_usernames({ limit });
   }
   return null;
 }

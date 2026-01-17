@@ -1,4 +1,127 @@
 {
-	"$schema": "https://inlang.com/schema/inlang-message-format",
-	"hello_world": "Hello, {name} from ru!"
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+
+  "loading_messages": "Загрузка сообщений...",
+  "no_messages_yet": "Ещё нет сообщений",
+  "start_a_conversation": "Начните общаться",
+  "thread_start": "Начало треда",
+  "type_a_message": "Напишите сообщение...",
+  "send": "Отправить",
+
+  "invite_users_to_spool": "Пригласить пользователей в спул \"{spoolName}\".",
+  "usernames": "Имена пользователей",
+  "cancel": "Отменить",
+  "invite": "Пригласить",
+
+  "invite_users_to_thread": "Пригласить пользователей в тред \"{threadTitle}\".",
+
+  "log_out": "Выйти",
+  "are_you_sure_log_out": "Вы уверены, что хотите выйти из аккаунта \"{account}\"?",
+
+  "profile_settings": "Настройки профиля",
+  "profile_picture": "Изображение профиля",
+  "nickname": "Никнейм",
+  "language": "Язык",
+  "updating": "Обновляется...",
+  "update_profile": "Обновить профиль",
+
+  "new_spool": "Новый спул",
+  "create_a_new_spool": "Создать новый спул.",
+  "spool_name": "Название спула",
+  "enter_spool_name": "Введите название спула",
+  "banner_image": "Изображение баннера",
+  "creating": "Создается...",
+  "create": "Создать",
+
+  "edit_spool": "Редактировать спул",
+  "change_name_or_banner": "Изменить название или баннер спула \"{spoolName}\".",
+  "saving": "Сохранение...",
+  "save": "Сохранить",
+
+  "leave_spool": "Выйти из спула",
+  "are_you_sure_leave_spool": "Вы уверены, что хотите выйти из спула \"{spoolName}\"? Вы не сможете вернуться без приглашения.",
+
+  "close_thread": "Закрыть тред",
+  "are_you_sure_close_thread": "Вы уверены, что хотите закрыть тред \"{threadTitle}\"? Это действие не может быть отменено.",
+  "close": "Закрыть",
+
+  "new_private_thread": "Новый приватный тред",
+  "new_public_thread": "Новый публичный тред",
+  "create_a_new_private_thread": "Создать новый приватный тред в этом спуле.",
+  "create_a_new_public_thread": "Создать новый публичный тред в этом спуле.",
+  "thread_title": "Название треда",
+  "enter_thread_title": "Введите название треда",
+
+  "create_invite_link": "Создать приглашение",
+  "create_invite_link_for_thread": "Создать пригласительную ссылку для треда \"{threadTitle}\".",
+  "copy": "Копировать",
+
+  "join_invite_link": "Присоединиться по приглашению",
+  "join_invite_link_for_thread": "Присоединиться по приглашению в таинственный тред :3 ?",
+  "joining": "Присоединяемся...",
+  "join": "Присоединиться",
+
+  "rename_thread": "Переименовать тред",
+  "enter_new_thread_title": "Введите новое название треда.",
+  "enter_new_title": "Введите новое название",
+
+  "rename": "Переименовать",
+
+  "private_threads": "Приватные",
+  "no_threads": "Нет тредов",
+  "public_threads": "Публичные",
+  "closed_threads": "Закрытые",
+
+  "thread_members": "Участники треда",
+  "spool_members": "Участники спула",
+
+  "voice_chat": "Голосовой чат",
+  "fullscreen": "Полный экран",
+  "minimize": "Свернуть",
+  "exit_fullscreen": "Выйти из полного экрана",
+  "expand": "Развернуть",
+  "you": "Вы",
+  "drag_to_resize": "Тяните для изменения размера",
+
+  "between_min_and_max_symbols": "От {min} до {max} символов",
+  "at_least_min_symbols": "От {min} символов",
+  "no_more_than_max_symbols": "Не более {max} символов",
+  "only_letters_and_digits": "Только буквы и цифры",
+  "username_already_taken": "Имя пользователя занято",
+  "invalid_email": "Неверный email",
+  "email_already_taken": "Email занят",
+  "capital_and_lowercase_letters_and_digits": "Заглавные и строчные буквы и цифры",
+  "incorrect_password": "Неверный пароль",
+  "passwords_do_not_match": "Пароли не совпадают",
+  "input_usernames": "Введите имена пользователей",
+  "no_more_than_limit_usernames": "Не более {limit} имен",
+
+  "incorrect_email_or_password": "Неверный email или пароль",
+  "could_not_sign_you_in": "Ошибка входа, попробуйте позже",
+  "sign_in": "Войти",
+  "email": "Email",
+  "enter_email": "Введите email",
+  "next": "Далее",
+  "password": "Пароль",
+  "enter_password": "Введите пароль",
+  "dont_have_an_account": "Нет аккаунта?",
+  "sign_up_suggestion": "зарегистрируйтесь",
+
+  "user_already_exists": "Пользователь уже существует",
+  "could_not_sign_you_up": "Ошибка регистрации, попробуйте позже",
+  "sign_up": "Создать аккаунт",
+  "checking": "Проверяем...",
+  "username": "Имя пользователя",
+  "repeat_password": "Повторите пароль",
+  "already_have_an_account": "Уже есть аккаунт?",
+  "sign_in_suggestion": "войдите",
+
+  "invite_users": "Пригласить людей",
+  "edit": "Редактировать",
+  "leave": "Выйти",
+  "loading_threads": "Загрузка тредов...",
+  "select_a_thread": "Выберите тред, чтобы начать общение",
+
+  "my_spools": "Мои спулы",
+  "create_spool": "Создать спул"
 }

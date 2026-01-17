@@ -36,8 +36,14 @@
 <Dialog.Root bind:open={isOpen}>
   <Dialog.Content class="sm:max-w-[425px]">
     <Dialog.Header>
-      <Dialog.Title>{m.new_thread({ threadType })}</Dialog.Title>
-      <Dialog.Description>{m.create_a_new_thread({ threadType })}</Dialog.Description>
+      <Dialog.Title
+        >{threadType === 'private' ? m.new_private_thread() : m.new_public_thread()}</Dialog.Title
+      >
+      <Dialog.Description
+        >{threadType === 'private'
+          ? m.create_a_new_private_thread()
+          : m.create_a_new_public_thread()}</Dialog.Description
+      >
     </Dialog.Header>
     <InputField
       type="text"

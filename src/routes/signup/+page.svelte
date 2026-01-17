@@ -88,7 +88,7 @@
       >
         <ChevronLeft />
       </Button>
-      <h2 class="m-auto w-fit text-center text-3xl select-text">{m.sign_up()}</h2>
+      <h2 class="m-auto w-fit px-16 text-center text-3xl select-text">{m.sign_up()}</h2>
     </div>
     <div class="flex w-full flex-row">
       <div

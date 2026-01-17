@@ -234,7 +234,7 @@
     {#if currentThread && threadChats.get(currentThread.id)?.initialLoading}
       <div class="flex h-full flex-col items-center justify-center gap-2">
         <Spinner class="size-10 text-muted-foreground" />
-        <p class="text-center text-sm text-muted-foreground">Loading messages...</p>
+        <p class="text-center text-sm text-muted-foreground">{m.loading_messages()}</p>
       </div>
     {:else if messages.length === 0}
       <div class="flex h-full items-center justify-center text-gray-500">

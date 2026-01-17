@@ -1,10 +1,11 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
 
+  "loading_messages": "Loading messages...",
   "no_messages_yet": "No messages yet",
-  "start_a_conversation": "Start a conversation!",
+  "start_a_conversation": "Start a conversation",
   "thread_start": "Thread start",
-  "type_a_message": "Type a message...",
+  "type_a_message": "Write a message...",
   "send": "Send",
 
   "invite_users_to_spool": "Invite users to spool \"{spoolName}\".",
@@ -41,11 +42,13 @@
   "are_you_sure_leave_spool": "Are you sure you want to leave from spool \"{spoolName}\"? You will not be able to return without an invite.",
 
   "close_thread": "Close thread",
-  "are_you_sure_close_thread": "Are you sure you want to close \"{threadTitle}\"? This action cannot be undone.",
+  "are_you_sure_close_thread": "Are you sure you want to close thread \"{threadTitle}\"? This action cannot be undone.",
   "close": "Close",
 
-  "new_thread": "New {threadType} thread",
-  "create_a_new_thread": "Create a new {threadType} thread in this spool.",
+  "new_private_thread": "New private thread",
+  "new_public_thread": "New public thread",
+  "create_a_new_private_thread": "Create a new private thread in this spool.",
+  "create_a_new_public_thread": "Create a new public thread in this spool.",
   "thread_title": "Thread title",
   "enter_thread_title": "Enter thread title",
 
@@ -64,21 +67,34 @@
 
   "rename": "Rename",
 
-  "private": "Private",
+  "private_threads": "Private",
   "no_threads": "No threads",
-  "public": "Public",
-  "closed": "Closed",
+  "public_threads": "Public",
+  "closed_threads": "Closed",
 
   "thread_members": "Thread members",
   "spool_members": "Spool members",
 
-  "voice_chat": "Voice Chat",
+  "voice_chat": "Voice chat",
   "fullscreen": "Fullscreen",
   "minimize": "Minimize",
   "exit_fullscreen": "Exit fullscreen",
   "expand": "Expand",
   "you": "You",
   "drag_to_resize": "Drag to resize",
+
+  "between_min_and_max_symbols": "Between {min} and {max} symbols",
+  "at_least_min_symbols": "At least {min} symbols",
+  "no_more_than_max_symbols": "No more than {max} symbols",
+  "only_letters_and_digits": "Only letters and digits",
+  "username_already_taken": "Username already taken",
+  "invalid_email": "Invalid email",
+  "email_already_taken": "Email already taken",
+  "capital_and_lowercase_letters_and_digits": "Capital and lowercase letters and digits",
+  "incorrect_password": "Incorrect password",
+  "passwords_do_not_match": "Passwords do not match",
+  "input_usernames": "Input usernames",
+  "no_more_than_limit_usernames": "No more than {limit} usernames",
 
   "incorrect_email_or_password": "Incorrect email or password",
   "could_not_sign_you_in": "Could not sign you in, retry later",

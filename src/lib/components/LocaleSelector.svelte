@@ -6,7 +6,10 @@
 
   const { class: className }: LocaleSelectorProps = $props();
 
-  const locales: { value: Locale; label: string }[] = [{ value: 'en', label: 'English' }];
+  const locales: { value: Locale; label: string }[] = [
+    { value: 'en', label: 'English' },
+    { value: 'ru', label: 'Русский' }
+  ];
 
   let currLocale = $state(getLocale());
 

@@ -22,7 +22,7 @@
 <div class="space-y-2">
   <div>
     <div class="mb-2 flex items-center justify-between">
-      <p class="text-sm font-medium text-muted-foreground">{m.private()}</p>
+      <p class="text-sm font-medium text-muted-foreground">{m.private_threads()}</p>
       <div class="flex items-center gap-1">
         {#if userAccessLevel > 0}
           <Button
@@ -64,7 +64,7 @@
 
   <div>
     <div class="mb-2 flex items-center justify-between">
-      <p class="text-sm font-medium text-muted-foreground">{m.public()}</p>
+      <p class="text-sm font-medium text-muted-foreground">{m.public_threads()}</p>
       <div class="flex items-center gap-1">
         {#if userAccessLevel > 0}
           <Button
@@ -106,7 +106,7 @@
 
   <div>
     <div class="mb-2 flex items-center justify-between">
-      <p class="text-sm font-medium text-muted-foreground">{m.closed()}</p>
+      <p class="text-sm font-medium text-muted-foreground">{m.closed_threads()}</p>
       <Button
         class="size-6 cursor-pointer rounded-full"
         size="icon"
