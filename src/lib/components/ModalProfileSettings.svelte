@@ -11,6 +11,7 @@
   import { stateProfile } from '$lib/states';
   import { nicknameGetError } from '$lib/validation';
   import * as m from '$lib/paraglide/messages';
+  import LocaleSelector from './LocaleSelector.svelte';
 
   let { isOpen = $bindable() }: ModalProfileSettingsProps = $props();
 
@@ -86,6 +87,10 @@
       bind:isValid={nicknameIsValid}
       label={m.nickname()}
     />
+    <div class="flex w-full max-w-sm flex-col gap-1.5">
+      <Label for="locale-input">{m.language()}</Label>
+      <LocaleSelector class="w-full" />
+    </div>
     <InputField
       type="text"
       getError={() => null}

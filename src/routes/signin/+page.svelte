@@ -8,6 +8,7 @@
   import { ChevronLeft } from '@lucide/svelte';
   import { untrack } from 'svelte';
   import * as m from '$lib/paraglide/messages';
+  import LocaleSelector from '$lib/components/LocaleSelector.svelte';
 
   let emailValue = $state('');
   let emailIsValid = $state(false);
@@ -53,6 +54,7 @@
   };
 </script>
 
+<LocaleSelector class="absolute top-4 right-4" />
 <div class="flex h-full w-full items-center justify-center">
   <div class="w-72 overflow-hidden rounded-2xl bg-background py-5">
     <div class="relative select-none">

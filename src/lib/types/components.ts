@@ -29,6 +29,10 @@ export interface InputFieldProps {
   tabindex?: number;
 }
 
+export interface LocaleSelectorProps {
+  class?: string;
+}
+
 export interface MessageProps {
   id: number;
   thread_id: number;
