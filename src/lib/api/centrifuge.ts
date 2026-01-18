@@ -59,7 +59,6 @@ const routeUserPublication = (ctx: PublicationContext) => {
 
 let centrifuge: Centrifuge | undefined = undefined;
 let tokens: GetCentrifugeTokensResponse | undefined = undefined;
-let subbedToChannels: string[] = [];
 
 export const centrifugeClient = {
   async connect(): Promise<void> {
@@ -73,17 +72,6 @@ export const centrifugeClient = {
       token: tokens!.ConnectToken,
       getToken: async () => {
         await this.getTokens(stateSpools.currentSpoolId);
-        const oldSubbedToChannels = subbedToChannels;
-        this.unsubFromUser();
-        this.unsubFromThreads();
-        subbedToChannels = oldSubbedToChannels;
-        subbedToChannels.forEach((chan) => {
-          if (chan.startsWith('user')) {
-            this.subToUser();
-            return;
-          }
-          this.subToThread(Number(chan.split('#')[1]));
-        }, this);
         return tokens!.ConnectToken;
       }
     });
@@ -102,7 +90,6 @@ export const centrifugeClient = {
 
     centrifuge = undefined;
     tokens = undefined;
-    subbedToChannels = [];
 
     idToThreadHandlers = {};
     userHandlers = {};
@@ -153,8 +140,6 @@ export const centrifugeClient = {
     sub.subscribe();
 
     idToThreadHandlers[thread_id] ||= {};
-
-    subbedToChannels.push(`thread#${thread_id}`);
   },
 
   unsubFromThreads(): void {
@@ -166,15 +151,13 @@ export const centrifugeClient = {
       throw Error('no tokens');
     }
 
-    subbedToChannels.forEach((chan) => {
+    Object.keys(centrifuge.subscriptions).forEach((chan) => {
       if (chan.startsWith('user')) return;
       const sub = centrifuge!.getSubscription(chan)!;
       sub.unsubscribe();
       sub.removeAllListeners();
       centrifuge!.removeSubscription(sub);
     }, this);
-
-    subbedToChannels = subbedToChannels.filter((channel) => !channel.startsWith('thread'));
   },
 
   onThread<T extends keyof ThreadHandlers>(
@@ -224,8 +207,6 @@ export const centrifugeClient = {
     });
 
     sub.subscribe();
-
-    subbedToChannels.push(channel);
   },
 
   unsubFromUser(): void {
@@ -237,7 +218,9 @@ export const centrifugeClient = {
       throw Error('no tokens');
     }
 
-    const userChannel = subbedToChannels.find((channel) => channel.startsWith('user'));
+    const userChannel = Object.keys(centrifuge.subscriptions).find((channel) =>
+      channel.startsWith('user')
+    );
     if (!userChannel) return;
 
     const sub = centrifuge.getSubscription(userChannel)!;
@@ -245,8 +228,6 @@ export const centrifugeClient = {
     sub.unsubscribe();
     sub.removeAllListeners();
     centrifuge.removeSubscription(sub);
-
-    subbedToChannels = subbedToChannels.filter((channel) => !channel.startsWith('user'));
   },
 
   onUser<T extends keyof UserHandlers>(event: T, handler: UserHandlers[T]) {
