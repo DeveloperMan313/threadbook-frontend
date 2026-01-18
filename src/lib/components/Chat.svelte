@@ -1,18 +1,17 @@
 <script lang="ts">
-  import { getContext, onDestroy, tick, untrack } from 'svelte';
+  import { getContext, tick, untrack } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import Message from './Message.svelte';
   import type { ChatState, MessageProps, ThreadProps, WsMessageCreated } from '$lib/types';
-  import type { SvelteMap } from 'svelte/reactivity';
   import { centrifugeClient, MessageApi } from '$lib/api';
   import { stateProfile } from '$lib/states';
   import Spinner from '$lib/components/ui/spinner/spinner.svelte';
   import { Paperclip, X } from '@lucide/svelte';
   import * as m from '$lib/paraglide/messages';
+  import { stateThreadChats } from '$lib/states/threadChats.svelte';
 
-  const { threadChats, getCurrentThreadId, getThreads } = getContext('threads') as {
-    threadChats: SvelteMap<number, ChatState>;
+  const { getCurrentThreadId, getThreads } = getContext('threads') as {
     getCurrentThreadId: () => number | null;
     getThreads: () => ThreadProps[];
   };
@@ -25,8 +24,8 @@
   const renderMessage = (threadId: number, message: MessageProps, mine: boolean = false) => {
     lastMessageMine = mine;
 
-    const chat = threadChats.get(threadId) as ChatState;
-    threadChats.set(threadId, {
+    const chat = stateThreadChats.get(threadId) as ChatState;
+    stateThreadChats.set(threadId, {
       ...chat,
       messages: [...chat.messages, message]
     });
@@ -42,11 +41,11 @@
 
   // Use captured thread instead of currentThread to avoid race condition
   const handleEmptyThreadMessages = (thread: ThreadProps) => {
-    if (threadChats.has(thread.id)) {
+    if (stateThreadChats.has(thread.id)) {
       return;
     }
 
-    threadChats.set(thread.id, {
+    stateThreadChats.set(thread.id, {
       thread: thread,
       messages: [],
       messageText: '',
@@ -57,7 +56,7 @@
     MessageApi.getThreadMessages({ thread_id: thread.id, limit: messageLoadLimit }).then(
       async (messages) => {
         cacheProfilesFromUsernames(messages.map((m) => m.username));
-        threadChats.set(thread.id, {
+        stateThreadChats.set(thread.id, {
           thread: thread,
           messages: messages,
           messageText: '',
@@ -77,15 +76,13 @@
       payload.created_at *= 1000; // convert s to ms
       renderMessage(thread.id, payload, mine);
     });
-
-    onDestroy(() => {
-      centrifugeClient.clearThread(thread.id, 'message.created');
-    });
   };
 
-  onDestroy(() => {
-    centrifugeClient.unsubFromThreads();
-  });
+  // HOTFIX: never unsub from threads, stateThreadChats never clears
+  // TODO think of WS unsubscribe strategy
+  // onDestroy(() => {
+  //   centrifugeClient.unsubFromThreads();
+  // });
 
   let currentThread = $derived.by(() => {
     if (!getCurrentThreadId()) return undefined;
@@ -94,13 +91,13 @@
 
   let messages = $derived.by(() => {
     if (!currentThread) return [];
-    const chat = threadChats.get(currentThread.id);
+    const chat = stateThreadChats.get(currentThread.id);
     return chat ? chat.messages : [];
   });
 
   let messageText = $derived.by(() => {
     if (!currentThread) return '';
-    const chat = threadChats.get(currentThread.id);
+    const chat = stateThreadChats.get(currentThread.id);
     return chat ? chat.messageText : '';
   });
 
@@ -129,7 +126,7 @@
   $effect(() => {
     const thread = currentThread; // capture thread
     if (!thread) return;
-    const chat = threadChats.get(thread.id);
+    const chat = stateThreadChats.get(thread.id);
     const msgs = untrack(() => messages);
     // track only currentThread and isAtTop
     if (isAtTop && chat && !chat.firstMessageLoaded && msgs.length > 0) {
@@ -143,7 +140,7 @@
         const scrollHeightBefore = messagesContainer.scrollHeight;
         // cache and render new messages
         cacheProfilesFromUsernames(msgs.map((m) => m.username));
-        threadChats.set(thread.id, {
+        stateThreadChats.set(thread.id, {
           ...chat,
           messages: [...fetchedMessages, ...chat.messages],
           firstMessageLoaded: fetchedMessages.length < messageLoadLimit
@@ -209,8 +206,8 @@
         content: message.content,
         files: selectedFilesDT.files
       });
-      const currentChat = threadChats.get(currentThread.id) as ChatState;
-      threadChats.set(currentThread.id, {
+      const currentChat = stateThreadChats.get(currentThread.id) as ChatState;
+      stateThreadChats.set(currentThread.id, {
         ...currentChat,
         messageText: ''
       });
@@ -231,7 +228,7 @@
 
 <div class="flex h-full flex-col">
   <div class="flex-1 overflow-y-auto p-4" bind:this={messagesContainer} onscroll={handleScroll}>
-    {#if currentThread && threadChats.get(currentThread.id)?.initialLoading}
+    {#if currentThread && stateThreadChats.get(currentThread.id)?.initialLoading}
       <div class="flex h-full flex-col items-center justify-center gap-2">
         <Spinner class="size-10 text-muted-foreground" />
         <p class="text-center text-sm text-muted-foreground">{m.loading_messages()}</p>
@@ -246,7 +243,7 @@
     {:else}
       <div>
         <div class="flex h-10 w-full items-center justify-center">
-          {#if currentThread && threadChats.get(currentThread.id)?.firstMessageLoaded}
+          {#if currentThread && stateThreadChats.get(currentThread.id)?.firstMessageLoaded}
             <p class="text-lg text-muted-foreground">{m.thread_start()}</p>
           {:else}
             <Spinner
@@ -306,9 +303,9 @@
       <Input
         bind:value={messageText}
         oninput={() => {
-          // avoid mutating threadChats and causing an effect
+          // avoid mutating stateThreadChats and causing an effect
           if (currentThread) {
-            const chat = threadChats.get(currentThread.id);
+            const chat = stateThreadChats.get(currentThread.id);
             if (chat) {
               chat.messageText = messageText;
             }

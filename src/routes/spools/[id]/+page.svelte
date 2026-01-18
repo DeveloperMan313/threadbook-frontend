@@ -1,14 +1,13 @@
 <script lang="ts">
-  import { useSwipe, type SwipeCustomEvent, type GestureCustomEvent } from 'svelte-gestures';
+  import { useSwipe, type SwipeCustomEvent } from 'svelte-gestures';
   import { Button } from '$lib/components/ui/button/index.js';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
   import Navbar from '$lib/components/Navbar.svelte';
   import SpoolDock from '$lib/components/SpoolDock.svelte';
   import ThreadList from '$lib/components/ThreadList.svelte';
-  import { onDestroy, setContext, untrack } from 'svelte';
+  import { onDestroy, setContext } from 'svelte';
   import { centrifugeClient, ProfileApi, ThreadApi } from '$lib/api';
   import type {
-    ChatState,
     ThreadProps,
     ThreadType,
     UserProfilePublic,
@@ -38,8 +37,6 @@
     throw new Error('unauthorized');
   }
 
-  let threadChats = new SvelteMap<number, ChatState>();
-
   let threads: Array<ThreadProps> = $state([]);
   let currentThreadId = $state<number | null>(null);
   let threadsAreLoading = $state(true);
@@ -65,7 +62,6 @@
   });
 
   setContext('threads', {
-    threadChats,
     closeThread: (id: number) => {
       ThreadApi.closeThread({ id });
     },
