@@ -65,6 +65,8 @@
       }
     );
 
+    if (thread.is_closed) return;
+
     centrifugeClient.subToThread(threadId);
 
     centrifugeClient.onThread(threadId, 'message.created', (payload: WsMessageCreated) => {
@@ -83,7 +85,7 @@
 
   const currentThreadId = $derived(getCurrentThreadId());
 
-  let messages = $derived.by(() => {
+  const messages = $derived.by(() => {
     if (!currentThreadId) return [];
     const chat = stateThreadChats.get(currentThreadId);
     return chat ? chat.messages : [];
@@ -94,6 +96,10 @@
     const chat = stateThreadChats.get(currentThreadId);
     return chat ? chat.messageText : '';
   });
+
+  const currentThreadIsClosed = $derived(
+    Boolean(currentThreadId && getThreads().find((t) => t.id === currentThreadId)!.is_closed)
+  );
 
   // thread switch
   $effect(() => {
@@ -196,22 +202,23 @@
     };
 
     isSendingMessage = true;
-    try {
-      await MessageApi.sendThreadMessage({
-        thread_id: currentThreadId,
-        content: message.content,
-        files: selectedFilesDT.files
-      });
-      const currentChat = stateThreadChats.get(currentThreadId) as ChatState;
-      stateThreadChats.set(currentThreadId, {
-        ...currentChat,
-        messageText: ''
-      });
-    } finally {
+
+    MessageApi.sendThreadMessage({
+      thread_id: currentThreadId,
+      content: message.content,
+      files: selectedFilesDT.files
+    }).finally(() => {
       isSendingMessage = false;
-      selectedFilesDT.items.clear();
-      selectedFilenames = [];
-    }
+    });
+
+    // WARNING: user will lose message data if request fails, but UI is more responsive that way
+    const currentChat = stateThreadChats.get(currentThreadId)!;
+    stateThreadChats.set(currentThreadId, {
+      ...currentChat,
+      messageText: ''
+    });
+    selectedFilesDT.items.clear();
+    selectedFilenames = [];
   };
 
   const handleKeyPress = (event: KeyboardEvent) => {
@@ -293,6 +300,7 @@
         class="cursor-pointer"
         variant="ghost"
         size="icon"
+        disabled={currentThreadIsClosed}
       >
         <Paperclip />
       </Button>
@@ -310,11 +318,14 @@
         placeholder={m.type_a_message()}
         class="flex-1"
         onkeydown={handleKeyPress}
+        disabled={currentThreadIsClosed}
       />
       <Button
         class="cursor-pointer"
         onclick={sendMessage}
-        disabled={(messageText.trim() === '' && selectedFilenames.length === 0) || isSendingMessage}
+        disabled={currentThreadIsClosed ||
+          (messageText.trim() === '' && selectedFilenames.length === 0) ||
+          isSendingMessage}
       >
         {m.send()}
       </Button>
