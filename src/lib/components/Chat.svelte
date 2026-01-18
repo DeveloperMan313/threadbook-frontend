@@ -20,7 +20,7 @@
     cacheProfilesFromUsernames: (usernames: string[]) => Promise<void>;
   };
 
-  // Use captured threadId instead of currentThread.id to avoid race condition
+  // Use captured threadId instead of currentThreadId to avoid race condition
   const renderMessage = (threadId: number, message: MessageProps, mine: boolean = false) => {
     lastMessageMine = mine;
 
@@ -39,13 +39,10 @@
 
   const messageLoadLimit = 15; // TODO derived state based on client ui size
 
-  // Use captured thread instead of currentThread to avoid race condition
-  const handleEmptyThreadMessages = (thread: ThreadProps) => {
-    if (stateThreadChats.has(thread.id)) {
-      return;
-    }
-
-    stateThreadChats.set(thread.id, {
+  // Use captured threadId instead of currentThreadId to avoid race condition
+  const handleNotLoadedThread = (threadId: number) => {
+    const thread = getThreads().find((t) => t.id === threadId)!;
+    stateThreadChats.set(threadId, {
       thread: thread,
       messages: [],
       messageText: '',
@@ -53,10 +50,10 @@
       initialLoading: true
     });
 
-    MessageApi.getThreadMessages({ thread_id: thread.id, limit: messageLoadLimit }).then(
+    MessageApi.getThreadMessages({ thread_id: threadId, limit: messageLoadLimit }).then(
       async (messages) => {
         cacheProfilesFromUsernames(messages.map((m) => m.username));
-        stateThreadChats.set(thread.id, {
+        stateThreadChats.set(threadId, {
           thread: thread,
           messages: messages,
           messageText: '',
@@ -68,13 +65,13 @@
       }
     );
 
-    centrifugeClient.subToThread(thread.id);
+    centrifugeClient.subToThread(threadId);
 
-    centrifugeClient.onThread(thread.id, 'message.created', (payload: WsMessageCreated) => {
+    centrifugeClient.onThread(threadId, 'message.created', (payload: WsMessageCreated) => {
       const mine = payload.username == stateProfile.profile!.username;
       cacheProfilesFromUsernames([payload.username]);
       payload.created_at *= 1000; // convert s to ms
-      renderMessage(thread.id, payload, mine);
+      renderMessage(threadId, payload, mine);
     });
   };
 
@@ -84,28 +81,27 @@
   //   centrifugeClient.unsubFromThreads();
   // });
 
-  let currentThread = $derived.by(() => {
-    if (!getCurrentThreadId()) return undefined;
-    return getThreads().find((t) => t.id === getCurrentThreadId());
-  });
+  const currentThreadId = $derived(getCurrentThreadId());
 
   let messages = $derived.by(() => {
-    if (!currentThread) return [];
-    const chat = stateThreadChats.get(currentThread.id);
+    if (!currentThreadId) return [];
+    const chat = stateThreadChats.get(currentThreadId);
     return chat ? chat.messages : [];
   });
 
   let messageText = $derived.by(() => {
-    if (!currentThread) return '';
-    const chat = stateThreadChats.get(currentThread.id);
+    if (!currentThreadId) return '';
+    const chat = stateThreadChats.get(currentThreadId);
     return chat ? chat.messageText : '';
   });
 
   // thread switch
   $effect(() => {
-    if (currentThread) {
-      let thread = currentThread;
-      handleEmptyThreadMessages(thread);
+    if (currentThreadId) {
+      let threadId = currentThreadId;
+      if (!stateThreadChats.has(threadId)) {
+        handleNotLoadedThread(threadId);
+      }
       handleScroll(); // might be at top after thread switch
     }
   });
@@ -124,14 +120,14 @@
 
   // load older messages chunk on scroll
   $effect(() => {
-    const thread = currentThread; // capture thread
-    if (!thread) return;
-    const chat = stateThreadChats.get(thread.id);
+    const threadId = currentThreadId; // capture threadId
+    if (!threadId) return;
+    const chat = stateThreadChats.get(threadId);
     const msgs = untrack(() => messages);
     // track only currentThread and isAtTop
     if (isAtTop && chat && !chat.firstMessageLoaded && msgs.length > 0) {
       MessageApi.getThreadMessages({
-        thread_id: thread.id,
+        thread_id: threadId,
         cursor_id: msgs[0].id,
         forward: false
       }).then((fetchedMessages) => {
@@ -140,7 +136,7 @@
         const scrollHeightBefore = messagesContainer.scrollHeight;
         // cache and render new messages
         cacheProfilesFromUsernames(msgs.map((m) => m.username));
-        stateThreadChats.set(thread.id, {
+        stateThreadChats.set(threadId, {
           ...chat,
           messages: [...fetchedMessages, ...chat.messages],
           firstMessageLoaded: fetchedMessages.length < messageLoadLimit
@@ -186,7 +182,7 @@
   };
 
   const sendMessage = async () => {
-    if (!currentThread || isSendingMessage) return;
+    if (!currentThreadId || isSendingMessage) return;
 
     if (messageText.trim() === '' && selectedFilenames.length === 0) return;
 
@@ -196,18 +192,18 @@
       content: messageText,
       created_at: new Date().getTime(),
       updated_at: new Date().getTime(),
-      thread_id: currentThread.id
+      thread_id: currentThreadId
     };
 
     isSendingMessage = true;
     try {
       await MessageApi.sendThreadMessage({
-        thread_id: currentThread.id,
+        thread_id: currentThreadId,
         content: message.content,
         files: selectedFilesDT.files
       });
-      const currentChat = stateThreadChats.get(currentThread.id) as ChatState;
-      stateThreadChats.set(currentThread.id, {
+      const currentChat = stateThreadChats.get(currentThreadId) as ChatState;
+      stateThreadChats.set(currentThreadId, {
         ...currentChat,
         messageText: ''
       });
@@ -228,7 +224,7 @@
 
 <div class="flex h-full flex-col">
   <div class="flex-1 overflow-y-auto p-4" bind:this={messagesContainer} onscroll={handleScroll}>
-    {#if currentThread && stateThreadChats.get(currentThread.id)?.initialLoading}
+    {#if currentThreadId && stateThreadChats.get(currentThreadId)?.initialLoading}
       <div class="flex h-full flex-col items-center justify-center gap-2">
         <Spinner class="size-10 text-muted-foreground" />
         <p class="text-center text-sm text-muted-foreground">{m.loading_messages()}</p>
@@ -243,7 +239,7 @@
     {:else}
       <div>
         <div class="flex h-10 w-full items-center justify-center">
-          {#if currentThread && stateThreadChats.get(currentThread.id)?.firstMessageLoaded}
+          {#if currentThreadId && stateThreadChats.get(currentThreadId)?.firstMessageLoaded}
             <p class="text-lg text-muted-foreground">{m.thread_start()}</p>
           {:else}
             <Spinner
@@ -304,8 +300,8 @@
         bind:value={messageText}
         oninput={() => {
           // avoid mutating stateThreadChats and causing an effect
-          if (currentThread) {
-            const chat = stateThreadChats.get(currentThread.id);
+          if (currentThreadId) {
+            const chat = stateThreadChats.get(currentThreadId);
             if (chat) {
               chat.messageText = messageText;
             }
