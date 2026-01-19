@@ -203,7 +203,7 @@
 
     isSendingMessage = true;
 
-    MessageApi.sendThreadMessage({
+    MessageApi.sendMessage({
       thread_id: currentThreadId,
       content: message.content,
       files: selectedFilesDT.files
@@ -230,7 +230,7 @@
 </script>
 
 <div class="flex h-full flex-col">
-  <div class="flex-1 overflow-y-auto p-4" bind:this={messagesContainer} onscroll={handleScroll}>
+  <div class="flex-1 overflow-y-auto py-4" bind:this={messagesContainer} onscroll={handleScroll}>
     {#if currentThreadId && stateThreadChats.get(currentThreadId)?.initialLoading}
       <div class="flex h-full flex-col items-center justify-center gap-2">
         <Spinner class="size-10 text-muted-foreground" />

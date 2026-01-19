@@ -1,5 +1,10 @@
 import { ApiClient } from './client';
-import type { GetThreadMessagesRequest, MessageProps, SendThreadMessageRequest } from '$lib/types';
+import type {
+  EditMessageRequest,
+  GetThreadMessagesRequest,
+  MessageProps,
+  SendMessageRequest
+} from '$lib/types';
 
 const MockGetThreadMessages: Array<MessageProps> = [
   {
@@ -36,10 +41,10 @@ export const MessageApi = {
   },
 
   /**
-   * Send message in a thread
-   * @param {SendThreadMessageRequest} request - request object
+   * Send message
+   * @param {SendMessageRequest} request - request object
    */
-  async sendThreadMessage(request: SendThreadMessageRequest) {
+  async sendMessage(request: SendMessageRequest) {
     const formData = new FormData();
     formData.append('content', request.content);
     for (const file of request.files) {
@@ -50,6 +55,17 @@ export const MessageApi = {
       method: 'POST',
       headers: {},
       body: formData
+    });
+  },
+
+  /**
+   * Edit message
+   * @param {EditMessageRequest} request - request object
+   */
+  async editMessage(request: EditMessageRequest) {
+    return ApiClient.fetchJSON(`/thread/${request.thread_id}/messages/${request.message_id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content: request.content })
     });
   }
 };
