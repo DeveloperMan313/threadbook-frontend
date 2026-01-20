@@ -40,18 +40,24 @@
   let isBeingEdited = $state(false);
   let editedContent = $state('');
 
-  const onInput = (event: KeyboardEvent) => {
+  // resize textarea to fit content
+  const onInput = () => {
+    textarea!.style.height = '0';
+    textarea!.style.height = `calc(${textarea!.scrollHeight}px + 0.1rem)`;
+  };
+
+  const onKeydown = (event: KeyboardEvent) => {
     const editedTrimmed = editedContent.trim();
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      if (editedTrimmed === '') {
+      if (editedTrimmed === '' && payloads === undefined) {
         isMessageDeleteModalOpen = true;
         return;
       }
+      isBeingEdited = false;
       if (editedTrimmed === content) {
         return;
       }
-      isBeingEdited = false;
       MessageApi.editMessage({
         thread_id,
         message_id: id,
@@ -75,12 +81,6 @@
     setTimeout(() => {
       textarea!.focus();
     }, 200);
-  });
-
-  let textareaMaxHeight = $state(window.innerHeight / 2);
-
-  window.addEventListener('resize', () => {
-    textareaMaxHeight = window.innerHeight / 2;
   });
 
   let isContextMenuOpen = $state(false);
@@ -113,12 +113,12 @@
         {/if}
         {#if isBeingEdited}
           <Textarea
-            id="textarea"
-            class="m-1 min-h-[2lh] w-[calc(100%-0.5rem)] resize-none bg-background text-sm"
-            style={`height: ${editedContent.split('\n').length + 1}lh; max-height: ${textareaMaxHeight}px;`}
+            class="m-1 box-border max-h-[50vh] min-h-9 w-[calc(100%-0.5rem)] resize-none bg-background text-sm"
+            style="height: 2.35rem;"
             bind:value={editedContent}
             bind:ref={textarea}
-            onkeydown={onInput}
+            oninput={onInput}
+            onkeydown={onKeydown}
           />
         {:else if content.length > 0}
           <p class="w-full overflow-hidden text-sm wrap-break-word">{content}</p>
