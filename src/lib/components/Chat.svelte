@@ -1,7 +1,6 @@
 <script lang="ts">
   import { getContext, tick, untrack } from 'svelte';
   import { Button } from '$lib/components/ui/button/index.js';
-  import { Input } from '$lib/components/ui/input/index.js';
   import Message from './Message.svelte';
   import type {
     ChatState,
@@ -17,6 +16,7 @@
   import { Paperclip, X } from '@lucide/svelte';
   import * as m from '$lib/paraglide/messages';
   import { stateThreadChats } from '$lib/states/threadChats.svelte';
+  import { Textarea } from './ui/textarea';
 
   const { getCurrentThreadId, getThreads } = getContext('threads') as {
     getCurrentThreadId: () => number | null;
@@ -244,12 +244,28 @@
     selectedFilenames = [];
   };
 
-  const handleKeyPress = (event: KeyboardEvent) => {
+  // resize textarea to fit content
+  const onInput = () => {
+    textarea!.style.height = '0';
+    textarea!.style.height = `calc(${textarea!.scrollHeight}px + 0.1rem)`;
+  };
+
+  const onKeydown = (event: KeyboardEvent) => {
+    // avoid mutating stateThreadChats and causing an effect
+    if (currentThreadId) {
+      const chat = stateThreadChats.get(currentThreadId);
+      if (chat) {
+        chat.messageText = messageText;
+      }
+    }
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       sendMessage();
     }
   };
+
+  // svelte-ignore non_reactive_update
+  let textarea: HTMLElement | null = null;
 </script>
 
 <div class="flex h-full flex-col">
@@ -327,20 +343,14 @@
       >
         <Paperclip />
       </Button>
-      <Input
-        bind:value={messageText}
-        oninput={() => {
-          // avoid mutating stateThreadChats and causing an effect
-          if (currentThreadId) {
-            const chat = stateThreadChats.get(currentThreadId);
-            if (chat) {
-              chat.messageText = messageText;
-            }
-          }
-        }}
+      <Textarea
+        class="max-h-[50vh] min-h-9 w-[calc(100%-0.5rem)] resize-none bg-background text-sm"
+        style="height: 2.35rem;"
         placeholder={m.type_a_message()}
-        class="flex-1"
-        onkeydown={handleKeyPress}
+        bind:value={messageText}
+        bind:ref={textarea}
+        oninput={onInput}
+        onkeydown={onKeydown}
         disabled={currentThreadIsClosed}
       />
       <Button
