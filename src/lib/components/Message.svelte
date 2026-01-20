@@ -9,12 +9,15 @@
   import * as m from '$lib/paraglide/messages';
   import { Textarea } from './ui/textarea';
   import ModalMessageDelete from './ModalMessageDelete.svelte';
+  import { stateProfile } from '$lib/states';
 
   const { id, username, content, payloads, created_at, index, thread_id }: MessageProps = $props();
 
   const { getProfile } = getContext('userProfiles') as {
     getProfile: (username: string) => UserProfilePublic | undefined;
   };
+
+  const sessionUsername = stateProfile.profile!.username;
 
   const nickname = $derived(getProfile(username) ? getProfile(username)!.nickname : undefined);
 
@@ -85,12 +88,20 @@
     textareaMaxHeight = window.innerHeight / 2;
   });
 
+  let isContextMenuOpen = $state(false);
+
   let isMessageDeleteModalOpen = $state(false);
 </script>
 
 <ContextMenu.Root>
-  <ContextMenu.Trigger class="pointer-events-none" disabled={isBeingEdited}>
-    <div class="flex w-full px-4 pe-16 hover:bg-accent/50" class:mt-4={shouldRenderProfileInfo}>
+  <ContextMenu.Trigger
+    class="pointer-events-none"
+    disabled={sessionUsername !== username || isBeingEdited}
+  >
+    <div
+      class={`flex w-full px-4 pe-16 hover:bg-accent/50 ${isContextMenuOpen || isBeingEdited ? 'bg-accent/50' : ''}`}
+      class:mt-4={shouldRenderProfileInfo}
+    >
       <div class="w-[5rem] flex-none">
         {#if shouldRenderProfileInfo}
           <UserAvatar {username} {nickname} {avatarSrc} class="size-12" />
@@ -133,7 +144,15 @@
       </div>
     </div>
   </ContextMenu.Trigger>
-  <ContextMenu.Content class="w-52" onFocusOutside={(e) => e.preventDefault()}>
+  <ContextMenu.Content
+    class="w-52"
+    onOpenAutoFocus={() => {
+      isContextMenuOpen = true;
+    }}
+    onCloseAutoFocus={() => {
+      isContextMenuOpen = false;
+    }}
+  >
     <ContextMenu.Item
       class="cursor-pointer"
       variant="default"
