@@ -79,6 +79,7 @@ export async function signupEmailGetError(value: string): Promise<string | null>
   if (!checkUsernamePromise) return null;
   const response = await checkUsernamePromise;
   if (response.is_exist) return m.email_already_taken();
+  if (!response.is_valid) return m.invalid_email();
   return null;
 }
 

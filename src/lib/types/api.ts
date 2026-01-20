@@ -23,6 +23,7 @@ export interface CheckEmailRequest {
 
 export interface CheckEmailResponse {
   is_exist: boolean;
+  is_valid: boolean;
 }
 
 export interface CheckUsernameRequest {
