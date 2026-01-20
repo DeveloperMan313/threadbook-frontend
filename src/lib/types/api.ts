@@ -144,6 +144,11 @@ export interface EditMessageRequest {
   content: string;
 }
 
+export interface DeleteMessageRequest {
+  thread_id: number;
+  message_id: number;
+}
+
 export interface GetCentrifugeTokensRequest {
   spool_id?: number;
 }

@@ -55,6 +55,12 @@ export interface ModalInviteUsersToThread {
   isOpen: boolean; // bindable
 }
 
+export interface ModalMessageDeleteProps {
+  threadId: number;
+  messageId: number;
+  isOpen: boolean; // bindable
+}
+
 export interface ModalSpoolLeaveProps {
   spoolId: number;
   isOpen: boolean; // bindable

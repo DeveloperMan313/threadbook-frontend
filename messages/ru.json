@@ -8,6 +8,8 @@
   "type_a_message": "Напишите сообщение...",
   "send": "Отправить",
 
+  "delete": "Удалить",
+
   "invite_users_to_spool": "Пригласить пользователей в спул \"{spoolName}\".",
   "usernames": "Имена пользователей",
   "cancel": "Отменить",
@@ -17,6 +19,9 @@
 
   "log_out": "Выйти",
   "are_you_sure_log_out": "Вы уверены, что хотите выйти из аккаунта \"{account}\"?",
+
+  "delete_message": "Удалить сообщение",
+  "are_you_sure_delete_message": "Вы уверены, что хотите удалить это сообщение?",
 
   "profile_settings": "Настройки профиля",
   "profile_picture": "Изображение профиля",

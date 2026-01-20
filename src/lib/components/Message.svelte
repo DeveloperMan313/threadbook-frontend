@@ -8,6 +8,7 @@
   import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
   import * as m from '$lib/paraglide/messages';
   import { Textarea } from './ui/textarea';
+  import ModalMessageDelete from './ModalMessageDelete.svelte';
 
   const { id, username, content, payloads, created_at, index, thread_id }: MessageProps = $props();
 
@@ -83,6 +84,8 @@
   window.addEventListener('resize', () => {
     textareaMaxHeight = window.innerHeight / 2;
   });
+
+  let isMessageDeleteModalOpen = $state(false);
 </script>
 
 <ContextMenu.Root>
@@ -138,5 +141,13 @@
         isBeingEdited = true;
       }}>{m.edit()}</ContextMenu.Item
     >
+    <ContextMenu.Item
+      class="cursor-pointer"
+      variant="destructive"
+      onclick={() => {
+        isMessageDeleteModalOpen = true;
+      }}>{m.delete()}</ContextMenu.Item
+    >
   </ContextMenu.Content>
 </ContextMenu.Root>
+<ModalMessageDelete threadId={thread_id} messageId={id} bind:isOpen={isMessageDeleteModalOpen} />

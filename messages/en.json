@@ -8,6 +8,8 @@
   "type_a_message": "Write a message...",
   "send": "Send",
 
+  "delete": "Delete",
+
   "invite_users_to_spool": "Invite users to spool \"{spoolName}\".",
   "usernames": "Usernames",
   "cancel": "Cancel",
@@ -17,6 +19,9 @@
 
   "log_out": "Log out",
   "are_you_sure_log_out": "Are you sure you want to log out of your account \"{account}\"?",
+
+  "delete_message": "Delete message",
+  "are_you_sure_delete_message": "Are you sure you want to delete this message?",
 
   "profile_settings": "Profile settings",
   "profile_picture": "Profile picture",
