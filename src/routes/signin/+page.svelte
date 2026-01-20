@@ -45,7 +45,12 @@
       goto(resolve('/spools', {}));
     } catch (error) {
       if (!(error instanceof Error)) return;
-      if (error.message == 'invalid credentials') {
+      // don't ask why this error is here lol
+      if (
+        error.message === 'invalid credentials' ||
+        error.message ===
+          'password must contain uppercase, lowercase, numbers and be at least 8 characters long'
+      ) {
         errorMsg = m.incorrect_email_or_password();
         return;
       }
