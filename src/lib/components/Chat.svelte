@@ -3,7 +3,14 @@
   import { Button } from '$lib/components/ui/button/index.js';
   import { Input } from '$lib/components/ui/input/index.js';
   import Message from './Message.svelte';
-  import type { ChatState, MessageProps, ThreadProps, WsMessageCreated } from '$lib/types';
+  import type {
+    ChatState,
+    MessageProps,
+    ThreadProps,
+    WsMessageCreated,
+    WsMessageDeleted,
+    WsMessageUpdated
+  } from '$lib/types';
   import { centrifugeClient, MessageApi } from '$lib/api';
   import { stateProfile } from '$lib/states';
   import Spinner from '$lib/components/ui/spinner/spinner.svelte';
@@ -74,6 +81,22 @@
       cacheProfilesFromUsernames([payload.username]);
       payload.created_at *= 1000; // convert s to ms
       renderMessage(threadId, payload, mine);
+    });
+
+    centrifugeClient.onThread(threadId, 'message.updated', (payload: WsMessageUpdated) => {
+      const chat = stateThreadChats.get(threadId) as ChatState;
+      stateThreadChats.set(threadId, {
+        ...chat,
+        messages: messages.map((m) => (m.id === payload.id ? { ...m, ...payload } : m))
+      });
+    });
+
+    centrifugeClient.onThread(threadId, 'message.deleted', (payload: WsMessageDeleted) => {
+      const chat = stateThreadChats.get(threadId) as ChatState;
+      stateThreadChats.set(threadId, {
+        ...chat,
+        messages: messages.filter((m) => m.id !== payload.id)
+      });
     });
   };
 
@@ -195,7 +218,7 @@
     const message: MessageProps = {
       id: 0,
       username: stateProfile.profile!.username,
-      content: messageText,
+      content: messageText.trim(),
       created_at: new Date().getTime(),
       updated_at: new Date().getTime(),
       thread_id: currentThreadId

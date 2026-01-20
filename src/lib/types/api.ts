@@ -1,4 +1,4 @@
-import type { SpoolProps, ThreadType } from './components';
+import type { MessageProps, SpoolProps, ThreadType } from './components';
 
 export type AccessLevel = 0 | 1 | 2 | 3;
 
@@ -142,6 +142,10 @@ export interface EditMessageRequest {
   thread_id: number;
   message_id: number;
   content: string;
+}
+
+export interface EditMessageResponse {
+  message: MessageProps;
 }
 
 export interface DeleteMessageRequest {

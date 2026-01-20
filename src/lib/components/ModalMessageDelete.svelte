@@ -4,18 +4,12 @@
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import * as m from '$lib/paraglide/messages';
   import { MessageApi } from '$lib/api';
-  import { stateThreadChats } from '$lib/states/threadChats.svelte';
 
   let { threadId, messageId, isOpen = $bindable() }: ModalMessageDeleteProps = $props();
 
   const onDeleteClick = async () => {
     isOpen = false;
     await MessageApi.deleteMessage({ thread_id: threadId, message_id: messageId });
-    const chat = stateThreadChats.get(threadId)!;
-    stateThreadChats.set(threadId, {
-      ...chat,
-      messages: chat.messages.filter((m) => m.id !== messageId)
-    });
   };
 
   const onCancel = () => {

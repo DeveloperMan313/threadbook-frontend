@@ -2,6 +2,7 @@ import { ApiClient } from './client';
 import type {
   DeleteMessageRequest,
   EditMessageRequest,
+  EditMessageResponse,
   GetThreadMessagesRequest,
   MessageProps,
   SendMessageRequest
@@ -62,8 +63,9 @@ export const MessageApi = {
   /**
    * Edit message
    * @param {EditMessageRequest} request - request object
+   * @returns {Promise<EditMessageResponse>} - API response
    */
-  async editMessage(request: EditMessageRequest) {
+  async editMessage(request: EditMessageRequest): Promise<EditMessageResponse> {
     return ApiClient.fetchJSON(`/thread/${request.thread_id}/messages/${request.message_id}`, {
       method: 'PUT',
       body: JSON.stringify({ content: request.content })
@@ -75,7 +77,7 @@ export const MessageApi = {
    * @param {DeleteMessageRequest} request - request object
    */
   async deleteMessage(request: DeleteMessageRequest) {
-    return ApiClient.fetchJSON(`/thread/${request.thread_id}/messages/${request.message_id}`, {
+    return ApiClient.fetch(`/thread/${request.thread_id}/messages/${request.message_id}`, {
       method: 'DELETE'
     });
   }

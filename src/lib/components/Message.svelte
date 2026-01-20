@@ -41,26 +41,21 @@
   let editedContent = $state('');
 
   const onInput = (event: KeyboardEvent) => {
+    const editedTrimmed = editedContent.trim();
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      if (editedContent === content) {
-        isBeingEdited = false;
+      if (editedTrimmed === '') {
+        isMessageDeleteModalOpen = true;
         return;
       }
+      if (editedTrimmed === content) {
+        return;
+      }
+      isBeingEdited = false;
       MessageApi.editMessage({
         thread_id,
         message_id: id,
-        content: editedContent
-      }).finally(() => {
-        // TODO handle errors
-        const chat = stateThreadChats.get(thread_id)!;
-        stateThreadChats.set(thread_id, {
-          ...chat,
-          messages: chat.messages.map((m) =>
-            m.id === id ? ({ ...m, content: editedContent } as MessageProps) : m
-          )
-        });
-        isBeingEdited = false;
+        content: editedTrimmed
       });
     }
     if (event.key === 'Escape') {
