@@ -101,6 +101,7 @@ export const centrifugeClient = {
       tokens = fetchedTokens;
       return;
     }
+    tokens.ConnectToken = fetchedTokens.ConnectToken;
     tokens.ChannelTokens = { ...tokens.ChannelTokens, ...fetchedTokens.ChannelTokens };
   },
 
