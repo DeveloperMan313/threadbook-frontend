@@ -2,15 +2,8 @@
   import { onDestroy, untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
-  import { Room, RoomEvent, Track } from 'livekit-client';
-  import type {
-    RemoteParticipant,
-    RemoteTrack,
-    RemoteTrackPublication,
-    RemoteAudioTrack,
-    LocalAudioTrack,
-    LocalVideoTrack
-  } from 'livekit-client';
+  import { Room, RoomEvent, Track, type RemoteAudioTrack } from 'livekit-client';
+  import type { RemoteParticipant, RemoteTrack, RemoteTrackPublication } from 'livekit-client';
   import {
     Mic,
     MicOff,
@@ -50,14 +43,11 @@
 
   let volumes = $state<Record<string, number>>({});
   let audioElements = new SvelteMap<string, HTMLAudioElement>();
+  let audioTracks = new SvelteMap<string, RemoteAudioTrack>();
   let localVideoEl = $state<HTMLVideoElement | null>(null);
-  let localVideoTrack = $state<LocalVideoTrack | null>(null);
+  let localVideoTrack = $state<any | null>(null);
 
   let dfnProcessor: DeepFilterNoiseFilterProcessor | null = null;
-
-  let audioContext: AudioContext | null = null;
-
-  let audioNodes = new SvelteMap<string, { source: MediaElementAudioSourceNode; gain: GainNode }>();
 
   let isDragging = false;
   let isResizing = false;
@@ -125,33 +115,11 @@
     }
   });
 
-  function ensureAudioContext() {
-    if (!audioContext && isBrowser) {
-      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-  }
-
-  function applyVolumeForParticipant(sid: string) {
-    const nodes = audioNodes.get(sid);
-    if (!nodes || !audioContext) return;
-
-    const volPercent = volumes[sid] ?? 100;
-    const finalVol = isOthersMuted ? 0 : volPercent / 100;
-    nodes.gain.gain.setValueAtTime(finalVol, audioContext.currentTime);
-  }
-
   function attachAudioTrack(track: RemoteTrack, participantSid: string) {
     if (!isBrowser || !participantSid) return;
-    
+
     if (audioElements.has(participantSid)) {
       detachTrack(participantSid);
-    }
-    
-    ensureAudioContext();
-    if (!audioContext) return;
-
-    if (audioContext.state === 'suspended') {
-      audioContext.resume().catch(console.warn);
     }
 
     const element = track.attach() as HTMLAudioElement;
@@ -163,18 +131,9 @@
     document.body.appendChild(element);
     audioElements.set(participantSid, element);
 
-    try {
-      const source = audioContext.createMediaElementSource(element);
-      const gain = audioContext.createGain();
-
-      source.connect(gain).connect(audioContext.destination);
-      audioNodes.set(participantSid, { source, gain });
-
+    if (track.kind === 'audio') {
+      audioTracks.set(participantSid, track as RemoteAudioTrack);
       applyVolumeForParticipant(participantSid);
-    } catch (err) {
-      console.error('Failed to create audio nodes:', err);
-      element.remove();
-      audioElements.delete(participantSid);
     }
   }
 
@@ -211,20 +170,13 @@
 
     const audioEl = audioElements.get(participantSid);
     if (audioEl) {
-      audioEl.remove();
+      try {
+        audioEl.remove();
+      } catch {}
       audioElements.delete(participantSid);
     }
 
-    const nodes = audioNodes.get(participantSid);
-    if (nodes) {
-      try {
-        nodes.source.disconnect();
-      } catch {}
-      try {
-        nodes.gain.disconnect();
-      } catch {}
-      audioNodes.delete(participantSid);
-    }
+    audioTracks.delete(participantSid);
 
     const container = document.querySelector(
       `.video-container[data-participant="${participantSid}"]`
@@ -236,6 +188,20 @@
       const newVolumeDisplay = { ...volumeDisplayFor };
       delete newVolumeDisplay[participantSid];
       volumeDisplayFor = newVolumeDisplay;
+    }
+  }
+
+  function applyVolumeForParticipant(sid: string) {
+    const audioTrack = audioTracks.get(sid);
+    if (!audioTrack) return;
+
+    const volPercent = volumes[sid] ?? 100;
+    const finalVol = isOthersMuted ? 0 : volPercent / 100;
+
+    try {
+      audioTrack.setVolume(finalVol);
+    } catch (e) {
+      console.warn('Failed to set volume:', e);
     }
   }
 
@@ -267,7 +233,7 @@
       ...showVolumeSliderFor,
       [id]: newValue
     };
-    
+
     if (newValue) {
       setTimeout(() => {
         showVolumeSliderFor = {
@@ -289,7 +255,7 @@
 
   function toggleOthersMute() {
     isOthersMuted = !isOthersMuted;
-    audioNodes.forEach((_, sid) => {
+    audioTracks.forEach((_, sid) => {
       applyVolumeForParticipant(sid);
     });
   }
@@ -301,7 +267,7 @@
     const next = !isSelfVideoEnabled;
     isSelfVideoEnabled = next;
     const pub = await room.localParticipant.setCameraEnabled(next);
-    const track = (pub?.track as LocalVideoTrack | undefined) ?? null;
+    const track = pub?.track ?? null;
     localVideoTrack = track;
     if (localVideoEl && track) {
       track.attach(localVideoEl);
@@ -364,6 +330,17 @@
     isResizing = false;
   }
 
+  async function subscribeToExistingTracks() {
+    if (!room) return;
+    room.remoteParticipants.forEach((participant) => {
+      participant.trackPublications.forEach((pub) => {
+        if (!pub.isSubscribed) {
+          pub.setSubscribed(true);
+        }
+      });
+    });
+  }
+
   async function joinRoom(roomThreadId: number) {
     if (!isBrowser) return;
 
@@ -410,6 +387,9 @@
       const p = room.localParticipant;
 
       participants = Array.from(room.remoteParticipants.values()) as RemoteParticipant[];
+
+      await subscribeToExistingTracks();
+
       recomputeVideoTiles();
 
       try {
@@ -440,12 +420,10 @@
 
       if (hasMic) {
         try {
-          const micPub = p.getTrackPublication(Track.Source.Microphone) as
-            | RemoteTrackPublication
-            | undefined;
-          const audioTrack = micPub?.track as LocalAudioTrack | undefined;
+          const micPub = p.getTrackPublication(Track.Source.Microphone);
+          const audioTrack = micPub?.track;
 
-          if (audioTrack) {
+          if (audioTrack && audioTrack.getProcessor === undefined) {
             if (!dfnProcessor) {
               dfnProcessor = new DeepFilterNoiseFilterProcessor({
                 sampleRate: 48000,
@@ -473,10 +451,8 @@
         }
       }
 
-      const camPub = p.getTrackPublication(Track.Source.Camera) as
-        | RemoteTrackPublication
-        | undefined;
-      const camTrack = camPub?.track as LocalVideoTrack | undefined;
+      const camPub = p.getTrackPublication(Track.Source.Camera);
+      const camTrack = camPub?.track;
       if (camTrack) {
         localVideoTrack = camTrack;
         if (localVideoEl) {
@@ -500,25 +476,14 @@
       room = null;
     }
     participants = [];
-    audioElements.forEach((el) => el.remove());
-    audioElements.clear();
 
-    audioNodes.forEach(({ source, gain }) => {
+    audioElements.forEach((el) => {
       try {
-        source.disconnect();
-      } catch {}
-      try {
-        gain.disconnect();
+        el.remove();
       } catch {}
     });
-    audioNodes.clear();
-
-    if (audioContext) {
-      try {
-        await audioContext.close();
-      } catch {}
-      audioContext = null;
-    }
+    audioElements.clear();
+    audioTracks.clear();
 
     document.querySelectorAll('.video-container').forEach((el) => {
       (el as HTMLElement).innerHTML = '';
@@ -879,6 +844,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    width: 100%;
   }
 
   .video-inner {
