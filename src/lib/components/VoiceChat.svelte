@@ -51,6 +51,7 @@
   let volumes = $state<Record<string, number>>({});
   let audioElements = new SvelteMap<string, HTMLAudioElement>();
   let audioTracks = new SvelteMap<string, RemoteAudioTrack>();
+  let videoTracks = new SvelteMap<string, RemoteTrack>(); // sid -> remote video track
   let localVideoEl = $state<HTMLVideoElement | null>(null);
   let localVideoTrack = $state<any | null>(null);
 
@@ -188,6 +189,8 @@
   function attachVideoTrack(track: RemoteTrack, participantSid: string) {
     if (!isBrowser || !participantSid) return;
 
+    videoTracks.set(participantSid, track);
+
     const element = track.attach() as HTMLVideoElement;
     element.autoplay = true;
     element.playsInline = true;
@@ -255,6 +258,7 @@
           }
         });
       }
+      videoTracks.delete(participantSid);
     }
 
     if (volumeDisplayFor[participantSid]?.timeout) {
@@ -428,7 +432,7 @@
         | undefined;
       if (camPub?.isSubscribed && camPub.track && camPub.track.kind === Track.Kind.Video) {
         attachVideoTrack(camPub.track, participant.sid);
-      } else if (!camPub?.isSubscribed || !camPub.track) {
+      } else {
         showRemotePlaceholder(participant.sid);
       }
     });
@@ -482,9 +486,15 @@
 
       newRoom.on(RoomEvent.TrackUnmuted, (pub, participant) => {
         if (pub.source === Track.Source.Camera) {
-          const track = (pub as RemoteTrackPublication).track;
+          const track = videoTracks.get(participant.sid) ?? (pub as RemoteTrackPublication).track;
           if (track && track.kind === Track.Kind.Video) {
             attachVideoTrack(track, participant.sid);
+          } else {
+            const camPub = getCameraPublication(participant.sid);
+            const t = camPub?.track;
+            if (t && t.kind === Track.Kind.Video) {
+              attachVideoTrack(t, participant.sid);
+            }
           }
         }
       });
@@ -609,6 +619,7 @@
     });
     audioElements.clear();
     audioTracks.clear();
+    videoTracks.clear();
 
     document.querySelectorAll('.video-container').forEach((el) => {
       (el as HTMLElement).querySelectorAll('video').forEach((v) => {
