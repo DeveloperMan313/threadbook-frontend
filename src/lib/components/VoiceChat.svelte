@@ -532,7 +532,7 @@
 
       await attachExistingVideoTracks();
       recomputeVideoTiles();
-
+      /*
       try {
         if (isSelfVideoEnabled) {
           await p.setCameraEnabled(true);
@@ -545,6 +545,7 @@
         hasCamera = false;
         isSelfVideoEnabled = false;
       }
+      */
 
       try {
         if (!isSelfMuted) {
