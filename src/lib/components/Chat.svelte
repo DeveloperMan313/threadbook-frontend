@@ -245,22 +245,24 @@
     });
     selectedFilesDT.items.clear();
     selectedFilenames = [];
+
+    tick().then(onInput);
   };
 
-  // resize textarea to fit content
   const onInput = () => {
+    if (!currentThreadId) return;
+    // resize textarea to fit content
     textarea!.style.height = '0';
     textarea!.style.height = `calc(${textarea!.scrollHeight}px + 0.1rem)`;
+    // update messageText to current value
+    const currentChat = stateThreadChats.get(currentThreadId)!;
+    stateThreadChats.set(currentThreadId, {
+      ...currentChat,
+      messageText
+    });
   };
 
   const onKeydown = (event: KeyboardEvent) => {
-    // avoid mutating stateThreadChats and causing an effect
-    if (currentThreadId) {
-      const chat = stateThreadChats.get(currentThreadId);
-      if (chat) {
-        chat.messageText = messageText;
-      }
-    }
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       sendMessage();

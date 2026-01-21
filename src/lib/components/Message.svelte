@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { MessageProps, UserProfilePublic } from '$lib/types';
-  import { getContext, untrack } from 'svelte';
+  import { getContext, tick, untrack } from 'svelte';
   import { ImageApi, MessageApi } from '$lib/api';
   import UserAvatar from './UserAvatar.svelte';
   import { Button } from './ui/button';
@@ -91,6 +91,8 @@
     setTimeout(() => {
       textarea!.focus();
     }, 200);
+
+    tick().then(onInput);
   });
 
   let isContextMenuOpen = $state(false);
