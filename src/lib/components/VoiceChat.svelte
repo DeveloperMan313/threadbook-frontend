@@ -196,7 +196,11 @@
     if (!audioTrack) return;
 
     const volPercent = volumes[sid] ?? 100;
-    const finalVol = isOthersMuted ? 0 : volPercent / 100;
+
+    const normalized = Math.max(0, Math.min(200, volPercent));
+    const gain = normalized <= 100 ? normalized / 100 : 1.0;
+
+    const finalVol = isOthersMuted ? 0 : gain;
 
     try {
       audioTrack.setVolume(finalVol);
