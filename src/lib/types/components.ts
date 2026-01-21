@@ -42,6 +42,7 @@ export interface MessageProps {
   created_at: number;
   updated_at?: number;
   index?: number;
+  scrolledParent?: HTMLElement;
 }
 
 export interface ModalInviteUsersToSpool {
