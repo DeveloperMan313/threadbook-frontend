@@ -66,8 +66,6 @@
     Record<string, { value: string; timeout?: ReturnType<typeof setTimeout> }>
   >({});
 
-  let remoteHasVideo = $state<Record<string, boolean>>({});
-
   const isBrowser = typeof document !== 'undefined';
 
   type VideoTile = {
@@ -384,9 +382,6 @@
 
       room.on(RoomEvent.ParticipantDisconnected, (participant) => {
         detachTrack(participant.sid, true, true);
-        const newRemoteHasVideo = { ...remoteHasVideo };
-        delete newRemoteHasVideo[participant.sid];
-        remoteHasVideo = newRemoteHasVideo;
         participants = participants.filter((p) => p.sid !== participant.sid);
         recomputeVideoTiles();
       });
@@ -395,7 +390,6 @@
         if (track.kind === 'audio') {
           attachAudioTrack(track, participant.sid);
         } else if (track.kind === 'video' && pub.source === Track.Source.Camera) {
-          remoteHasVideo = { ...remoteHasVideo, [participant.sid]: true };
           attachVideoTrack(track, participant.sid);
         }
       });
@@ -404,9 +398,6 @@
         if (track.kind === 'audio') {
           detachTrack(participant.sid, false, true);
         } else if (track.kind === 'video' && pub.source === Track.Source.Camera) {
-          const copy = { ...remoteHasVideo };
-          delete copy[participant.sid];
-          remoteHasVideo = copy;
           detachTrack(participant.sid, true, false);
         }
       });
@@ -565,7 +556,6 @@
     showVolumeSliderFor = {};
     volumeDisplayFor = {};
     videoTiles = [];
-    remoteHasVideo = {};
 
     stateVoiceThreadId.id = null;
     viewMode = 'normal';
@@ -702,7 +692,7 @@
                           <VideoOff size={64} />
                         </div>
                       {/if}
-                    {:else if remoteHasVideo[tile.sid]}{:else}
+                    {:else if participants.find((p) => p.sid === tile.sid)?.isCameraEnabled}{:else}
                       <div class="video-placeholder">
                         <VideoOff size={64} />
                       </div>
