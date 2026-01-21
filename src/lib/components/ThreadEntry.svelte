@@ -12,7 +12,8 @@
   import ModalThreadInviteLinkCreate from './ModalThreadInviteLinkCreate.svelte';
   import * as m from '$lib/paraglide/messages';
 
-  let { id, title, access_level, type, unreadCnt, mentionCnt }: ThreadProps = $props();
+  let { id, title, access_level, type, is_closed, is_creator, unreadCnt, mentionCnt }: ThreadProps =
+    $props();
 
   const { setCurrentThreadId, getCurrentThreadId } = getContext('threads') as {
     setCurrentThreadId: { (id: number): void };
@@ -85,7 +86,7 @@
                   {m.create_invite_link()}</DropdownMenu.Item
                 >
               {/if}
-              {#if userAccessLevel > access_level}
+              {#if userAccessLevel > access_level || is_creator}
                 <DropdownMenu.Item
                   class="cursor-pointer"
                   onclick={() => {
@@ -94,28 +95,32 @@
                 >
                   {m.rename()}</DropdownMenu.Item
                 >
-                <DropdownMenu.Item
-                  class="cursor-pointer"
-                  variant="destructive"
-                  onclick={() => {
-                    isThreadCloseModalOpen = true;
-                  }}
-                >
-                  {m.close()}</DropdownMenu.Item
-                >
+                {#if !is_closed}
+                  <DropdownMenu.Item
+                    class="cursor-pointer"
+                    variant="destructive"
+                    onclick={() => {
+                      isThreadCloseModalOpen = true;
+                    }}
+                  >
+                    {m.close()}</DropdownMenu.Item
+                  >
+                {/if}
               {/if}
             </DropdownMenu.Content>
           </DropdownMenu.Root>
         {/if}
-        <Button
-          variant="ghost"
-          class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200 [@media(hover:none)]:opacity-100"
-          onclick={() => {
-            stateVoiceThreadId.id = id;
-          }}
-        >
-          <Phone />
-        </Button>
+        {#if !is_closed}
+          <Button
+            variant="ghost"
+            class="z-10 aspect-square h-full cursor-pointer text-muted-foreground opacity-0 duration-[0] group-hover:opacity-100 group-hover:duration-200 [@media(hover:none)]:opacity-100"
+            onclick={() => {
+              stateVoiceThreadId.id = id;
+            }}
+          >
+            <Phone />
+          </Button>
+        {/if}
       </div>
     </div>
   </ContextMenu.Trigger>
@@ -137,7 +142,7 @@
           }}>{m.create_invite_link()}</ContextMenu.Item
         >
       {/if}
-      {#if userAccessLevel > access_level}
+      {#if userAccessLevel > access_level || is_creator}
         <ContextMenu.Item
           class="cursor-pointer"
           variant="default"
@@ -145,13 +150,15 @@
             isThreadRenameModalOpen = true;
           }}>{m.rename()}</ContextMenu.Item
         >
-        <ContextMenu.Item
-          class="cursor-pointer"
-          variant="destructive"
-          onclick={() => {
-            isThreadCloseModalOpen = true;
-          }}>{m.close()}</ContextMenu.Item
-        >
+        {#if !is_closed}
+          <ContextMenu.Item
+            class="cursor-pointer"
+            variant="destructive"
+            onclick={() => {
+              isThreadCloseModalOpen = true;
+            }}>{m.close()}</ContextMenu.Item
+          >
+        {/if}
       {/if}
     </ContextMenu.Content>
   {/if}
