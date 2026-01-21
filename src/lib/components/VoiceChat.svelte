@@ -524,7 +524,7 @@
       });
 
       hasMic = true;
-      hasCamera = true;
+      hasCamera = false;
 
       const p = newRoom.localParticipant;
 
