@@ -10,6 +10,7 @@
   import { Textarea } from './ui/textarea';
   import ModalMessageDelete from './ModalMessageDelete.svelte';
   import { stateProfile } from '$lib/states';
+  import { getLocale } from '$lib/paraglide/runtime';
 
   const { id, username, content, payloads, created_at, index, thread_id }: MessageProps = $props();
 
@@ -106,8 +107,20 @@
         {#if shouldRenderProfileInfo}
           <div class="flex w-full flex-row items-end gap-1">
             <p class="text-base font-semibold">{nickname || username}</p>
-            <p class="text-sm text-muted-foreground">
-              {new Date(created_at).toLocaleTimeString()}
+            <p
+              class="text-sm text-muted-foreground"
+              title={new Date(created_at).toLocaleString(getLocale(), {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: 'numeric'
+              })}
+            >
+              {new Date(created_at).toLocaleTimeString(getLocale(), {
+                hour: 'numeric',
+                minute: 'numeric'
+              })}
             </p>
           </div>
         {/if}
