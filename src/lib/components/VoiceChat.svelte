@@ -54,7 +54,7 @@
   let localVideoEl = $state<HTMLVideoElement | null>(null);
   let localVideoTrack = $state<any | null>(null);
 
-  let dfnProcessor: DeepFilterNet3Processor | null = null;
+  let dfnProcessor: DeepFilterNoiseFilterProcessor | null = null;
 
   let isDragging = false;
   let isResizing = false;
@@ -163,6 +163,7 @@
       ) as HTMLElement | null;
 
       if (container) {
+        container.querySelectorAll('.video-placeholder').forEach((v) => v.remove());
         container.querySelectorAll('video').forEach((v) => v.remove());
         element.classList.add('video-element');
         container.appendChild(element);
@@ -373,17 +374,6 @@
     return participant.getTrackPublication(Track.Source.Camera) as
       | RemoteTrackPublication
       | undefined;
-  }
-
-  function hasRemoteCameraTrack(participantSid: string): boolean {
-    const participant = getParticipantBySid(participantSid);
-    if (!participant || !participant.isCameraEnabled) return false;
-
-    const camPub = participant.getTrackPublication(Track.Source.Camera) as
-      | RemoteTrackPublication
-      | undefined;
-
-    return !!camPub?.isSubscribed;
   }
 
   async function attachExistingVideoTracks() {
@@ -745,8 +735,6 @@
                           <VideoOff size={64} />
                         </div>
                       {/if}
-                    {:else if hasRemoteCameraTrack(tile.sid)}
-                      <!-- attach here -->
                     {:else}
                       <div class="video-placeholder">
                         <VideoOff size={64} />
