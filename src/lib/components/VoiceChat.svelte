@@ -52,8 +52,8 @@
   let audioElements = new SvelteMap<string, HTMLAudioElement>();
   let audioTracks = new SvelteMap<string, RemoteAudioTrack>();
   let videoTracks = new SvelteMap<string, RemoteTrack>();
+
   let localVideoEl = $state<HTMLVideoElement | null>(null);
-  let localVideoTrack = $state<any | null>(null);
 
   let dfnProcessor: DeepFilterNoiseFilterProcessor | null = null;
 
@@ -356,21 +356,8 @@
 
     const next = !isSelfVideoEnabled;
     isSelfVideoEnabled = next;
-    const pub = await room.localParticipant.setCameraEnabled(next);
-    const track = pub?.track ?? null;
 
-    if (!next || !track) {
-      if (localVideoEl) {
-        localVideoEl.srcObject = null;
-        localVideoEl.load();
-      }
-      localVideoTrack = null;
-    } else {
-      localVideoTrack = track;
-      if (localVideoEl) {
-        track.attach(localVideoEl);
-      }
-    }
+    await room.localParticipant.setCameraEnabled(next);
   }
 
   function setViewMode(next: ViewMode) {
@@ -595,19 +582,6 @@
         }
       }
 
-      const camPub = p.getTrackPublication(Track.Source.Camera) as
-        | RemoteTrackPublication
-        | undefined;
-      const camTrack = camPub?.track;
-      if (camTrack && !camPub.isMuted) {
-        localVideoTrack = camTrack;
-        if (localVideoEl) {
-          camTrack.attach(localVideoEl);
-        }
-      } else {
-        localVideoTrack = null;
-      }
-
       isConnected = true;
       recomputeVideoTiles();
     } catch (err) {
@@ -653,7 +627,6 @@
       localVideoEl.srcObject = null;
       localVideoEl.load();
     }
-    localVideoTrack = null;
 
     if (dfnProcessor && typeof dfnProcessor.destroy === 'function') {
       try {
@@ -710,8 +683,17 @@
   });
 
   $effect(() => {
-    if (localVideoEl && localVideoTrack) {
-      localVideoTrack.attach(localVideoEl);
+    if (!room || !localVideoEl) return;
+
+    const p = room.localParticipant;
+    const camPub = p.getTrackPublication(Track.Source.Camera) as RemoteTrackPublication | undefined;
+    const camTrack = camPub?.track;
+
+    if (camTrack && !camPub?.isMuted && isSelfVideoEnabled && hasCamera) {
+      camTrack.attach(localVideoEl);
+    } else {
+      localVideoEl.srcObject = null;
+      localVideoEl.load();
     }
   });
 
@@ -814,7 +796,7 @@
                 <div class="video-inner">
                   <div class="video-container" data-participant={tile.sid}>
                     {#if tile.isLocal}
-                      {#if hasCamera && isSelfVideoEnabled && localVideoTrack}
+                      {#if hasCamera && isSelfVideoEnabled}
                         <video
                           bind:this={localVideoEl}
                           autoplay
