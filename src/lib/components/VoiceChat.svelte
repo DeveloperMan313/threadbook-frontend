@@ -191,6 +191,14 @@
 
     videoTracks.set(participantSid, track);
 
+    if ((track as any).detach) {
+      try {
+        (track as any).detach();
+      } catch {
+        // ignore
+      }
+    }
+
     const element = track.attach() as HTMLVideoElement;
     element.autoplay = true;
     element.playsInline = true;
