@@ -2,8 +2,15 @@
   import { onDestroy, untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { PUBLIC_LIVEKIT_ORIGIN } from '$env/static/public';
-  import { Room, RoomEvent, Track, type RemoteAudioTrack } from 'livekit-client';
-  import type { RemoteParticipant, RemoteTrack, RemoteTrackPublication } from 'livekit-client';
+  import {
+    Room,
+    RoomEvent,
+    Track,
+    type RemoteAudioTrack,
+    type RemoteParticipant,
+    type RemoteTrack,
+    type RemoteTrackPublication
+  } from 'livekit-client';
   import {
     Mic,
     MicOff,
@@ -356,18 +363,33 @@
     isResizing = false;
   }
 
-  async function subscribeToExistingTracks() {
+  function getParticipantBySid(sid: string): RemoteParticipant | undefined {
+    return participants.find((p) => p.sid === sid);
+  }
+
+  function getCameraPublication(participantSid: string): RemoteTrackPublication | undefined {
+    const participant = getParticipantBySid(participantSid);
+    if (!participant) return undefined;
+    return participant.getTrackPublication(Track.Source.Camera) as
+      | RemoteTrackPublication
+      | undefined;
+  }
+
+  function hasRemoteCameraTrack(participantSid: string): boolean {
+    const camPub = getCameraPublication(participantSid);
+    return !!(camPub && camPub.track && !camPub.muted);
+  }
+
+  async function attachExistingVideoTracks() {
     if (!room) return;
     room.remoteParticipants.forEach((participant) => {
-      participant.trackPublications.forEach((pub) => {
-        if (!pub.isSubscribed) {
-          pub.setSubscribed(true);
-        }
-        const track = pub.track;
-        if (track && track.kind === Track.Kind.Video && pub.source === Track.Source.Camera) {
-          attachVideoTrack(track, participant.sid);
-        }
-      });
+      const camPub = participant.getTrackPublication(Track.Source.Camera) as
+        | RemoteTrackPublication
+        | undefined;
+      const track = camPub?.track;
+      if (track && track.kind === Track.Kind.Video) {
+        attachVideoTrack(track, participant.sid);
+      }
     });
   }
 
@@ -425,8 +447,7 @@
 
       participants = Array.from(newRoom.remoteParticipants.values()) as RemoteParticipant[];
 
-      await subscribeToExistingTracks();
-
+      await attachExistingVideoTracks();
       recomputeVideoTiles();
 
       try {
@@ -719,10 +740,8 @@
                           <VideoOff size={64} />
                         </div>
                       {/if}
-                    {:else if participants
-                      .find((p) => p.sid === tile.sid)
-                      ?.getTrackPublication(Track.Source.Camera)?.isSubscribed}
-                      <!-- Attach Here -->
+                    {:else if hasRemoteCameraTrack(tile.sid)}
+                      <!-- attach here -->
                     {:else}
                       <div class="video-placeholder">
                         <VideoOff size={64} />
