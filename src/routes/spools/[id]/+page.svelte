@@ -123,9 +123,12 @@
     if (payload.spool_id != data.spoolId) return;
     const thread = {
       id: payload.id,
+      spool_id: payload.spool_id,
+      access_level: payload.access_level,
       title: payload.title,
       type: payload.type,
       is_closed: false,
+      is_creator: payload.is_creator,
       unreadCnt: 0,
       mentionCnt: 0
     } as ThreadProps;

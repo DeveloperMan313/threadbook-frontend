@@ -35,6 +35,8 @@ export interface WsThreadCreated {
   spool_id: number;
   title: string;
   type: ThreadType;
+  access_level: number;
+  is_creator: boolean;
   created_at: number;
   channel: string;
   token: string;
