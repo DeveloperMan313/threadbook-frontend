@@ -363,6 +363,10 @@
         if (!pub.isSubscribed) {
           pub.setSubscribed(true);
         }
+        const track = pub.track;
+        if (track && track.kind === Track.Kind.Video && pub.source === Track.Source.Camera) {
+          attachVideoTrack(track, participant.sid);
+        }
       });
     });
   }
@@ -410,7 +414,9 @@
         isConnected = false;
       });
 
-      await newRoom.connect(PUBLIC_LIVEKIT_ORIGIN, token);
+      await newRoom.connect(PUBLIC_LIVEKIT_ORIGIN, token, {
+        autoSubscribe: true
+      });
 
       hasMic = true;
       hasCamera = true;
