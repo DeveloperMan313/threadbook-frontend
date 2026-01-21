@@ -715,7 +715,9 @@
                       {/if}
                     {:else if participants
                       .find((p) => p.sid === tile.sid)
-                      ?.getTrackPublication(Track.Source.Camera)?.isSubscribed}{:else}
+                      ?.getTrackPublication(Track.Source.Camera)?.isSubscribed}
+                      <!-- Attach Here -->
+                    {:else}
                       <div class="video-placeholder">
                         <VideoOff size={64} />
                       </div>
