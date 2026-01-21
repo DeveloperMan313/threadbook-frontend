@@ -127,7 +127,7 @@
 
   function ensureAudioContext() {
     if (!audioContext && isBrowser) {
-      audioContext = new AudioContext();
+      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
   }
 
@@ -135,6 +135,8 @@
     if (!isBrowser) return;
     ensureAudioContext();
     if (!audioContext) return;
+
+    detachTrack(participantSid);
 
     const element = track.attach() as HTMLAudioElement;
     element.autoplay = true;
@@ -145,14 +147,20 @@
     document.body.appendChild(element);
     audioElements.set(participantSid, element);
 
-    const source = audioContext.createMediaElementSource(element);
-    const gain = audioContext.createGain();
-    const volPercent = volumes[participantSid] ?? 100;
-    gain.gain.value = volPercent / 100;
+    try {
+      const source = audioContext.createMediaElementSource(element);
+      const gain = audioContext.createGain();
+      const volPercent = volumes[participantSid] ?? 100;
+      gain.gain.value = volPercent / 100;
 
-    source.connect(gain).connect(audioContext.destination);
+      source.connect(gain).connect(audioContext.destination);
 
-    audioNodes.set(participantSid, { source, gain });
+      audioNodes.set(participantSid, { source, gain });
+    } catch (err) {
+      console.error('Failed to create audio nodes:', err);
+      // If audio processing fails, just use the basic audio element
+      element.muted = false;
+    }
   }
 
   function attachVideoTrack(track: RemoteTrack, participantSid: string) {
@@ -367,6 +375,22 @@
       const p = room.localParticipant;
 
       participants = Array.from(room.remoteParticipants.values()) as RemoteParticipant[];
+
+      room.remoteParticipants.forEach((participant) => {
+        const publications = participant.getTrackPublications();
+        for (const publication of publications) {
+          if (publication.isSubscribed && publication.track) {
+            const remoteTrack = publication.track as RemoteTrack;
+
+            if (publication.kind === 'audio') {
+              attachAudioTrack(remoteTrack, participant.sid);
+            } else if (publication.kind === 'video' && publication.source === Track.Source.Camera) {
+              attachVideoTrack(remoteTrack, participant.sid);
+            }
+          }
+        }
+      });
+
       recomputeVideoTiles();
 
       try {
@@ -397,7 +421,7 @@
 
       if (hasMic) {
         try {
-          const micPub = p.getTrackPublication('microphone' as any) as
+          const micPub = p.getTrackPublication(Track.Source.Microphone) as
             | RemoteTrackPublication
             | undefined;
           const audioTrack = micPub?.track as LocalAudioTrack | undefined;
@@ -430,7 +454,9 @@
         }
       }
 
-      const camPub = p.getTrackPublication('camera' as any) as RemoteTrackPublication | undefined;
+      const camPub = p.getTrackPublication(Track.Source.Camera) as
+        | RemoteTrackPublication
+        | undefined;
       const camTrack = camPub?.track as LocalVideoTrack | undefined;
       if (camTrack) {
         localVideoTrack = camTrack;
