@@ -358,9 +358,18 @@
     isSelfVideoEnabled = next;
     const pub = await room.localParticipant.setCameraEnabled(next);
     const track = pub?.track ?? null;
-    localVideoTrack = track;
-    if (localVideoEl && track) {
-      track.attach(localVideoEl);
+
+    if (!next || !track) {
+      if (localVideoEl) {
+        localVideoEl.srcObject = null;
+        localVideoEl.load();
+      }
+      localVideoTrack = null;
+    } else {
+      localVideoTrack = track;
+      if (localVideoEl) {
+        track.attach(localVideoEl);
+      }
     }
   }
 
@@ -432,17 +441,26 @@
       | undefined;
   }
 
+  function refreshRemoteVideoState(participantSid: string) {
+    const camPub = getCameraPublication(participantSid);
+    if (!camPub) {
+      showRemotePlaceholder(participantSid);
+      return;
+    }
+
+    const track = camPub.videoTrack as RemoteTrack | undefined;
+
+    if (!track || camPub.isMuted) {
+      showRemotePlaceholder(participantSid);
+    } else {
+      attachVideoTrack(track, participantSid);
+    }
+  }
+
   async function attachExistingVideoTracks() {
     if (!room) return;
     room.remoteParticipants.forEach((participant) => {
-      const camPub = participant.getTrackPublication(Track.Source.Camera) as
-        | RemoteTrackPublication
-        | undefined;
-      if (camPub?.isSubscribed && camPub.track && camPub.track.kind === Track.Kind.Video) {
-        attachVideoTrack(camPub.track, participant.sid);
-      } else if (!camPub?.isSubscribed || !camPub.track) {
-        showRemotePlaceholder(participant.sid);
-      }
+      refreshRemoteVideoState(participant.sid);
     });
   }
 
@@ -473,7 +491,7 @@
         if (track.kind === 'audio') {
           attachAudioTrack(track, participant.sid);
         } else if (track.kind === 'video' && pub.source === Track.Source.Camera) {
-          attachVideoTrack(track, participant.sid);
+          refreshRemoteVideoState(participant.sid);
         }
       });
 
@@ -488,23 +506,13 @@
 
       newRoom.on(RoomEvent.TrackMuted, (pub, participant) => {
         if (pub.source === Track.Source.Camera) {
-          showRemotePlaceholder(participant.sid);
+          refreshRemoteVideoState(participant.sid);
         }
       });
 
       newRoom.on(RoomEvent.TrackUnmuted, (pub, participant) => {
         if (pub.source === Track.Source.Camera) {
-          const existing = videoTracks.get(participant.sid);
-          const track = existing ?? (pub as RemoteTrackPublication).track;
-          if (track && track.kind === Track.Kind.Video) {
-            attachVideoTrack(track, participant.sid);
-          } else {
-            const camPub = getCameraPublication(participant.sid);
-            const t = camPub?.track;
-            if (t && t.kind === Track.Kind.Video) {
-              attachVideoTrack(t, participant.sid);
-            }
-          }
+          refreshRemoteVideoState(participant.sid);
         }
       });
 
@@ -591,11 +599,13 @@
         | RemoteTrackPublication
         | undefined;
       const camTrack = camPub?.track;
-      if (camTrack) {
+      if (camTrack && !camPub.isMuted) {
         localVideoTrack = camTrack;
         if (localVideoEl) {
           camTrack.attach(localVideoEl);
         }
+      } else {
+        localVideoTrack = null;
       }
 
       isConnected = true;
@@ -804,7 +814,7 @@
                 <div class="video-inner">
                   <div class="video-container" data-participant={tile.sid}>
                     {#if tile.isLocal}
-                      {#if hasCamera && isSelfVideoEnabled}
+                      {#if hasCamera && isSelfVideoEnabled && localVideoTrack}
                         <video
                           bind:this={localVideoEl}
                           autoplay
