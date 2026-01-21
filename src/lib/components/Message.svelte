@@ -11,6 +11,7 @@
   import ModalMessageDelete from './ModalMessageDelete.svelte';
   import { stateProfile } from '$lib/states';
   import { getLocale } from '$lib/paraglide/runtime';
+  import { toast } from 'svelte-sonner';
 
   const {
     id,
@@ -72,6 +73,8 @@
         thread_id,
         message_id: id,
         content: editedTrimmed
+      }).catch(() => {
+        toast.error(m.error_editing_message());
       });
     }
     if (event.key === 'Escape') {

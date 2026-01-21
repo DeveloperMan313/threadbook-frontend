@@ -6,6 +6,7 @@
   import { ThreadApi } from '$lib/api';
   import { inviteUsernamesGetError } from '$lib/validation';
   import * as m from '$lib/paraglide/messages';
+  import { toast } from 'svelte-sonner';
 
   let { threadId, threadTitle, isOpen = $bindable() }: ModalInviteUsersToThread = $props();
 
@@ -19,8 +20,8 @@
     isLoading = true;
     try {
       ThreadApi.inviteUsersToThread({ invitee_usernames: usernameList, thread_id: threadId });
-    } catch (error) {
-      console.error('Failed to invite users to thread:', error);
+    } catch {
+      toast.error(m.error_inviting_users_to_thread());
     } finally {
       isLoading = false;
     }

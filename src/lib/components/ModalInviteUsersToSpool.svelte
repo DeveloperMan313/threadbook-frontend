@@ -7,6 +7,7 @@
   import { inviteUsernamesGetError } from '$lib/validation';
   import { stateSpools } from '$lib/states';
   import * as m from '$lib/paraglide/messages';
+  import { toast } from 'svelte-sonner';
 
   let { spoolId, isOpen = $bindable() }: ModalInviteUsersToSpool = $props();
 
@@ -22,8 +23,8 @@
     isLoading = true;
     try {
       SpoolApi.inviteUsersToSpool({ member_usernames: usernameList, spool_id: spoolId });
-    } catch (error) {
-      console.error('Failed to invite users to spool:', error);
+    } catch {
+      toast.error(m.error_inviting_users_to_spool());
     } finally {
       isLoading = false;
     }

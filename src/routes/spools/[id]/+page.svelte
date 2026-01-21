@@ -30,6 +30,7 @@
   import ModalSpoolEdit from '$lib/components/ModalSpoolEdit.svelte';
   import ThreadMemberList from '$lib/components/ThreadMemberList.svelte';
   import * as m from '$lib/paraglide/messages';
+  import { toast } from 'svelte-sonner';
 
   let { data } = $props();
 
@@ -63,13 +64,17 @@
 
   setContext('threads', {
     closeThread: (id: number) => {
-      ThreadApi.closeThread({ id });
+      ThreadApi.closeThread({ id }).catch(() => {
+        toast.error(m.error_closing_thread());
+      });
     },
     createThread: (title: string, type: ThreadType) => {
       ThreadApi.createThread({
         title,
         spool_id: data.spoolId,
         type
+      }).catch(() => {
+        toast.error(m.error_creating_thread());
       });
     },
     getCurrentThreadId: () => {
@@ -83,10 +88,8 @@
     },
     renameThread: (id: number, title: string) => {
       let thread = threads.filter((t) => t.id == id)[0];
-      const oldThreadTitle = thread.title;
-      thread.title = title;
       ThreadApi.updateThread({ id, title, type: thread.type }).catch(() => {
-        thread.title = oldThreadTitle;
+        toast.error(m.error_renaming_thread());
       });
     }
   });
@@ -102,10 +105,14 @@
         return unique;
       }, [] as Array<string>);
       if (unknownUsernames.length == 0) return;
-      const fetchedProfiles = await ProfileApi.getProfiles({ usernames: unknownUsernames });
-      fetchedProfiles.profiles.forEach((profile) => {
-        userProfiles.set(profile.username, profile);
-      });
+      try {
+        const fetchedProfiles = await ProfileApi.getProfiles({ usernames: unknownUsernames });
+        fetchedProfiles.profiles.forEach((profile) => {
+          userProfiles.set(profile.username, profile);
+        });
+      } catch {
+        toast.error(m.error_fetching_user_profiles());
+      }
     },
     getProfile: (username: string): UserProfilePublic | undefined => {
       return userProfiles.get(username);

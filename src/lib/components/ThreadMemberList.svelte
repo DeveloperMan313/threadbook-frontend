@@ -5,6 +5,7 @@
   import { SpoolApi, ThreadApi } from '$lib/api';
   import { Skeleton } from '$lib/components/ui/skeleton';
   import * as m from '$lib/paraglide/messages';
+  import { toast } from 'svelte-sonner';
 
   const { spoolId }: ThreadMemberListProps = $props();
 
@@ -33,20 +34,28 @@
     const threadId = getCurrentThreadId(); // TEMP capture
     isLoading = true;
     if (mode === 'private') {
-      ThreadApi.getMembers({ thread_id: threadId! }).then((members) => {
-        if (getCurrentThreadId() !== threadId) return; // TEMP
-        usernames = members.map((m) => m.username);
-        cacheProfilesFromUsernames(usernames);
-        isLoading = false;
-      });
+      ThreadApi.getMembers({ thread_id: threadId! })
+        .then((members) => {
+          if (getCurrentThreadId() !== threadId) return; // TEMP
+          usernames = members.map((m) => m.username);
+          cacheProfilesFromUsernames(usernames);
+          isLoading = false;
+        })
+        .catch(() => {
+          toast.error(m.error_loading_thread_members());
+        });
       return;
     }
-    SpoolApi.getMembers({ spool_id: spoolId }).then((response) => {
-      if (getCurrentThreadId() !== threadId) return; // TEMP
-      usernames = response.members.map((m) => m.username);
-      cacheProfilesFromUsernames(usernames);
-      isLoading = false;
-    });
+    SpoolApi.getMembers({ spool_id: spoolId })
+      .then((response) => {
+        if (getCurrentThreadId() !== threadId) return; // TEMP
+        usernames = response.members.map((m) => m.username);
+        cacheProfilesFromUsernames(usernames);
+        isLoading = false;
+      })
+      .catch(() => {
+        toast.error(m.error_loading_spool_members());
+      });
   });
 </script>
 

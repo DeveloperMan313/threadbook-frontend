@@ -1,6 +1,8 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
 
+  "error_loading_messages": "Ошибка загрузки сообщений",
+  "error_sending_message": "Ошибка отправки сообщения",
   "loading_messages": "Загрузка сообщений...",
   "no_messages_yet": "Ещё нет сообщений",
   "start_a_conversation": "Начните общаться",
@@ -8,21 +10,27 @@
   "type_a_message": "Напишите сообщение...",
   "send": "Отправить",
 
+  "error_editing_message": "Ошибка редактирования сообщения",
   "delete": "Удалить",
 
+  "error_inviting_users_to_spool": "Ошибка приглашения пользователей в спул",
   "invite_users_to_spool": "Пригласить пользователей в спул \"{spoolName}\".",
   "usernames": "Имена пользователей",
   "cancel": "Отменить",
   "invite": "Пригласить",
 
+  "error_inviting_users_to_thread": "Ошибка приглашения пользователей в тред",
   "invite_users_to_thread": "Пригласить пользователей в тред \"{threadTitle}\".",
 
+  "error_logging_out": "Ошибка выхода из аккаунта",
   "log_out": "Выйти",
   "are_you_sure_log_out": "Вы уверены, что хотите выйти из аккаунта \"{account}\"?",
 
+  "error_deleting_message": "Ошибка удаления сообщения",
   "delete_message": "Удалить сообщение",
   "are_you_sure_delete_message": "Вы уверены, что хотите удалить это сообщение?",
 
+  "error_updating_profile": "Ошибка обновления профиля",
   "profile_settings": "Настройки профиля",
   "profile_picture": "Изображение профиля",
   "nickname": "Никнейм",
@@ -57,10 +65,12 @@
   "thread_title": "Название треда",
   "enter_thread_title": "Введите название треда",
 
+  "error_creating_invite_link": "Ошибка создания пригласительной ссылки",
   "create_invite_link": "Создать приглашение",
   "create_invite_link_for_thread": "Создать пригласительную ссылку для треда \"{threadTitle}\".",
   "copy": "Копировать",
 
+  "error_joining_thread_by_link": "Ошибка присоединения по приглашению",
   "join_invite_link": "Присоединиться по приглашению",
   "join_invite_link_for_thread": "Присоединиться по приглашению в таинственный тред :3 ?",
   "joining": "Присоединяемся...",
@@ -77,9 +87,12 @@
   "public_threads": "Публичные",
   "closed_threads": "Закрытые",
 
+  "error_loading_thread_members": "Ошибка загрузки участников треда",
+  "error_loading_spool_members": "Ошибка загрузки участников спула",
   "thread_members": "Участники треда",
   "spool_members": "Участники спула",
 
+  "error_joining_voice_chat": "Ошибка присоединения к голосовому чату",
   "voice_chat": "Голосовой чат",
   "fullscreen": "Полный экран",
   "minimize": "Свернуть",
@@ -87,6 +100,10 @@
   "expand": "Развернуть",
   "you": "Вы",
   "drag_to_resize": "Тяните для изменения размера",
+
+  "error_creating_spool": "Ошибка создания спула",
+  "error_updating_spool": "Ошибка редактирования спула",
+  "error_leaving_spool": "Ошибка выхода из спула",
 
   "between_min_and_max_symbols": "От {min} до {max} символов",
   "at_least_min_symbols": "От {min} символов",
@@ -121,6 +138,10 @@
   "already_have_an_account": "Уже есть аккаунт?",
   "sign_in_suggestion": "войдите",
 
+  "error_closing_thread": "Ошибка закрытия треда",
+  "error_creating_thread": "Ошибка создания треда",
+  "error_renaming_thread": "Ошибка переименования треда",
+  "error_fetching_user_profiles": "Ошибка запроса пользовательских профилей",
   "invite_users": "Пригласить людей",
   "edit": "Редактировать",
   "leave": "Выйти",

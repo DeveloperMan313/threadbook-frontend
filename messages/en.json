@@ -1,6 +1,8 @@
 {
   "$schema": "https://inlang.com/schema/inlang-message-format",
 
+  "error_loading_messages": "Error loading messages",
+  "error_sending_message": "Error sending message",
   "loading_messages": "Loading messages...",
   "no_messages_yet": "No messages yet",
   "start_a_conversation": "Start a conversation",
@@ -8,21 +10,27 @@
   "type_a_message": "Write a message...",
   "send": "Send",
 
+  "error_editing_message": "Error editing message",
   "delete": "Delete",
 
+  "error_inviting_users_to_spool": "Error inviting users to spool",
   "invite_users_to_spool": "Invite users to spool \"{spoolName}\".",
   "usernames": "Usernames",
   "cancel": "Cancel",
   "invite": "Invite",
 
+  "error_inviting_users_to_thread": "Error inviting users to thread",
   "invite_users_to_thread": "Invite users to thread \"{threadTitle}\".",
 
+  "error_logging_out": "Error logging out",
   "log_out": "Log out",
   "are_you_sure_log_out": "Are you sure you want to log out of your account \"{account}\"?",
 
+  "error_deleting_message": "Error deleting message",
   "delete_message": "Delete message",
   "are_you_sure_delete_message": "Are you sure you want to delete this message?",
 
+  "error_updating_profile": "Error updating profile",
   "profile_settings": "Profile settings",
   "profile_picture": "Profile picture",
   "nickname": "Nickname",
@@ -57,10 +65,12 @@
   "thread_title": "Thread title",
   "enter_thread_title": "Enter thread title",
 
+  "error_creating_invite_link": "Error creating invite link",
   "create_invite_link": "Create invite link",
   "create_invite_link_for_thread": "Create invite link for thread \"{threadTitle}\".",
   "copy": "Copy",
 
+  "error_joining_thread_by_link": "Error joining thread by link",
   "join_invite_link": "Join invite link",
   "join_invite_link_for_thread": "Join invite link for mysterious thread :3 ?",
   "joining": "Joining...",
@@ -77,9 +87,12 @@
   "public_threads": "Public",
   "closed_threads": "Closed",
 
+  "error_loading_thread_members": "Error loading thread members",
+  "error_loading_spool_members": "Error loading spool members",
   "thread_members": "Thread members",
   "spool_members": "Spool members",
 
+  "error_joining_voice_chat": "Error joining voice chat",
   "voice_chat": "Voice chat",
   "fullscreen": "Fullscreen",
   "minimize": "Minimize",
@@ -87,6 +100,10 @@
   "expand": "Expand",
   "you": "You",
   "drag_to_resize": "Drag to resize",
+
+  "error_creating_spool": "Error creating spool",
+  "error_updating_spool": "Error updating spool",
+  "error_leaving_spool": "Error leaving spool",
 
   "between_min_and_max_symbols": "Between {min} and {max} symbols",
   "at_least_min_symbols": "At least {min} symbols",
@@ -121,6 +138,10 @@
   "already_have_an_account": "Already have an account?",
   "sign_in_suggestion": "sign in",
 
+  "error_closing_thread": "Error closing thread",
+  "error_creating_thread": "Error creating thread",
+  "error_renaming_thread": "Error renaming thread",
+  "error_fetching_user_profiles": "Error fetching user profiles",
   "invite_users": "Invite users",
   "edit": "Edit",
   "leave": "Leave",

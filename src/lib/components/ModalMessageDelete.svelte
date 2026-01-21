@@ -4,12 +4,15 @@
   import * as Dialog from '$lib/components/ui/dialog/index.js';
   import * as m from '$lib/paraglide/messages';
   import { MessageApi } from '$lib/api';
+  import { toast } from 'svelte-sonner';
 
   let { threadId, messageId, isOpen = $bindable() }: ModalMessageDeleteProps = $props();
 
   const onDeleteClick = async () => {
     isOpen = false;
-    await MessageApi.deleteMessage({ thread_id: threadId, message_id: messageId });
+    MessageApi.deleteMessage({ thread_id: threadId, message_id: messageId }).catch(() => {
+      toast.error(m.error_deleting_message());
+    });
   };
 
   const onCancel = () => {

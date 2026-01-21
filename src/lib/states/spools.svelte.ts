@@ -6,6 +6,8 @@ import type {
   WsSpoolInvited,
   WsSpoolUpdated
 } from '$lib/types';
+import * as m from '$lib/paraglide/messages';
+import { toast } from 'svelte-sonner';
 
 export const stateSpools = $state<{ spools: SpoolProps[]; currentSpoolId: number }>({
   spools: [],
@@ -23,32 +25,44 @@ export const stateSpoolsFetch = async () => {
 };
 
 export const stateSpoolCreate = async (name: string, banner?: File) => {
-  const response = await SpoolApi.createSpool({ name, banner });
-  const newSpool = {
-    id: response.spool_id,
-    name: response.name,
-    is_creator: true,
-    access_level: 3,
-    banner_link: response.banner_link,
-    description: '',
-    members: 0,
-    threads: 0
-  } as SpoolProps;
-  stateSpoolsAdd(newSpool);
+  try {
+    const response = await SpoolApi.createSpool({ name, banner });
+    const newSpool = {
+      id: response.spool_id,
+      name: response.name,
+      is_creator: true,
+      access_level: 3,
+      banner_link: response.banner_link,
+      description: '',
+      members: 0,
+      threads: 0
+    } as SpoolProps;
+    stateSpoolsAdd(newSpool);
+  } catch {
+    toast.error(m.error_creating_spool());
+  }
 };
 
 export const stateSpoolUpdate = async (spoolId: number, name: string, banner?: File) => {
-  const response = await SpoolApi.updateSpool({ spool_id: spoolId, name, banner });
-  const updatedSpool = {
-    id: spoolId,
-    ...response
-  };
-  stateSpoolsUpdate(updatedSpool);
+  try {
+    const response = await SpoolApi.updateSpool({ spool_id: spoolId, name, banner });
+    const updatedSpool = {
+      id: spoolId,
+      ...response
+    };
+    stateSpoolsUpdate(updatedSpool);
+  } catch {
+    toast.error(m.error_updating_spool());
+  }
 };
 
 export const stateSpoolLeave = async (spoolId: number) => {
-  await SpoolApi.leaveFromSpool({ spool_id: spoolId });
-  stateSpoolsDelete(spoolId);
+  try {
+    await SpoolApi.leaveFromSpool({ spool_id: spoolId });
+    stateSpoolsDelete(spoolId);
+  } catch {
+    toast.error(m.error_leaving_spool());
+  }
 };
 
 export const stateSpoolsSetCurrentSpoolId = (spoolId: number) => {

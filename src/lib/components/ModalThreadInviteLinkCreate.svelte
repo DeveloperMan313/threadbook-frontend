@@ -5,6 +5,7 @@
   import { ThreadApi } from '$lib/api';
   import Input from '$lib/components/ui/input/input.svelte';
   import * as m from '$lib/paraglide/messages';
+  import { toast } from 'svelte-sonner';
 
   let { isOpen = $bindable(), threadId, threadTitle }: ModalThreadInviteLinkCreateProps = $props();
 
@@ -32,8 +33,8 @@
         expires_at: new Date()
       });
       linkId = inviteLink.id;
-    } catch (error) {
-      console.error('Failed to create thread invite link:', error);
+    } catch {
+      toast.error(m.error_creating_invite_link());
     } finally {
       isLoading = false;
     }

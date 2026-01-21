@@ -12,6 +12,7 @@
   import { nicknameGetError } from '$lib/validation';
   import * as m from '$lib/paraglide/messages';
   import LocaleSelector from './LocaleSelector.svelte';
+  import { toast } from 'svelte-sonner';
 
   let { isOpen = $bindable() }: ModalProfileSettingsProps = $props();
 
@@ -47,8 +48,8 @@
         ...profileChanges
       };
       avatarLocal = '';
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Profile update failed');
+    } catch {
+      toast.error(m.error_updating_profile());
     } finally {
       isLoading = false;
     }

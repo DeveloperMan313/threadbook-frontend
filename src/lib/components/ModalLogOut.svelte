@@ -7,6 +7,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import * as m from '$lib/paraglide/messages';
+  import { toast } from 'svelte-sonner';
 
   let { isOpen = $bindable() }: ModalLogOutProps = $props();
 
@@ -15,8 +16,8 @@
     try {
       AuthApi.logOut();
       goto(resolve('/signin', {}));
-    } catch (error) {
-      console.error('Failed to log out:', error);
+    } catch {
+      toast.error(m.error_logging_out());
     }
   };
 

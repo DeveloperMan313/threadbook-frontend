@@ -27,10 +27,9 @@
   import { ThreadApi } from '$lib/api';
   import { DeepFilterNet3Processor as DeepFilterNoiseFilterProcessor } from 'deepfilternet3-noise-filter';
   import * as m from '$lib/paraglide/messages';
+  import { toast } from 'svelte-sonner';
 
   let isConnected = $state(false);
-  let error = $state('');
-  let showError = $state(false);
   let room = $state<Room | null>(null);
 
   let isSelfMuted = $state(false);
@@ -610,9 +609,8 @@
 
       isConnected = true;
       recomputeVideoTiles();
-    } catch (err) {
-      error = (err as Error).message || 'Connection failed';
-      console.error('Join error:', err);
+    } catch {
+      toast.error(m.error_joining_voice_chat());
       await leaveRoom(false);
     }
   }

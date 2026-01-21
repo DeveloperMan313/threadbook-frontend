@@ -17,6 +17,7 @@
   import * as m from '$lib/paraglide/messages';
   import { stateThreadChats } from '$lib/states/threadChats.svelte';
   import { Textarea } from './ui/textarea';
+  import { toast } from 'svelte-sonner';
 
   const { getCurrentThreadId, getThreads } = getContext('threads') as {
     getCurrentThreadId: () => number | null;
@@ -59,8 +60,8 @@
       initialLoading: true
     });
 
-    MessageApi.getThreadMessages({ thread_id: threadId, limit: messageLoadLimit }).then(
-      async (messages) => {
+    MessageApi.getThreadMessages({ thread_id: threadId, limit: messageLoadLimit })
+      .then(async (messages) => {
         cacheProfilesFromUsernames(messages.map((m) => m.username));
         stateThreadChats.set(threadId, {
           thread: thread,
@@ -71,8 +72,10 @@
         });
         await tick();
         handleScroll(); // might be at top after initial load
-      }
-    );
+      })
+      .catch(() => {
+        toast.error(m.error_loading_messages());
+      });
 
     if (thread.is_closed) return;
 
@@ -162,26 +165,30 @@
         thread_id: threadId,
         cursor_id: msgs[0].id,
         forward: false
-      }).then((fetchedMessages) => {
-        // save old scroll
-        const scrollTopBefore = messagesContainer.scrollTop;
-        const scrollHeightBefore = messagesContainer.scrollHeight;
-        // cache and render new messages
-        cacheProfilesFromUsernames(msgs.map((m) => m.username));
-        stateThreadChats.set(threadId, {
-          ...chat,
-          messages: [...fetchedMessages, ...chat.messages],
-          firstMessageLoaded: fetchedMessages.length < messageLoadLimit
+      })
+        .then((fetchedMessages) => {
+          // save old scroll
+          const scrollTopBefore = messagesContainer.scrollTop;
+          const scrollHeightBefore = messagesContainer.scrollHeight;
+          // cache and render new messages
+          cacheProfilesFromUsernames(msgs.map((m) => m.username));
+          stateThreadChats.set(threadId, {
+            ...chat,
+            messages: [...fetchedMessages, ...chat.messages],
+            firstMessageLoaded: fetchedMessages.length < messageLoadLimit
+          });
+          untrack(() => {
+            isAtTop = false;
+          });
+          // restore scroll after DOM update
+          tick().then(() => {
+            messagesContainer.scrollTop =
+              messagesContainer.scrollHeight - scrollHeightBefore + scrollTopBefore;
+          });
+        })
+        .catch(() => {
+          toast.error(m.error_loading_messages());
         });
-        untrack(() => {
-          isAtTop = false;
-        });
-        // restore scroll after DOM update
-        tick().then(() => {
-          messagesContainer.scrollTop =
-            messagesContainer.scrollHeight - scrollHeightBefore + scrollTopBefore;
-        });
-      });
     }
   });
 
@@ -233,9 +240,13 @@
       thread_id: currentThreadId,
       content: message.content,
       files: selectedFilesDT.files
-    }).finally(() => {
-      isSendingMessage = false;
-    });
+    })
+      .catch(() => {
+        toast.error(m.error_sending_message());
+      })
+      .finally(() => {
+        isSendingMessage = false;
+      });
 
     // WARNING: user will lose message data if request fails, but UI is more responsive that way
     const currentChat = stateThreadChats.get(currentThreadId)!;

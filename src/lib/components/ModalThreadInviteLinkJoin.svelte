@@ -6,6 +6,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import * as m from '$lib/paraglide/messages';
+  import { toast } from 'svelte-sonner';
 
   let { isOpen = $bindable(), linkId }: ModalThreadInviteLinkJoinProps = $props();
 
@@ -18,7 +19,7 @@
       // TODO get spoolId+threadId from response and redirect to thread
       goto(resolve('/spools', {}));
     } catch {
-      console.error('Could not join thread by link');
+      toast.error(m.error_joining_thread_by_link());
     } finally {
       isLoading = false;
     }
