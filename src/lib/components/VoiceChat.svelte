@@ -66,6 +66,8 @@
     Record<string, { value: string; timeout?: ReturnType<typeof setTimeout> }>
   >({});
 
+  let remoteHasVideo = $state<Record<string, boolean>>({});
+
   const isBrowser = typeof document !== 'undefined';
 
   type VideoTile = {
@@ -119,7 +121,7 @@
     if (!isBrowser || !participantSid) return;
 
     if (audioElements.has(participantSid)) {
-      detachTrack(participantSid);
+      detachTrack(participantSid, false, true);
     }
 
     const element = track.attach() as HTMLAudioElement;
@@ -153,7 +155,7 @@
       ) as HTMLElement | null;
 
       if (container) {
-        container.innerHTML = '';
+        container.querySelectorAll('video').forEach((v) => v.remove());
         element.classList.add('video-element');
         container.appendChild(element);
       } else if (attempts < 20) {
@@ -165,23 +167,42 @@
     tryAttach();
   }
 
-  function detachTrack(participantSid: string) {
+  function detachTrack(
+    participantSid: string,
+    removeVideo: boolean = true,
+    removeAudio: boolean = true
+  ) {
     if (!isBrowser || !participantSid) return;
 
-    const audioEl = audioElements.get(participantSid);
-    if (audioEl) {
-      try {
-        audioEl.remove();
-      } catch {}
-      audioElements.delete(participantSid);
+    if (removeAudio) {
+      const audioEl = audioElements.get(participantSid);
+      if (audioEl) {
+        try {
+          audioEl.remove();
+        } catch {
+          // ignore
+        }
+        audioElements.delete(participantSid);
+      }
+
+      audioTracks.delete(participantSid);
     }
 
-    audioTracks.delete(participantSid);
+    if (removeVideo) {
+      const container = document.querySelector(
+        `.video-container[data-participant="${participantSid}"]`
+      ) as HTMLElement | null;
 
-    const container = document.querySelector(
-      `.video-container[data-participant="${participantSid}"]`
-    );
-    if (container) (container as HTMLElement).innerHTML = '';
+      if (container) {
+        container.querySelectorAll('video').forEach((v) => {
+          try {
+            v.remove();
+          } catch {
+            // ignore
+          }
+        });
+      }
+    }
 
     if (volumeDisplayFor[participantSid]?.timeout) {
       clearTimeout(volumeDisplayFor[participantSid].timeout);
@@ -362,7 +383,10 @@
       });
 
       room.on(RoomEvent.ParticipantDisconnected, (participant) => {
-        detachTrack(participant.sid);
+        detachTrack(participant.sid, true, true);
+        const newRemoteHasVideo = { ...remoteHasVideo };
+        delete newRemoteHasVideo[participant.sid];
+        remoteHasVideo = newRemoteHasVideo;
         participants = participants.filter((p) => p.sid !== participant.sid);
         recomputeVideoTiles();
       });
@@ -371,12 +395,20 @@
         if (track.kind === 'audio') {
           attachAudioTrack(track, participant.sid);
         } else if (track.kind === 'video' && pub.source === Track.Source.Camera) {
+          remoteHasVideo = { ...remoteHasVideo, [participant.sid]: true };
           attachVideoTrack(track, participant.sid);
         }
       });
 
       room.on(RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
-        detachTrack(participant.sid);
+        if (track.kind === 'audio') {
+          detachTrack(participant.sid, false, true);
+        } else if (track.kind === 'video' && pub.source === Track.Source.Camera) {
+          const copy = { ...remoteHasVideo };
+          delete copy[participant.sid];
+          remoteHasVideo = copy;
+          detachTrack(participant.sid, true, false);
+        }
       });
 
       room.on(RoomEvent.Disconnected, () => {
@@ -424,10 +456,12 @@
 
       if (hasMic) {
         try {
-          const micPub = p.getTrackPublication(Track.Source.Microphone);
+          const micPub = p.getTrackPublication(Track.Source.Microphone) as
+            | RemoteTrackPublication
+            | undefined;
           const audioTrack = micPub?.track;
 
-          if (audioTrack && audioTrack.getProcessor === undefined) {
+          if (audioTrack && (audioTrack as any).getProcessor === undefined) {
             if (!dfnProcessor) {
               dfnProcessor = new DeepFilterNoiseFilterProcessor({
                 sampleRate: 48000,
@@ -455,7 +489,9 @@
         }
       }
 
-      const camPub = p.getTrackPublication(Track.Source.Camera);
+      const camPub = p.getTrackPublication(Track.Source.Camera) as
+        | RemoteTrackPublication
+        | undefined;
       const camTrack = camPub?.track;
       if (camTrack) {
         localVideoTrack = camTrack;
@@ -476,7 +512,11 @@
   async function leaveRoom() {
     if (!isBrowser) return;
     if (room) {
-      await room.disconnect();
+      try {
+        await room.disconnect();
+      } catch {
+        // ignore
+      }
       room = null;
     }
     participants = [];
@@ -484,13 +524,21 @@
     audioElements.forEach((el) => {
       try {
         el.remove();
-      } catch {}
+      } catch {
+        // ignore
+      }
     });
     audioElements.clear();
     audioTracks.clear();
 
     document.querySelectorAll('.video-container').forEach((el) => {
-      (el as HTMLElement).innerHTML = '';
+      (el as HTMLElement).querySelectorAll('video').forEach((v) => {
+        try {
+          v.remove();
+        } catch {
+          // ignore
+        }
+      });
     });
     if (localVideoEl) {
       localVideoEl.srcObject = null;
@@ -517,6 +565,7 @@
     showVolumeSliderFor = {};
     volumeDisplayFor = {};
     videoTiles = [];
+    remoteHasVideo = {};
 
     stateVoiceThreadId.id = null;
     viewMode = 'normal';
@@ -653,7 +702,7 @@
                           <VideoOff size={64} />
                         </div>
                       {/if}
-                    {:else}
+                    {:else if remoteHasVideo[tile.sid]}{:else}
                       <div class="video-placeholder">
                         <VideoOff size={64} />
                       </div>
