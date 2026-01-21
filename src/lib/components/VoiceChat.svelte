@@ -51,7 +51,7 @@
   let volumes = $state<Record<string, number>>({});
   let audioElements = new SvelteMap<string, HTMLAudioElement>();
   let audioTracks = new SvelteMap<string, RemoteAudioTrack>();
-  let videoTracks = new SvelteMap<string, RemoteTrack>(); // sid -> remote video track
+  let videoTracks = new SvelteMap<string, RemoteTrack>();
   let localVideoEl = $state<HTMLVideoElement | null>(null);
   let localVideoTrack = $state<any | null>(null);
 
@@ -432,7 +432,7 @@
         | undefined;
       if (camPub?.isSubscribed && camPub.track && camPub.track.kind === Track.Kind.Video) {
         attachVideoTrack(camPub.track, participant.sid);
-      } else {
+      } else if (!camPub?.isSubscribed || !camPub.track) {
         showRemotePlaceholder(participant.sid);
       }
     });
@@ -486,7 +486,8 @@
 
       newRoom.on(RoomEvent.TrackUnmuted, (pub, participant) => {
         if (pub.source === Track.Source.Camera) {
-          const track = videoTracks.get(participant.sid) ?? (pub as RemoteTrackPublication).track;
+          const existing = videoTracks.get(participant.sid);
+          const track = existing ?? (pub as RemoteTrackPublication).track;
           if (track && track.kind === Track.Kind.Video) {
             attachVideoTrack(track, participant.sid);
           } else {
