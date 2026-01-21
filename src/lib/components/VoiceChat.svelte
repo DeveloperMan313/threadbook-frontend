@@ -142,14 +142,17 @@
 
   function attachAudioTrack(track: RemoteTrack, participantSid: string) {
     if (!isBrowser || !participantSid) return;
+    
+    if (audioElements.has(participantSid)) {
+      detachTrack(participantSid);
+    }
+    
     ensureAudioContext();
     if (!audioContext) return;
 
     if (audioContext.state === 'suspended') {
       audioContext.resume().catch(console.warn);
     }
-
-    detachTrack(participantSid);
 
     const element = track.attach() as HTMLAudioElement;
     element.autoplay = true;
@@ -170,6 +173,8 @@
       applyVolumeForParticipant(participantSid);
     } catch (err) {
       console.error('Failed to create audio nodes:', err);
+      element.remove();
+      audioElements.delete(participantSid);
     }
   }
 
@@ -262,7 +267,7 @@
       ...showVolumeSliderFor,
       [id]: newValue
     };
-
+    
     if (newValue) {
       setTimeout(() => {
         showVolumeSliderFor = {
@@ -405,22 +410,6 @@
       const p = room.localParticipant;
 
       participants = Array.from(room.remoteParticipants.values()) as RemoteParticipant[];
-
-      room.remoteParticipants.forEach((participant) => {
-        const publications = participant.getTrackPublications();
-        for (const publication of publications) {
-          if (publication.isSubscribed && publication.track) {
-            const remoteTrack = publication.track as RemoteTrack;
-
-            if (publication.kind === 'audio') {
-              attachAudioTrack(remoteTrack, participant.sid);
-            } else if (publication.kind === 'video' && publication.source === Track.Source.Camera) {
-              attachVideoTrack(remoteTrack, participant.sid);
-            }
-          }
-        }
-      });
-
       recomputeVideoTiles();
 
       try {
@@ -911,7 +900,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* 🔹 Теперь placeholder такого же размера, как видео */
   }
 
   .video-container {
@@ -946,7 +934,6 @@
     inset: 0;
   }
 
-  /* 🔹 Микшер громкости ПОД участником */
   .volume-popover-bottom {
     position: absolute;
     bottom: 6px;
@@ -966,7 +953,6 @@
     accent-color: currentColor;
   }
 
-  /* 🔹 Отображение текущей громкости */
   .volume-value-display {
     position: absolute;
     bottom: 6px;
