@@ -147,6 +147,44 @@
     }
   }
 
+  function showRemotePlaceholder(participantSid: string) {
+    if (!isBrowser || !participantSid) return;
+    const container = document.querySelector(
+      `.video-container[data-participant="${participantSid}"]`
+    ) as HTMLElement | null;
+    if (!container) return;
+
+    container.querySelectorAll('video').forEach((v) => {
+      try {
+        v.remove();
+      } catch {
+        // ignore
+      }
+    });
+
+    if (!container.querySelector('.video-placeholder')) {
+      const div = document.createElement('div');
+      div.className = 'video-placeholder';
+      container.appendChild(div);
+    }
+  }
+
+  function hideRemotePlaceholder(participantSid: string) {
+    if (!isBrowser || !participantSid) return;
+    const container = document.querySelector(
+      `.video-container[data-participant="${participantSid}"]`
+    ) as HTMLElement | null;
+    if (!container) return;
+
+    container.querySelectorAll('.video-placeholder').forEach((v) => {
+      try {
+        v.remove();
+      } catch {
+        // ignore
+      }
+    });
+  }
+
   function attachVideoTrack(track: RemoteTrack, participantSid: string) {
     if (!isBrowser || !participantSid) return;
 
@@ -163,8 +201,14 @@
       ) as HTMLElement | null;
 
       if (container) {
-        container.querySelectorAll('.video-placeholder').forEach((v) => v.remove());
-        container.querySelectorAll('video').forEach((v) => v.remove());
+        hideRemotePlaceholder(participantSid);
+        container.querySelectorAll('video').forEach((v) => {
+          try {
+            v.remove();
+          } catch {
+            // ignore
+          }
+        });
         element.classList.add('video-element');
         container.appendChild(element);
       } else if (attempts < 20) {
@@ -384,6 +428,8 @@
         | undefined;
       if (camPub?.isSubscribed && camPub.track && camPub.track.kind === Track.Kind.Video) {
         attachVideoTrack(camPub.track, participant.sid);
+      } else if (!camPub?.isSubscribed || !camPub.track) {
+        showRemotePlaceholder(participant.sid);
       }
     });
   }
@@ -424,6 +470,22 @@
           detachTrack(participant.sid, false, true);
         } else if (track.kind === 'video' && pub.source === Track.Source.Camera) {
           detachTrack(participant.sid, true, false);
+          showRemotePlaceholder(participant.sid);
+        }
+      });
+
+      newRoom.on(RoomEvent.TrackMuted, (pub, participant) => {
+        if (pub.source === Track.Source.Camera) {
+          showRemotePlaceholder(participant.sid);
+        }
+      });
+
+      newRoom.on(RoomEvent.TrackUnmuted, (pub, participant) => {
+        if (pub.source === Track.Source.Camera) {
+          const track = (pub as RemoteTrackPublication).track;
+          if (track && track.kind === Track.Kind.Video) {
+            attachVideoTrack(track, participant.sid);
+          }
         }
       });
 
