@@ -131,16 +131,29 @@
     }
   }
 
+  function applyVolumeForParticipant(sid: string) {
+    const nodes = audioNodes.get(sid);
+    if (!nodes || !audioContext) return;
+
+    const volPercent = volumes[sid] ?? 100;
+    const finalVol = isOthersMuted ? 0 : volPercent / 100;
+    nodes.gain.gain.setValueAtTime(finalVol, audioContext.currentTime);
+  }
+
   function attachAudioTrack(track: RemoteTrack, participantSid: string) {
-    if (!isBrowser) return;
+    if (!isBrowser || !participantSid) return;
     ensureAudioContext();
     if (!audioContext) return;
+
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().catch(console.warn);
+    }
 
     detachTrack(participantSid);
 
     const element = track.attach() as HTMLAudioElement;
     element.autoplay = true;
-    element.muted = isOthersMuted;
+    element.muted = false;
     element.volume = 1.0;
     element.style.display = 'none';
     element.dataset.participant = participantSid;
@@ -150,21 +163,18 @@
     try {
       const source = audioContext.createMediaElementSource(element);
       const gain = audioContext.createGain();
-      const volPercent = volumes[participantSid] ?? 100;
-      gain.gain.value = volPercent / 100;
 
       source.connect(gain).connect(audioContext.destination);
-
       audioNodes.set(participantSid, { source, gain });
+
+      applyVolumeForParticipant(participantSid);
     } catch (err) {
       console.error('Failed to create audio nodes:', err);
-      // If audio processing fails, just use the basic audio element
-      element.muted = false;
     }
   }
 
   function attachVideoTrack(track: RemoteTrack, participantSid: string) {
-    if (!isBrowser) return;
+    if (!isBrowser || !participantSid) return;
 
     const element = track.attach() as HTMLVideoElement;
     element.autoplay = true;
@@ -192,7 +202,7 @@
   }
 
   function detachTrack(participantSid: string) {
-    if (!isBrowser) return;
+    if (!isBrowser || !participantSid) return;
 
     const audioEl = audioElements.get(participantSid);
     if (audioEl) {
@@ -215,34 +225,52 @@
       `.video-container[data-participant="${participantSid}"]`
     );
     if (container) (container as HTMLElement).innerHTML = '';
+
+    if (volumeDisplayFor[participantSid]?.timeout) {
+      clearTimeout(volumeDisplayFor[participantSid].timeout);
+      const newVolumeDisplay = { ...volumeDisplayFor };
+      delete newVolumeDisplay[participantSid];
+      volumeDisplayFor = newVolumeDisplay;
+    }
   }
 
   function updateVolume(id: string, volPercent: number) {
     const clamped = Math.max(0, Math.min(200, volPercent));
     volumes = { ...volumes, [id]: clamped };
 
-    const nodes = audioNodes.get(id);
-    if (nodes && audioContext) {
-      nodes.gain.gain.setValueAtTime(clamped / 100, audioContext.currentTime);
-    }
+    applyVolumeForParticipant(id);
 
-    if (volumeDisplayFor[id]?.timeout) clearTimeout(volumeDisplayFor[id].timeout);
-    volumeDisplayFor[id] = {
-      value: `${Math.round(clamped)}%`,
-      timeout: setTimeout(() => {
-        volumeDisplayFor = {
-          ...volumeDisplayFor,
-          [id]: { value: '', timeout: undefined }
-        };
-      }, 1500)
+    if (volumeDisplayFor[id]?.timeout) {
+      clearTimeout(volumeDisplayFor[id].timeout);
+    }
+    volumeDisplayFor = {
+      ...volumeDisplayFor,
+      [id]: {
+        value: `${Math.round(clamped)}%`,
+        timeout: setTimeout(() => {
+          const newVolumeDisplay = { ...volumeDisplayFor };
+          delete newVolumeDisplay[id];
+          volumeDisplayFor = newVolumeDisplay;
+        }, 3000)
+      }
     };
   }
 
   function toggleVolumeSlider(id: string) {
+    const newValue = !showVolumeSliderFor[id];
     showVolumeSliderFor = {
       ...showVolumeSliderFor,
-      [id]: !showVolumeSliderFor[id]
+      [id]: newValue
     };
+
+    if (newValue) {
+      setTimeout(() => {
+        showVolumeSliderFor = {
+          ...showVolumeSliderFor,
+          [id]: false
+        };
+      }, 3000);
+    }
   }
 
   async function toggleSelfMute() {
@@ -256,7 +284,9 @@
 
   function toggleOthersMute() {
     isOthersMuted = !isOthersMuted;
-    audioElements.forEach((el) => (el.muted = isOthersMuted));
+    audioNodes.forEach((_, sid) => {
+      applyVolumeForParticipant(sid);
+    });
   }
 
   async function toggleSelfVideo() {
@@ -539,13 +569,10 @@
     const vtId = stateVoiceThreadId.id;
     untrack(async () => {
       if (isConnected) {
-        const voiceThreadIdCopy = vtId;
         await leaveRoom();
-        stateVoiceThreadId.id = voiceThreadIdCopy;
       }
-    }).then(() => {
       if (vtId) {
-        joinRoom(vtId);
+        await joinRoom(vtId);
       }
     });
   });
@@ -690,7 +717,7 @@
                     ></div>
 
                     {#if showVolumeSliderFor[tile.sid]}
-                      <div class="volume-popover">
+                      <div class="volume-popover-bottom">
                         <input
                           type="range"
                           min="0"
@@ -703,13 +730,13 @@
                             updateVolume(tile.sid, val);
                           }}
                         />
-
-                        {#if volumeDisplayFor[tile.sid]?.value}
-                          <span class="volume-value">
-                            {volumeDisplayFor[tile.sid].value}
-                          </span>
-                        {/if}
                       </div>
+                    {/if}
+
+                    {#if volumeDisplayFor[tile.sid]?.value}
+                      <span class="volume-value-display">
+                        {volumeDisplayFor[tile.sid].value}
+                      </span>
                     {/if}
                   {/if}
                 </div>
@@ -884,6 +911,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* 🔹 Теперь placeholder такого же размера, как видео */
   }
 
   .video-container {
@@ -918,15 +946,18 @@
     inset: 0;
   }
 
-  .volume-popover {
+  /* 🔹 Микшер громкости ПОД участником */
+  .volume-popover-bottom {
     position: absolute;
-    right: 6px;
     bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
     padding: 4px;
     border-radius: 6px;
     background: rgba(0, 0, 0, 0.75);
     color: #fff;
     width: 96px;
+    z-index: 10;
   }
 
   .volume-range {
@@ -935,11 +966,18 @@
     accent-color: currentColor;
   }
 
-  .volume-value {
-    display: block;
-    margin-top: 2px;
-    text-align: center;
+  /* 🔹 Отображение текущей громкости */
+  .volume-value-display {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
     font-size: 10px;
+    pointer-events: none;
+    z-index: 5;
   }
 
   .videos-grid-min {
