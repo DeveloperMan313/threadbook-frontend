@@ -926,16 +926,6 @@
     display: flex;
   }
 
-  .video-placeholder {
-    width: 100%;
-    height: 100%;
-    background: #000;
-    color: #888;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
   .video-container {
     position: relative;
     flex: 1;
@@ -944,11 +934,37 @@
     display: flex;
   }
 
-  .video-element {
+  .video-element,
+  .video-container video {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
+    position: relative;
+    z-index: 2;
+  }
+
+  .video-placeholder {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    color: #888;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+  }
+
+  .video-container,
+  .video-inner {
+    background-image: none !important;
+  }
+
+  .video-container::before,
+  .video-container::after,
+  .video-inner::before,
+  .video-inner::after {
+    content: none !important;
   }
 
   .video-label {
