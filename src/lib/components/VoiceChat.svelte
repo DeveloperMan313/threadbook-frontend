@@ -54,7 +54,7 @@
   let localVideoEl = $state<HTMLVideoElement | null>(null);
   let localVideoTrack = $state<any | null>(null);
 
-  let dfnProcessor: DeepFilterNoiseFilterProcessor | null = null;
+  let dfnProcessor: DeepFilterNet3Processor | null = null;
 
   let isDragging = false;
   let isResizing = false;
@@ -376,8 +376,14 @@
   }
 
   function hasRemoteCameraTrack(participantSid: string): boolean {
-    const camPub = getCameraPublication(participantSid);
-    return !!(camPub && camPub.track && !camPub.muted);
+    const participant = getParticipantBySid(participantSid);
+    if (!participant || !participant.isCameraEnabled) return false;
+
+    const camPub = participant.getTrackPublication(Track.Source.Camera) as
+      | RemoteTrackPublication
+      | undefined;
+
+    return !!camPub?.isSubscribed;
   }
 
   async function attachExistingVideoTracks() {
@@ -386,9 +392,8 @@
       const camPub = participant.getTrackPublication(Track.Source.Camera) as
         | RemoteTrackPublication
         | undefined;
-      const track = camPub?.track;
-      if (track && track.kind === Track.Kind.Video) {
-        attachVideoTrack(track, participant.sid);
+      if (camPub?.isSubscribed && camPub.track && camPub.track.kind === Track.Kind.Video) {
+        attachVideoTrack(camPub.track, participant.sid);
       }
     });
   }
