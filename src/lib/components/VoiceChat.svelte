@@ -34,7 +34,7 @@
 
   let isSelfMuted = $state(false);
   let isOthersMuted = $state(false);
-  let isSelfVideoEnabled = $state(true);
+  let isSelfVideoEnabled = $state(false);
 
   let hasMic = $state(true);
   let hasCamera = $state(true);
@@ -524,7 +524,7 @@
       });
 
       hasMic = true;
-      hasCamera = false;
+      hasCamera = true;
 
       const p = newRoom.localParticipant;
 
