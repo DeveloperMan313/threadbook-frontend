@@ -39,13 +39,24 @@
   const shouldRenderProfileInfo = $derived.by((): boolean => {
     if (!index || !thread_id) return true;
 
-    if (index == 0) return true;
+    if (index === 0) return true;
 
     const prevMsg = stateThreadChats.get(thread_id)!.messages[index - 1];
     const prevDT = new Date(prevMsg.created_at).getTime();
     const thisDT = new Date(created_at).getTime();
     const maxDelta = 60 * 1000; // 1 minute
-    return prevMsg.username != username || Math.abs(thisDT - prevDT) > maxDelta;
+    return prevMsg.username !== username || Math.abs(thisDT - prevDT) > maxDelta;
+  });
+
+  const shouldRenderDate = $derived.by((): boolean => {
+    if (!index || !thread_id) return true;
+
+    if (index === 0) return true;
+
+    const prevMsg = stateThreadChats.get(thread_id)!.messages[index - 1];
+    const prevDate = new Date(prevMsg.created_at).getDate();
+    const thisDate = new Date(created_at).getDate();
+    return prevDate !== thisDate;
   });
 
   let isBeingEdited = $state(false);
@@ -114,6 +125,14 @@
   let isMessageDeleteModalOpen = $state(false);
 </script>
 
+{#if shouldRenderDate}
+  <p class="mt-4 text-center text-base text-muted-foreground">
+    {new Date(created_at).toLocaleString(getLocale(), {
+      month: 'long',
+      day: 'numeric'
+    })}
+  </p>
+{/if}
 <ContextMenu.Root bind:open={isContextMenuOpen}>
   <ContextMenu.Trigger
     class="pointer-events-none"
@@ -131,7 +150,7 @@
       <div class="w-full flex-1 overflow-hidden">
         {#if shouldRenderProfileInfo}
           <div class="flex w-full flex-row items-end gap-1">
-            <p class="text-base font-semibold">{nickname || username}</p>
+            <p class="text-sm font-semibold">{nickname || username}</p>
             <p
               class="text-sm text-muted-foreground"
               title={new Date(created_at).toLocaleString(getLocale(), {
