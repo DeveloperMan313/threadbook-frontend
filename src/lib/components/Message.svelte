@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { MessageProps, UserProfilePublic } from '$lib/types';
-  import { getContext, untrack } from 'svelte';
+  import { getContext, tick, untrack } from 'svelte';
   import { ImageApi, MessageApi } from '$lib/api';
   import UserAvatar from './UserAvatar.svelte';
   import { Button } from './ui/button';
@@ -12,7 +12,16 @@
   import { stateProfile } from '$lib/states';
   import { getLocale } from '$lib/paraglide/runtime';
 
-  const { id, username, content, payloads, created_at, index, thread_id }: MessageProps = $props();
+  const {
+    id,
+    thread_id,
+    username,
+    content,
+    payloads,
+    created_at,
+    index,
+    scrolledParent
+  }: MessageProps = $props();
 
   const { getProfile } = getContext('userProfiles') as {
     getProfile: (username: string) => UserProfilePublic | undefined;
@@ -82,14 +91,27 @@
     setTimeout(() => {
       textarea!.focus();
     }, 200);
+
+    tick().then(onInput);
   });
 
   let isContextMenuOpen = $state(false);
 
+  const onScroll = () => {
+    isContextMenuOpen = false;
+    scrolledParent!.removeEventListener('scroll', onScroll);
+  };
+
+  $effect(() => {
+    if (isContextMenuOpen) {
+      scrolledParent!.addEventListener('scroll', onScroll);
+    }
+  });
+
   let isMessageDeleteModalOpen = $state(false);
 </script>
 
-<ContextMenu.Root>
+<ContextMenu.Root bind:open={isContextMenuOpen}>
   <ContextMenu.Trigger
     class="pointer-events-none"
     disabled={sessionUsername !== username || isBeingEdited}
@@ -134,7 +156,9 @@
             onkeydown={onKeydown}
           />
         {:else if content.length > 0}
-          <p class="w-full overflow-hidden text-sm wrap-break-word">{content}</p>
+          <p class="w-full overflow-hidden text-sm wrap-break-word whitespace-pre-line">
+            {content}
+          </p>
         {/if}
         {#if payloads}
           <div class="mt-2 mb-2 max-w-96">
@@ -152,15 +176,7 @@
       </div>
     </div>
   </ContextMenu.Trigger>
-  <ContextMenu.Content
-    class="w-52"
-    onOpenAutoFocus={() => {
-      isContextMenuOpen = true;
-    }}
-    onCloseAutoFocus={() => {
-      isContextMenuOpen = false;
-    }}
-  >
+  <ContextMenu.Content class="w-52">
     <ContextMenu.Item
       class="cursor-pointer"
       variant="default"

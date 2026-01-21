@@ -39,8 +39,10 @@
   };
 
   $effect(() => {
-    if (messages.length && (isAtBottom || lastMessageMine)) {
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    if (messages.length && (untrack(() => isAtBottom) || lastMessageMine)) {
+      untrack(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      });
     }
   });
 
@@ -135,6 +137,7 @@
     }
   });
 
+  // svelte-ignore non_reactive_update
   let messagesContainer: HTMLDivElement;
   let isAtTop = $state(false);
   let isAtBottom = $state(true);
@@ -242,22 +245,24 @@
     });
     selectedFilesDT.items.clear();
     selectedFilenames = [];
+
+    tick().then(onInput);
   };
 
-  // resize textarea to fit content
   const onInput = () => {
+    if (!currentThreadId) return;
+    // resize textarea to fit content
     textarea!.style.height = '0';
     textarea!.style.height = `calc(${textarea!.scrollHeight}px + 0.1rem)`;
+    // update messageText to current value
+    const currentChat = stateThreadChats.get(currentThreadId)!;
+    stateThreadChats.set(currentThreadId, {
+      ...currentChat,
+      messageText
+    });
   };
 
   const onKeydown = (event: KeyboardEvent) => {
-    // avoid mutating stateThreadChats and causing an effect
-    if (currentThreadId) {
-      const chat = stateThreadChats.get(currentThreadId);
-      if (chat) {
-        chat.messageText = messageText;
-      }
-    }
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       sendMessage();
@@ -283,20 +288,18 @@
         </div>
       </div>
     {:else}
-      <div>
-        <div class="flex h-10 w-full items-center justify-center">
-          {#if currentThreadId && stateThreadChats.get(currentThreadId)?.firstMessageLoaded}
-            <p class="text-lg text-muted-foreground">{m.thread_start()}</p>
-          {:else}
-            <Spinner
-              class={`size-8 text-muted-foreground transition-opacity ${isAtTop ? '' : 'opacity-0'}`}
-            />
-          {/if}
-        </div>
-        {#each messages as message, i (message.id)}
-          <Message {...message} index={i} />
-        {/each}
+      <div class="flex h-10 w-full items-center justify-center">
+        {#if currentThreadId && stateThreadChats.get(currentThreadId)?.firstMessageLoaded}
+          <p class="text-lg text-muted-foreground">{m.thread_start()}</p>
+        {:else}
+          <Spinner
+            class={`size-8 text-muted-foreground transition-opacity ${isAtTop ? '' : 'opacity-0'}`}
+          />
+        {/if}
       </div>
+      {#each messages as message, i (message.id)}
+        <Message {...message} index={i} scrolledParent={messagesContainer} />
+      {/each}
     {/if}
   </div>
   <div class="border-t border-gray-200 p-4 pt-2">
