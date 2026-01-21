@@ -666,7 +666,7 @@
     isConnected = false;
     isSelfMuted = false;
     isOthersMuted = false;
-    isSelfVideoEnabled = true;
+    isSelfVideoEnabled = false;
     hasMic = true;
     hasCamera = true;
     volumes = {};
