@@ -76,6 +76,9 @@
 
   let videoTiles = $state<VideoTile[]>([]);
 
+  let currentThreadId: number | null = null;
+  let isSwitchingRoom = false;
+
   function recomputeVideoTiles() {
     if (!room || !isConnected) {
       videoTiles = [];
@@ -371,22 +374,23 @@
       const resp = await ThreadApi.getSFUToken({ thread_id: roomThreadId });
       const token = resp.token;
 
-      room = new Room();
+      const newRoom = new Room();
+      room = newRoom;
 
-      room.on(RoomEvent.ParticipantConnected, (participant) => {
+      newRoom.on(RoomEvent.ParticipantConnected, (participant) => {
         if (!participants.some((p) => p.sid === participant.sid)) {
           participants = [...participants, participant as RemoteParticipant];
           recomputeVideoTiles();
         }
       });
 
-      room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+      newRoom.on(RoomEvent.ParticipantDisconnected, (participant) => {
         detachTrack(participant.sid, true, true);
         participants = participants.filter((p) => p.sid !== participant.sid);
         recomputeVideoTiles();
       });
 
-      room.on(RoomEvent.TrackSubscribed, (track, pub, participant) => {
+      newRoom.on(RoomEvent.TrackSubscribed, (track, pub, participant) => {
         if (track.kind === 'audio') {
           attachAudioTrack(track, participant.sid);
         } else if (track.kind === 'video' && pub.source === Track.Source.Camera) {
@@ -394,7 +398,7 @@
         }
       });
 
-      room.on(RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
+      newRoom.on(RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
         if (track.kind === 'audio') {
           detachTrack(participant.sid, false, true);
         } else if (track.kind === 'video' && pub.source === Track.Source.Camera) {
@@ -402,18 +406,18 @@
         }
       });
 
-      room.on(RoomEvent.Disconnected, () => {
-        leaveRoom();
+      newRoom.on(RoomEvent.Disconnected, () => {
+        isConnected = false;
       });
 
-      await room.connect(PUBLIC_LIVEKIT_ORIGIN, token);
+      await newRoom.connect(PUBLIC_LIVEKIT_ORIGIN, token);
 
       hasMic = true;
       hasCamera = true;
 
-      const p = room.localParticipant;
+      const p = newRoom.localParticipant;
 
-      participants = Array.from(room.remoteParticipants.values()) as RemoteParticipant[];
+      participants = Array.from(newRoom.remoteParticipants.values()) as RemoteParticipant[];
 
       await subscribeToExistingTracks();
 
@@ -496,11 +500,11 @@
     } catch (err) {
       error = (err as Error).message || 'Connection failed';
       console.error('Join error:', err);
-      await leaveRoom();
+      await leaveRoom(false);
     }
   }
 
-  async function leaveRoom() {
+  async function leaveRoom(resetThreadId: boolean = true) {
     if (!isBrowser) return;
     if (room) {
       try {
@@ -557,7 +561,10 @@
     volumeDisplayFor = {};
     videoTiles = [];
 
-    stateVoiceThreadId.id = null;
+    if (resetThreadId) {
+      stateVoiceThreadId.id = null;
+      currentThreadId = null;
+    }
     viewMode = 'normal';
     setDefaultPosition();
   }
@@ -565,12 +572,26 @@
   $effect(() => {
     const vtId = stateVoiceThreadId.id;
     untrack(async () => {
+      if (isSwitchingRoom) return;
+
+      const nextId = vtId ?? null;
+      if (nextId === currentThreadId && isConnected) {
+        return;
+      }
+
+      isSwitchingRoom = true;
+
       if (isConnected) {
-        await leaveRoom();
+        await leaveRoom(false);
       }
-      if (vtId) {
-        await joinRoom(vtId);
+
+      currentThreadId = nextId;
+
+      if (nextId !== null) {
+        await joinRoom(nextId);
       }
+
+      isSwitchingRoom = false;
     });
   });
 
@@ -692,7 +713,9 @@
                           <VideoOff size={64} />
                         </div>
                       {/if}
-                    {:else if participants.find((p) => p.sid === tile.sid)?.isCameraEnabled}{:else}
+                    {:else if participants
+                      .find((p) => p.sid === tile.sid)
+                      ?.getTrackPublication(Track.Source.Camera)?.isSubscribed}{:else}
                       <div class="video-placeholder">
                         <VideoOff size={64} />
                       </div>
@@ -788,7 +811,7 @@
 
         <button
           class="rounded-full bg-destructive p-3 text-white transition-colors hover:bg-destructive/90"
-          onclick={leaveRoom}
+          onclick={() => leaveRoom()}
         >
           {#if isConnected}
             <LogOut size={20} />
@@ -831,7 +854,7 @@
         </button>
         <button
           class="rounded-full bg-destructive p-2 text-white transition-colors hover:bg-destructive/90"
-          onclick={leaveRoom}
+          onclick={() => leaveRoom()}
         >
           {#if isConnected}
             <LogOut size={16} />
