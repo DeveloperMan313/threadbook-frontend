@@ -13,7 +13,7 @@
   import { centrifugeClient, MessageApi } from '$lib/api';
   import { stateProfile } from '$lib/states';
   import Spinner from '$lib/components/ui/spinner/spinner.svelte';
-  import { Paperclip, X } from '@lucide/svelte';
+  import { Paperclip, SendHorizontal, X } from '@lucide/svelte';
   import * as m from '$lib/paraglide/messages';
   import { stateThreadChats } from '$lib/states/threadChats.svelte';
   import { Textarea } from './ui/textarea';
@@ -369,12 +369,13 @@
       />
       <Button
         class="cursor-pointer"
+        size="icon"
         onclick={sendMessage}
         disabled={currentThreadIsClosed ||
           (messageText.trim() === '' && selectedFilenames.length === 0) ||
           isSendingMessage}
       >
-        {m.send()}
+        <SendHorizontal />
       </Button>
     </div>
   </div>
