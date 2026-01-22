@@ -39,7 +39,7 @@
   const shouldRenderProfileInfo = $derived.by((): boolean => {
     if (!index || !thread_id) return true;
 
-    if (index === 0) return true;
+    if (index === 0 || shouldRenderDate) return true;
 
     const prevMsg = stateThreadChats.get(thread_id)!.messages[index - 1];
     const prevDT = new Date(prevMsg.created_at).getTime();
