@@ -37,7 +37,7 @@
     <Dialog.Footer>
       <Button variant="outline" class="cursor-pointer" onclick={onCancel}>{m.cancel()}</Button>
       <Button variant="destructive" class="cursor-pointer" onclick={onLeaveClick}
-        >{m.cancel()}</Button
+        >{m.log_out()}</Button
       >
     </Dialog.Footer>
   </Dialog.Content>
